@@ -1,9 +1,25 @@
 import { createContext, useMemo, useReducer, type ReactNode } from 'react';
 
 import { ABILITIES, SKILLS } from '@/constants/character';
-import type { AbilityKey, CharacterSheet, HitPoints, SkillKey } from '@/types/character';
+import type {
+  AbilityKey,
+  CharacterClass,
+  CharacterSheet,
+  DeathSaves,
+  HitDice,
+  HitPoints,
+  SkillKey,
+} from '@/types/character';
+
+function createClassId() {
+  return `class-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 const initialCharacter: CharacterSheet = {
+  name: '',
+  race: '',
+  classes: [{ id: createClassId(), name: '', level: '' }],
+  inspiration: false,
   proficiencyBonus: '',
   abilities: Object.fromEntries(
     ABILITIES.map((ability) => [ability.key, { score: '', modifier: '' }])
@@ -20,9 +36,19 @@ const initialCharacter: CharacterSheet = {
   initiative: '',
   speed: '',
   hitPoints: { max: '', current: '', temporary: '' },
+  hitDice: { current: '', max: '' },
+  exhaustion: 0,
+  deathSaves: { successes: 0, failures: 0 },
 };
 
 type Action =
+  | { type: 'SET_NAME'; value: string }
+  | { type: 'SET_RACE'; value: string }
+  | { type: 'ADD_CLASS' }
+  | { type: 'REMOVE_CLASS'; id: string }
+  | { type: 'SET_CLASS_NAME'; id: string; value: string }
+  | { type: 'SET_CLASS_LEVEL'; id: string; value: string }
+  | { type: 'TOGGLE_INSPIRATION' }
   | { type: 'SET_ABILITY_SCORE'; key: AbilityKey; value: string }
   | { type: 'SET_ABILITY_MODIFIER'; key: AbilityKey; value: string }
   | { type: 'TOGGLE_SAVING_THROW'; key: AbilityKey }
@@ -35,10 +61,43 @@ type Action =
   | { type: 'SET_ARMOR_CLASS'; value: string }
   | { type: 'SET_INITIATIVE'; value: string }
   | { type: 'SET_SPEED'; value: string }
-  | { type: 'SET_HP_FIELD'; field: keyof HitPoints; value: string };
+  | { type: 'SET_HP_FIELD'; field: keyof HitPoints; value: string }
+  | { type: 'SET_HIT_DICE_FIELD'; field: keyof HitDice; value: string }
+  | { type: 'SET_EXHAUSTION'; value: number }
+  | { type: 'SET_DEATH_SAVES'; field: keyof DeathSaves; value: number };
 
 function characterReducer(state: CharacterSheet, action: Action): CharacterSheet {
   switch (action.type) {
+    case 'SET_NAME':
+      return { ...state, name: action.value };
+    case 'SET_RACE':
+      return { ...state, race: action.value };
+    case 'ADD_CLASS':
+      return {
+        ...state,
+        classes: [...state.classes, { id: createClassId(), name: '', level: '' }],
+      };
+    case 'REMOVE_CLASS':
+      return {
+        ...state,
+        classes: state.classes.filter((characterClass) => characterClass.id !== action.id),
+      };
+    case 'SET_CLASS_NAME':
+      return {
+        ...state,
+        classes: state.classes.map((characterClass) =>
+          characterClass.id === action.id ? { ...characterClass, name: action.value } : characterClass
+        ),
+      };
+    case 'SET_CLASS_LEVEL':
+      return {
+        ...state,
+        classes: state.classes.map((characterClass) =>
+          characterClass.id === action.id ? { ...characterClass, level: action.value } : characterClass
+        ),
+      };
+    case 'TOGGLE_INSPIRATION':
+      return { ...state, inspiration: !state.inspiration };
     case 'SET_ABILITY_SCORE':
       return {
         ...state,
@@ -110,6 +169,18 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
         ...state,
         hitPoints: { ...state.hitPoints, [action.field]: action.value },
       };
+    case 'SET_HIT_DICE_FIELD':
+      return {
+        ...state,
+        hitDice: { ...state.hitDice, [action.field]: action.value },
+      };
+    case 'SET_EXHAUSTION':
+      return { ...state, exhaustion: action.value };
+    case 'SET_DEATH_SAVES':
+      return {
+        ...state,
+        deathSaves: { ...state.deathSaves, [action.field]: action.value },
+      };
     default:
       return state;
   }
@@ -117,6 +188,13 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
 
 export interface CharacterContextValue {
   character: CharacterSheet;
+  setName: (value: string) => void;
+  setRace: (value: string) => void;
+  addClass: () => void;
+  removeClass: (id: string) => void;
+  setClassName: (id: string, value: string) => void;
+  setClassLevel: (id: string, value: string) => void;
+  toggleInspiration: () => void;
   setAbilityScore: (key: AbilityKey, value: string) => void;
   setAbilityModifier: (key: AbilityKey, value: string) => void;
   toggleSavingThrowProficiency: (key: AbilityKey) => void;
@@ -130,6 +208,9 @@ export interface CharacterContextValue {
   setInitiative: (value: string) => void;
   setSpeed: (value: string) => void;
   setHitPointsField: (field: keyof HitPoints, value: string) => void;
+  setHitDiceField: (field: keyof HitDice, value: string) => void;
+  setExhaustion: (value: number) => void;
+  setDeathSaves: (field: keyof DeathSaves, value: number) => void;
 }
 
 export const CharacterContext = createContext<CharacterContextValue | undefined>(undefined);
@@ -140,6 +221,13 @@ export function CharacterProvider({ children }: { children: ReactNode }) {
   const value = useMemo<CharacterContextValue>(
     () => ({
       character,
+      setName: (value) => dispatch({ type: 'SET_NAME', value }),
+      setRace: (value) => dispatch({ type: 'SET_RACE', value }),
+      addClass: () => dispatch({ type: 'ADD_CLASS' }),
+      removeClass: (id) => dispatch({ type: 'REMOVE_CLASS', id }),
+      setClassName: (id, value) => dispatch({ type: 'SET_CLASS_NAME', id, value }),
+      setClassLevel: (id, value) => dispatch({ type: 'SET_CLASS_LEVEL', id, value }),
+      toggleInspiration: () => dispatch({ type: 'TOGGLE_INSPIRATION' }),
       setAbilityScore: (key, value) => dispatch({ type: 'SET_ABILITY_SCORE', key, value }),
       setAbilityModifier: (key, value) => dispatch({ type: 'SET_ABILITY_MODIFIER', key, value }),
       toggleSavingThrowProficiency: (key) => dispatch({ type: 'TOGGLE_SAVING_THROW', key }),
@@ -154,6 +242,9 @@ export function CharacterProvider({ children }: { children: ReactNode }) {
       setInitiative: (value) => dispatch({ type: 'SET_INITIATIVE', value }),
       setSpeed: (value) => dispatch({ type: 'SET_SPEED', value }),
       setHitPointsField: (field, value) => dispatch({ type: 'SET_HP_FIELD', field, value }),
+      setHitDiceField: (field, value) => dispatch({ type: 'SET_HIT_DICE_FIELD', field, value }),
+      setExhaustion: (value) => dispatch({ type: 'SET_EXHAUSTION', value }),
+      setDeathSaves: (field, value) => dispatch({ type: 'SET_DEATH_SAVES', field, value }),
     }),
     [character]
   );

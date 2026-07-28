@@ -2,6 +2,7 @@ import { StyleSheet, TextInput, View, type StyleProp, type TextStyle, type ViewS
 
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { formatModifier } from '@/utils/format-modifier';
 
 interface EditableModifierProps {
   label?: string;
@@ -9,14 +10,6 @@ interface EditableModifierProps {
   onChangeText: (value: string) => void;
   style?: StyleProp<TextStyle>;
   containerStyle?: StyleProp<ViewStyle>;
-}
-
-function formatModifier(value: string): string {
-  const trimmed = value.trim();
-  if (trimmed === '' || trimmed.startsWith('+') || trimmed.startsWith('-')) {
-    return trimmed;
-  }
-  return /^\d+$/.test(trimmed) ? `+${trimmed}` : trimmed;
 }
 
 export function EditableModifier({ label, value, onChangeText, style, containerStyle }: EditableModifierProps) {

@@ -41,7 +41,27 @@ export interface HitPoints {
   temporary: string;
 }
 
+export interface HitDice {
+  current: string;
+  max: string;
+}
+
+export interface CharacterClass {
+  id: string;
+  name: string;
+  level: string;
+}
+
+export interface DeathSaves {
+  successes: number;
+  failures: number;
+}
+
 export interface CharacterSheet {
+  name: string;
+  race: string;
+  classes: CharacterClass[];
+  inspiration: boolean;
   proficiencyBonus: string;
   abilities: Record<AbilityKey, AbilityScore>;
   savingThrows: Record<AbilityKey, SavingThrow>;
@@ -52,4 +72,7 @@ export interface CharacterSheet {
   initiative: string;
   speed: string;
   hitPoints: HitPoints;
+  hitDice: HitDice;
+  exhaustion: number;
+  deathSaves: DeathSaves;
 }
