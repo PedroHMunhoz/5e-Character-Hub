@@ -90,24 +90,11 @@ export function CharacterSheet() {
               onScoreChange={(value) => setAbilityScore(ability.key, value)}
               modifier={character.abilities[ability.key].modifier}
               onModifierChange={(value) => setAbilityModifier(ability.key, value)}
+              savingThrowProficient={character.savingThrows[ability.key].proficient}
+              onToggleSavingThrowProficiency={() => toggleSavingThrowProficiency(ability.key)}
+              savingThrowModifier={character.savingThrows[ability.key].modifier}
+              onSavingThrowModifierChange={(value) => setSavingThrowModifier(ability.key, value)}
             />
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <ThemedText type="subtitle">Testes de Resistência</ThemedText>
-        <View style={styles.savingThrowGrid}>
-          {ABILITIES.map((ability) => (
-            <View key={ability.key} style={styles.savingThrowItem}>
-              <SkillRow
-                label={ability.abbr}
-                proficient={character.savingThrows[ability.key].proficient}
-                onToggleProficiency={() => toggleSavingThrowProficiency(ability.key)}
-                modifier={character.savingThrows[ability.key].modifier}
-                onModifierChange={(value) => setSavingThrowModifier(ability.key, value)}
-              />
-            </View>
           ))}
         </View>
       </View>
@@ -125,16 +112,18 @@ export function CharacterSheet() {
 
       <View style={styles.section}>
         <ThemedText type="subtitle">Perícias</ThemedText>
-        {SKILLS.map((skill) => (
-          <SkillRow
-            key={skill.key}
-            label={`${skill.label} (${ABILITIES_BY_KEY[skill.ability].abbr})`}
-            proficient={character.skills[skill.key].proficient}
-            onToggleProficiency={() => toggleSkillProficiency(skill.key)}
-            modifier={character.skills[skill.key].modifier}
-            onModifierChange={(value) => setSkillModifier(skill.key, value)}
-          />
-        ))}
+        <View style={styles.skillsList}>
+          {SKILLS.map((skill) => (
+            <SkillRow
+              key={skill.key}
+              label={`${skill.label} (${ABILITIES_BY_KEY[skill.ability].abbr})`}
+              proficient={character.skills[skill.key].proficient}
+              onToggleProficiency={() => toggleSkillProficiency(skill.key)}
+              modifier={character.skills[skill.key].modifier}
+              onModifierChange={(value) => setSkillModifier(skill.key, value)}
+            />
+          ))}
+        </View>
       </View>
     </ScrollView>
   );
@@ -165,17 +154,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   abilityCard: {
-    width: '47%',
+    width: '30%',
     minWidth: 0,
   },
-  savingThrowGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  savingThrowItem: {
-    width: '47%',
-    minWidth: 0,
+  skillsList: {
+    alignSelf: 'center',
   },
   passiveRow: {
     flexDirection: 'row',
