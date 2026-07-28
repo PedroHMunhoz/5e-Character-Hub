@@ -47,6 +47,7 @@ export interface CharacterSheet {
   savingThrows: Record<AbilityKey, SavingThrow>;
   skills: Record<SkillKey, Skill>;
   passivePerception: string;
+  passiveInsight: string;
   armorClass: string;
   initiative: string;
   speed: string;

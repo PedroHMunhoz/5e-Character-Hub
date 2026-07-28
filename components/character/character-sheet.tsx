@@ -20,6 +20,7 @@ export function CharacterSheet() {
     setSkillModifier,
     setProficiencyBonus,
     setPassivePerception,
+    setPassiveInsight,
     setArmorClass,
     setInitiative,
     setSpeed,
@@ -28,34 +29,6 @@ export function CharacterSheet() {
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
-      <View style={styles.section}>
-        <ThemedText type="subtitle">Combate</ThemedText>
-        <View style={styles.combatRow}>
-          <EditableStat
-            label="CA"
-            value={character.armorClass}
-            onChangeText={setArmorClass}
-            keyboardType="number-pad"
-            style={styles.combatItem}
-            inputStyle={styles.combatInput}
-          />
-          <EditableStat
-            label="Iniciativa"
-            value={character.initiative}
-            onChangeText={setInitiative}
-            style={styles.combatItem}
-            inputStyle={styles.combatInput}
-          />
-          <EditableStat
-            label="Desloc."
-            value={character.speed}
-            onChangeText={setSpeed}
-            style={styles.combatItem}
-            inputStyle={styles.combatInput}
-          />
-        </View>
-      </View>
-
       <View style={styles.section}>
         <ThemedText type="subtitle">Pontos de Vida</ThemedText>
         <HPTracker
@@ -69,8 +42,40 @@ export function CharacterSheet() {
       </View>
 
       <View style={styles.section}>
-        <ThemedText type="subtitle">Bônus de Proficiência</ThemedText>
-        <EditableModifier value={character.proficiencyBonus} onChangeText={setProficiencyBonus} />
+        <ThemedText type="subtitle">Combate</ThemedText>
+        <View style={styles.combatRow}>
+          <EditableModifier
+            label="Bônus de Proficiência"
+            value={character.proficiencyBonus}
+            onChangeText={setProficiencyBonus}
+            containerStyle={styles.combatItem}
+            style={styles.combatInput}
+          />
+          <EditableStat
+            label="Desloc."
+            value={character.speed}
+            onChangeText={setSpeed}
+            style={styles.combatItem}
+            inputStyle={styles.combatInput}
+          />
+        </View>
+        <View style={styles.combatRow}>
+          <EditableModifier
+            label="Iniciativa"
+            value={character.initiative}
+            onChangeText={setInitiative}
+            containerStyle={styles.combatItem}
+            style={styles.combatInput}
+          />
+          <EditableStat
+            label="CA"
+            value={character.armorClass}
+            onChangeText={setArmorClass}
+            keyboardType="number-pad"
+            style={styles.combatItem}
+            inputStyle={styles.combatInput}
+          />
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -85,12 +90,36 @@ export function CharacterSheet() {
               onScoreChange={(value) => setAbilityScore(ability.key, value)}
               modifier={character.abilities[ability.key].modifier}
               onModifierChange={(value) => setAbilityModifier(ability.key, value)}
-              savingThrowProficient={character.savingThrows[ability.key].proficient}
-              onToggleSavingThrowProficiency={() => toggleSavingThrowProficiency(ability.key)}
-              savingThrowModifier={character.savingThrows[ability.key].modifier}
-              onSavingThrowModifierChange={(value) => setSavingThrowModifier(ability.key, value)}
             />
           ))}
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <ThemedText type="subtitle">Testes de Resistência</ThemedText>
+        <View style={styles.savingThrowGrid}>
+          {ABILITIES.map((ability) => (
+            <View key={ability.key} style={styles.savingThrowItem}>
+              <SkillRow
+                label={ability.abbr}
+                proficient={character.savingThrows[ability.key].proficient}
+                onToggleProficiency={() => toggleSavingThrowProficiency(ability.key)}
+                modifier={character.savingThrows[ability.key].modifier}
+                onModifierChange={(value) => setSavingThrowModifier(ability.key, value)}
+              />
+            </View>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.passiveRow}>
+          <ThemedText style={styles.passiveLabel}>Percepção Passiva</ThemedText>
+          <EditableStat value={character.passivePerception} onChangeText={setPassivePerception} keyboardType="number-pad" />
+        </View>
+        <View style={styles.passiveRow}>
+          <ThemedText style={styles.passiveLabel}>Intuição Passiva</ThemedText>
+          <EditableStat value={character.passiveInsight} onChangeText={setPassiveInsight} keyboardType="number-pad" />
         </View>
       </View>
 
@@ -106,11 +135,6 @@ export function CharacterSheet() {
             onModifierChange={(value) => setSkillModifier(skill.key, value)}
           />
         ))}
-      </View>
-
-      <View style={styles.section}>
-        <ThemedText type="subtitle">Sabedoria Passiva (Percepção)</ThemedText>
-        <EditableStat value={character.passivePerception} onChangeText={setPassivePerception} keyboardType="number-pad" />
       </View>
     </ScrollView>
   );
@@ -142,6 +166,26 @@ const styles = StyleSheet.create({
   },
   abilityCard: {
     width: '47%',
+    minWidth: 0,
+  },
+  savingThrowGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  savingThrowItem: {
+    width: '47%',
+    minWidth: 0,
+  },
+  passiveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  passiveLabel: {
+    fontSize: 15,
+    flexShrink: 1,
     minWidth: 0,
   },
 });

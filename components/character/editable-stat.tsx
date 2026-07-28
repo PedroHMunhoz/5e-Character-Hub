@@ -35,7 +35,6 @@ export function EditableStat({
         keyboardType={keyboardType}
         placeholder={placeholder}
         placeholderTextColor={borderColor}
-        selectTextOnFocus
       />
     </View>
   );
@@ -60,6 +59,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     fontSize: 18,
+    height: 40,
     width: 64,
     textAlign: 'center',
     fontVariant: ['tabular-nums'],

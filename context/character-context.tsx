@@ -15,6 +15,7 @@ const initialCharacter: CharacterSheet = {
     SKILLS.map((skill) => [skill.key, { proficient: false, modifier: '' }])
   ) as CharacterSheet['skills'],
   passivePerception: '',
+  passiveInsight: '',
   armorClass: '',
   initiative: '',
   speed: '',
@@ -30,6 +31,7 @@ type Action =
   | { type: 'SET_SKILL_MODIFIER'; key: SkillKey; value: string }
   | { type: 'SET_PROFICIENCY_BONUS'; value: string }
   | { type: 'SET_PASSIVE_PERCEPTION'; value: string }
+  | { type: 'SET_PASSIVE_INSIGHT'; value: string }
   | { type: 'SET_ARMOR_CLASS'; value: string }
   | { type: 'SET_INITIATIVE'; value: string }
   | { type: 'SET_SPEED'; value: string }
@@ -95,6 +97,8 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
       return { ...state, proficiencyBonus: action.value };
     case 'SET_PASSIVE_PERCEPTION':
       return { ...state, passivePerception: action.value };
+    case 'SET_PASSIVE_INSIGHT':
+      return { ...state, passiveInsight: action.value };
     case 'SET_ARMOR_CLASS':
       return { ...state, armorClass: action.value };
     case 'SET_INITIATIVE':
@@ -121,6 +125,7 @@ export interface CharacterContextValue {
   setSkillModifier: (key: SkillKey, value: string) => void;
   setProficiencyBonus: (value: string) => void;
   setPassivePerception: (value: string) => void;
+  setPassiveInsight: (value: string) => void;
   setArmorClass: (value: string) => void;
   setInitiative: (value: string) => void;
   setSpeed: (value: string) => void;
@@ -144,6 +149,7 @@ export function CharacterProvider({ children }: { children: ReactNode }) {
       setSkillModifier: (key, value) => dispatch({ type: 'SET_SKILL_MODIFIER', key, value }),
       setProficiencyBonus: (value) => dispatch({ type: 'SET_PROFICIENCY_BONUS', value }),
       setPassivePerception: (value) => dispatch({ type: 'SET_PASSIVE_PERCEPTION', value }),
+      setPassiveInsight: (value) => dispatch({ type: 'SET_PASSIVE_INSIGHT', value }),
       setArmorClass: (value) => dispatch({ type: 'SET_ARMOR_CLASS', value }),
       setInitiative: (value) => dispatch({ type: 'SET_INITIATIVE', value }),
       setSpeed: (value) => dispatch({ type: 'SET_SPEED', value }),

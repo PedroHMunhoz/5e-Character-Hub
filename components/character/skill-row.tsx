@@ -32,6 +32,7 @@ const styles = StyleSheet.create({
   modifierInput: {
     fontSize: 14,
     width: 48,
+    height: 32,
     paddingVertical: 4,
   },
   label: {
