@@ -5,6 +5,7 @@ import type {
   AbilityKey,
   CharacterClass,
   CharacterSheet,
+  Currency,
   DeathSaves,
   HitDice,
   HitPoints,
@@ -39,6 +40,8 @@ const initialCharacter: CharacterSheet = {
   hitDice: { current: '', max: '' },
   exhaustion: 0,
   deathSaves: { successes: 0, failures: 0 },
+  currency: { pl: '', po: '', pp: '', pe: '', pc: '' },
+  inventoryItems: {},
 };
 
 type Action =
@@ -64,7 +67,10 @@ type Action =
   | { type: 'SET_HP_FIELD'; field: keyof HitPoints; value: string }
   | { type: 'SET_HIT_DICE_FIELD'; field: keyof HitDice; value: string }
   | { type: 'SET_EXHAUSTION'; value: number }
-  | { type: 'SET_DEATH_SAVES'; field: keyof DeathSaves; value: number };
+  | { type: 'SET_DEATH_SAVES'; field: keyof DeathSaves; value: number }
+  | { type: 'SET_CURRENCY_FIELD'; field: keyof Currency; value: string }
+  | { type: 'SET_ITEM_QUANTITY'; id: string; value: string }
+  | { type: 'TOGGLE_ITEM_EQUIPPED'; id: string };
 
 function characterReducer(state: CharacterSheet, action: Action): CharacterSheet {
   switch (action.type) {
@@ -181,6 +187,33 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
         ...state,
         deathSaves: { ...state.deathSaves, [action.field]: action.value },
       };
+    case 'SET_CURRENCY_FIELD':
+      return {
+        ...state,
+        currency: { ...state.currency, [action.field]: action.value },
+      };
+    case 'SET_ITEM_QUANTITY':
+      return {
+        ...state,
+        inventoryItems: {
+          ...state.inventoryItems,
+          [action.id]: {
+            equipped: state.inventoryItems[action.id]?.equipped ?? false,
+            quantity: action.value,
+          },
+        },
+      };
+    case 'TOGGLE_ITEM_EQUIPPED':
+      return {
+        ...state,
+        inventoryItems: {
+          ...state.inventoryItems,
+          [action.id]: {
+            quantity: state.inventoryItems[action.id]?.quantity ?? '1',
+            equipped: !(state.inventoryItems[action.id]?.equipped ?? false),
+          },
+        },
+      };
     default:
       return state;
   }
@@ -211,6 +244,9 @@ export interface CharacterContextValue {
   setHitDiceField: (field: keyof HitDice, value: string) => void;
   setExhaustion: (value: number) => void;
   setDeathSaves: (field: keyof DeathSaves, value: number) => void;
+  setCurrencyField: (field: keyof Currency, value: string) => void;
+  setItemQuantity: (id: string, value: string) => void;
+  toggleItemEquipped: (id: string) => void;
 }
 
 export const CharacterContext = createContext<CharacterContextValue | undefined>(undefined);
@@ -245,6 +281,9 @@ export function CharacterProvider({ children }: { children: ReactNode }) {
       setHitDiceField: (field, value) => dispatch({ type: 'SET_HIT_DICE_FIELD', field, value }),
       setExhaustion: (value) => dispatch({ type: 'SET_EXHAUSTION', value }),
       setDeathSaves: (field, value) => dispatch({ type: 'SET_DEATH_SAVES', field, value }),
+      setCurrencyField: (field, value) => dispatch({ type: 'SET_CURRENCY_FIELD', field, value }),
+      setItemQuantity: (id, value) => dispatch({ type: 'SET_ITEM_QUANTITY', id, value }),
+      toggleItemEquipped: (id) => dispatch({ type: 'TOGGLE_ITEM_EQUIPPED', id }),
     }),
     [character]
   );

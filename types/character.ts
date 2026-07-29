@@ -57,6 +57,19 @@ export interface DeathSaves {
   failures: number;
 }
 
+export interface Currency {
+  pl: string;
+  po: string;
+  pp: string;
+  pe: string;
+  pc: string;
+}
+
+export interface InventoryItemState {
+  quantity: string;
+  equipped: boolean;
+}
+
 export interface CharacterSheet {
   name: string;
   race: string;
@@ -75,4 +88,6 @@ export interface CharacterSheet {
   hitDice: HitDice;
   exhaustion: number;
   deathSaves: DeathSaves;
+  currency: Currency;
+  inventoryItems: Record<string, InventoryItemState>;
 }
