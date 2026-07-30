@@ -20,6 +20,7 @@ const MAPPING = {
   'chevron.right': 'chevron-right',
   'person.fill': 'person',
   'bag.fill': 'backpack',
+  'list.bullet': 'format-list-bulleted',
 } as IconMapping;
 
 /**

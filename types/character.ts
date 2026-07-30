@@ -70,6 +70,10 @@ export interface InventoryItemState {
   equipped: boolean;
 }
 
+export interface FeatureItemState {
+  usesCurrent: string;
+}
+
 export interface CharacterSheet {
   name: string;
   race: string;
@@ -90,4 +94,5 @@ export interface CharacterSheet {
   deathSaves: DeathSaves;
   currency: Currency;
   inventoryItems: Record<string, InventoryItemState>;
+  features: Record<string, FeatureItemState>;
 }

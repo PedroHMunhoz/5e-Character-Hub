@@ -42,6 +42,7 @@ const initialCharacter: CharacterSheet = {
   deathSaves: { successes: 0, failures: 0 },
   currency: { pl: '', po: '', pp: '', pe: '', pc: '' },
   inventoryItems: {},
+  features: {},
 };
 
 type Action =
@@ -70,7 +71,8 @@ type Action =
   | { type: 'SET_DEATH_SAVES'; field: keyof DeathSaves; value: number }
   | { type: 'SET_CURRENCY_FIELD'; field: keyof Currency; value: string }
   | { type: 'SET_ITEM_QUANTITY'; id: string; value: string }
-  | { type: 'TOGGLE_ITEM_EQUIPPED'; id: string };
+  | { type: 'TOGGLE_ITEM_EQUIPPED'; id: string }
+  | { type: 'SET_FEATURE_USES'; id: string; value: string };
 
 function characterReducer(state: CharacterSheet, action: Action): CharacterSheet {
   switch (action.type) {
@@ -214,6 +216,14 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
           },
         },
       };
+    case 'SET_FEATURE_USES':
+      return {
+        ...state,
+        features: {
+          ...state.features,
+          [action.id]: { usesCurrent: action.value },
+        },
+      };
     default:
       return state;
   }
@@ -247,6 +257,7 @@ export interface CharacterContextValue {
   setCurrencyField: (field: keyof Currency, value: string) => void;
   setItemQuantity: (id: string, value: string) => void;
   toggleItemEquipped: (id: string) => void;
+  setFeatureUses: (id: string, value: string) => void;
 }
 
 export const CharacterContext = createContext<CharacterContextValue | undefined>(undefined);
@@ -284,6 +295,7 @@ export function CharacterProvider({ children }: { children: ReactNode }) {
       setCurrencyField: (field, value) => dispatch({ type: 'SET_CURRENCY_FIELD', field, value }),
       setItemQuantity: (id, value) => dispatch({ type: 'SET_ITEM_QUANTITY', id, value }),
       toggleItemEquipped: (id) => dispatch({ type: 'TOGGLE_ITEM_EQUIPPED', id }),
+      setFeatureUses: (id, value) => dispatch({ type: 'SET_FEATURE_USES', id, value }),
     }),
     [character]
   );
