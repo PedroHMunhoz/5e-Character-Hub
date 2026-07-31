@@ -78,6 +78,23 @@ export interface SpellItemState {
   prepared: boolean;
 }
 
+export interface Biography {
+  alignment: string;
+  eyes: string;
+  height: string;
+  faith: string;
+  hair: string;
+  weight: string;
+  gender: string;
+  skin: string;
+  age: string;
+  ideals: string;
+  personalityTraits: string;
+  bonds: string;
+  flaws: string;
+  notes: string;
+}
+
 export interface CharacterSheet {
   name: string;
   race: string;
@@ -101,4 +118,5 @@ export interface CharacterSheet {
   features: Record<string, FeatureItemState>;
   spells: Record<string, SpellItemState>;
   spellSlotsUsed: Record<string, number>;
+  biography: Biography;
 }

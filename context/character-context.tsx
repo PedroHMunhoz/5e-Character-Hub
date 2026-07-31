@@ -3,6 +3,7 @@ import { createContext, useMemo, useReducer, type ReactNode } from 'react';
 import { ABILITIES, SKILLS } from '@/constants/character';
 import type {
   AbilityKey,
+  Biography,
   CharacterClass,
   CharacterSheet,
   Currency,
@@ -45,6 +46,22 @@ const initialCharacter: CharacterSheet = {
   features: {},
   spells: {},
   spellSlotsUsed: {},
+  biography: {
+    alignment: '',
+    eyes: '',
+    height: '',
+    faith: '',
+    hair: '',
+    weight: '',
+    gender: '',
+    skin: '',
+    age: '',
+    ideals: '',
+    personalityTraits: '',
+    bonds: '',
+    flaws: '',
+    notes: '',
+  },
 };
 
 type Action =
@@ -76,7 +93,8 @@ type Action =
   | { type: 'TOGGLE_ITEM_EQUIPPED'; id: string }
   | { type: 'SET_FEATURE_USES'; id: string; value: string }
   | { type: 'TOGGLE_SPELL_PREPARED'; id: string }
-  | { type: 'SET_SPELL_SLOT_USED'; level: string; value: number };
+  | { type: 'SET_SPELL_SLOT_USED'; level: string; value: number }
+  | { type: 'SET_BIOGRAPHY_FIELD'; field: keyof Biography; value: string };
 
 function characterReducer(state: CharacterSheet, action: Action): CharacterSheet {
   switch (action.type) {
@@ -244,6 +262,11 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
           [action.level]: action.value,
         },
       };
+    case 'SET_BIOGRAPHY_FIELD':
+      return {
+        ...state,
+        biography: { ...state.biography, [action.field]: action.value },
+      };
     default:
       return state;
   }
@@ -280,6 +303,7 @@ export interface CharacterContextValue {
   setFeatureUses: (id: string, value: string) => void;
   toggleSpellPrepared: (id: string) => void;
   setSpellSlotUsed: (level: string, value: number) => void;
+  setBiographyField: (field: keyof Biography, value: string) => void;
 }
 
 export const CharacterContext = createContext<CharacterContextValue | undefined>(undefined);
@@ -320,6 +344,7 @@ export function CharacterProvider({ children }: { children: ReactNode }) {
       setFeatureUses: (id, value) => dispatch({ type: 'SET_FEATURE_USES', id, value }),
       toggleSpellPrepared: (id) => dispatch({ type: 'TOGGLE_SPELL_PREPARED', id }),
       setSpellSlotUsed: (level, value) => dispatch({ type: 'SET_SPELL_SLOT_USED', level, value }),
+      setBiographyField: (field, value) => dispatch({ type: 'SET_BIOGRAPHY_FIELD', field, value }),
     }),
     [character]
   );
