@@ -21,6 +21,7 @@ const MAPPING = {
   'person.fill': 'person',
   'bag.fill': 'backpack',
   'list.bullet': 'format-list-bulleted',
+  'wand.and.sparkles': 'auto-fix-high',
 } as IconMapping;
 
 /**

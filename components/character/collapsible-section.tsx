@@ -13,9 +13,16 @@ interface CollapsibleSectionProps {
   children: ReactNode;
   defaultExpanded?: boolean;
   columns?: ColumnDefinition[];
+  right?: ReactNode;
 }
 
-export function CollapsibleSection({ title, children, defaultExpanded = true, columns }: CollapsibleSectionProps) {
+export function CollapsibleSection({
+  title,
+  children,
+  defaultExpanded = true,
+  columns,
+  right,
+}: CollapsibleSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   return (
@@ -24,6 +31,7 @@ export function CollapsibleSection({ title, children, defaultExpanded = true, co
         style={columns ? styles.headerWithColumns : styles.header}
         onPress={() => setExpanded((value) => !value)}>
         <ThemedText type="subtitle">{title}</ThemedText>
+        {right ?? null}
         {columns ? (
           <View style={styles.columns}>
             {columns.map((column) => (

@@ -44,6 +44,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="list.bullet" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="spells"
+        options={{
+          title: 'Magias',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="wand.and.sparkles" color={color} />,
+        }}
+      />
     </Tabs>
   );
 }

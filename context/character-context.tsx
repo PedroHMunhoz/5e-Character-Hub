@@ -43,6 +43,8 @@ const initialCharacter: CharacterSheet = {
   currency: { pl: '', po: '', pp: '', pe: '', pc: '' },
   inventoryItems: {},
   features: {},
+  spells: {},
+  spellSlotsUsed: {},
 };
 
 type Action =
@@ -72,7 +74,9 @@ type Action =
   | { type: 'SET_CURRENCY_FIELD'; field: keyof Currency; value: string }
   | { type: 'SET_ITEM_QUANTITY'; id: string; value: string }
   | { type: 'TOGGLE_ITEM_EQUIPPED'; id: string }
-  | { type: 'SET_FEATURE_USES'; id: string; value: string };
+  | { type: 'SET_FEATURE_USES'; id: string; value: string }
+  | { type: 'TOGGLE_SPELL_PREPARED'; id: string }
+  | { type: 'SET_SPELL_SLOT_USED'; level: string; value: number };
 
 function characterReducer(state: CharacterSheet, action: Action): CharacterSheet {
   switch (action.type) {
@@ -224,6 +228,22 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
           [action.id]: { usesCurrent: action.value },
         },
       };
+    case 'TOGGLE_SPELL_PREPARED':
+      return {
+        ...state,
+        spells: {
+          ...state.spells,
+          [action.id]: { prepared: !(state.spells[action.id]?.prepared ?? false) },
+        },
+      };
+    case 'SET_SPELL_SLOT_USED':
+      return {
+        ...state,
+        spellSlotsUsed: {
+          ...state.spellSlotsUsed,
+          [action.level]: action.value,
+        },
+      };
     default:
       return state;
   }
@@ -258,6 +278,8 @@ export interface CharacterContextValue {
   setItemQuantity: (id: string, value: string) => void;
   toggleItemEquipped: (id: string) => void;
   setFeatureUses: (id: string, value: string) => void;
+  toggleSpellPrepared: (id: string) => void;
+  setSpellSlotUsed: (level: string, value: number) => void;
 }
 
 export const CharacterContext = createContext<CharacterContextValue | undefined>(undefined);
@@ -296,6 +318,8 @@ export function CharacterProvider({ children }: { children: ReactNode }) {
       setItemQuantity: (id, value) => dispatch({ type: 'SET_ITEM_QUANTITY', id, value }),
       toggleItemEquipped: (id) => dispatch({ type: 'TOGGLE_ITEM_EQUIPPED', id }),
       setFeatureUses: (id, value) => dispatch({ type: 'SET_FEATURE_USES', id, value }),
+      toggleSpellPrepared: (id) => dispatch({ type: 'TOGGLE_SPELL_PREPARED', id }),
+      setSpellSlotUsed: (level, value) => dispatch({ type: 'SET_SPELL_SLOT_USED', level, value }),
     }),
     [character]
   );

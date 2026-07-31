@@ -74,6 +74,10 @@ export interface FeatureItemState {
   usesCurrent: string;
 }
 
+export interface SpellItemState {
+  prepared: boolean;
+}
+
 export interface CharacterSheet {
   name: string;
   race: string;
@@ -95,4 +99,6 @@ export interface CharacterSheet {
   currency: Currency;
   inventoryItems: Record<string, InventoryItemState>;
   features: Record<string, FeatureItemState>;
+  spells: Record<string, SpellItemState>;
+  spellSlotsUsed: Record<string, number>;
 }
