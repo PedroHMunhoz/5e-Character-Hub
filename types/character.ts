@@ -22,17 +22,14 @@ export type SkillKey =
 
 export interface AbilityScore {
   score: string;
-  modifier: string;
 }
 
 export interface SavingThrow {
   proficient: boolean;
-  modifier: string;
 }
 
 export interface Skill {
   proficient: boolean;
-  modifier: string;
 }
 
 export interface HitPoints {
@@ -104,8 +101,6 @@ export interface CharacterSheet {
   abilities: Record<AbilityKey, AbilityScore>;
   savingThrows: Record<AbilityKey, SavingThrow>;
   skills: Record<SkillKey, Skill>;
-  passivePerception: string;
-  passiveInsight: string;
   armorClass: string;
   initiative: string;
   speed: string;

@@ -9,14 +9,13 @@ interface SkillRowProps {
   proficient: boolean;
   onToggleProficiency: () => void;
   modifier: string;
-  onModifierChange: (value: string) => void;
 }
 
-export function SkillRow({ label, proficient, onToggleProficiency, modifier, onModifierChange }: SkillRowProps) {
+export function SkillRow({ label, proficient, onToggleProficiency, modifier }: SkillRowProps) {
   return (
     <View style={styles.row}>
       <ProficiencyDot checked={proficient} onToggle={onToggleProficiency} />
-      <EditableModifier value={modifier} onChangeText={onModifierChange} style={styles.modifierInput} />
+      <EditableModifier value={modifier} editable={false} style={styles.modifierInput} />
       <ThemedText style={styles.label}>{label}</ThemedText>
     </View>
   );

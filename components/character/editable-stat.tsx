@@ -6,7 +6,8 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 interface EditableStatProps {
   label?: string;
   value: string;
-  onChangeText: (value: string) => void;
+  onChangeText?: (value: string) => void;
+  editable?: boolean;
   keyboardType?: KeyboardTypeOptions;
   placeholder?: string;
   style?: StyleProp<ViewStyle>;
@@ -17,6 +18,7 @@ export function EditableStat({
   label,
   value,
   onChangeText,
+  editable = true,
   keyboardType = 'default',
   placeholder,
   style,
@@ -29,9 +31,10 @@ export function EditableStat({
     <View style={[styles.container, style]}>
       {label ? <ThemedText style={styles.label}>{label}</ThemedText> : null}
       <TextInput
-        style={[styles.input, { color: textColor, borderColor }, inputStyle]}
+        style={[styles.input, { color: textColor, borderColor }, !editable && styles.readOnlyInput, inputStyle]}
         value={value}
         onChangeText={onChangeText}
+        editable={editable}
         keyboardType={keyboardType}
         placeholder={placeholder}
         placeholderTextColor={borderColor}
@@ -63,5 +66,8 @@ const styles = StyleSheet.create({
     width: 64,
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
+  },
+  readOnlyInput: {
+    opacity: 0.7,
   },
 });

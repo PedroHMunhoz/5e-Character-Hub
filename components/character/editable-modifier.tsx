@@ -7,21 +7,30 @@ import { formatModifier } from '@/utils/format-modifier';
 interface EditableModifierProps {
   label?: string;
   value: string;
-  onChangeText: (value: string) => void;
+  onChangeText?: (value: string) => void;
+  editable?: boolean;
   style?: StyleProp<TextStyle>;
   containerStyle?: StyleProp<ViewStyle>;
 }
 
-export function EditableModifier({ label, value, onChangeText, style, containerStyle }: EditableModifierProps) {
+export function EditableModifier({
+  label,
+  value,
+  onChangeText,
+  editable = true,
+  style,
+  containerStyle,
+}: EditableModifierProps) {
   const textColor = useThemeColor({}, 'text');
   const borderColor = useThemeColor({}, 'icon');
 
   const input = (
     <TextInput
-      style={[styles.input, { color: textColor, borderColor }, style]}
+      style={[styles.input, { color: textColor, borderColor }, !editable && styles.readOnlyInput, style]}
       value={value}
       onChangeText={onChangeText}
-      onBlur={() => onChangeText(formatModifier(value))}
+      onBlur={editable && onChangeText ? () => onChangeText(formatModifier(value)) : undefined}
+      editable={editable}
       keyboardType="default"
     />
   );
@@ -62,5 +71,8 @@ const styles = StyleSheet.create({
     width: 64,
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
+  },
+  readOnlyInput: {
+    opacity: 0.7,
   },
 });

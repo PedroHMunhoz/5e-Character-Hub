@@ -24,16 +24,14 @@ const initialCharacter: CharacterSheet = {
   inspiration: false,
   proficiencyBonus: '',
   abilities: Object.fromEntries(
-    ABILITIES.map((ability) => [ability.key, { score: '', modifier: '' }])
+    ABILITIES.map((ability) => [ability.key, { score: '' }])
   ) as CharacterSheet['abilities'],
   savingThrows: Object.fromEntries(
-    ABILITIES.map((ability) => [ability.key, { proficient: false, modifier: '' }])
+    ABILITIES.map((ability) => [ability.key, { proficient: false }])
   ) as CharacterSheet['savingThrows'],
   skills: Object.fromEntries(
-    SKILLS.map((skill) => [skill.key, { proficient: false, modifier: '' }])
+    SKILLS.map((skill) => [skill.key, { proficient: false }])
   ) as CharacterSheet['skills'],
-  passivePerception: '',
-  passiveInsight: '',
   armorClass: '',
   initiative: '',
   speed: '',
@@ -73,14 +71,9 @@ type Action =
   | { type: 'SET_CLASS_LEVEL'; id: string; value: string }
   | { type: 'TOGGLE_INSPIRATION' }
   | { type: 'SET_ABILITY_SCORE'; key: AbilityKey; value: string }
-  | { type: 'SET_ABILITY_MODIFIER'; key: AbilityKey; value: string }
   | { type: 'TOGGLE_SAVING_THROW'; key: AbilityKey }
-  | { type: 'SET_SAVING_THROW_MODIFIER'; key: AbilityKey; value: string }
   | { type: 'TOGGLE_SKILL'; key: SkillKey }
-  | { type: 'SET_SKILL_MODIFIER'; key: SkillKey; value: string }
   | { type: 'SET_PROFICIENCY_BONUS'; value: string }
-  | { type: 'SET_PASSIVE_PERCEPTION'; value: string }
-  | { type: 'SET_PASSIVE_INSIGHT'; value: string }
   | { type: 'SET_ARMOR_CLASS'; value: string }
   | { type: 'SET_INITIATIVE'; value: string }
   | { type: 'SET_SPEED'; value: string }
@@ -136,14 +129,6 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
           [action.key]: { ...state.abilities[action.key], score: action.value },
         },
       };
-    case 'SET_ABILITY_MODIFIER':
-      return {
-        ...state,
-        abilities: {
-          ...state.abilities,
-          [action.key]: { ...state.abilities[action.key], modifier: action.value },
-        },
-      };
     case 'TOGGLE_SAVING_THROW':
       return {
         ...state,
@@ -153,14 +138,6 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
             ...state.savingThrows[action.key],
             proficient: !state.savingThrows[action.key].proficient,
           },
-        },
-      };
-    case 'SET_SAVING_THROW_MODIFIER':
-      return {
-        ...state,
-        savingThrows: {
-          ...state.savingThrows,
-          [action.key]: { ...state.savingThrows[action.key], modifier: action.value },
         },
       };
     case 'TOGGLE_SKILL':
@@ -174,20 +151,8 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
           },
         },
       };
-    case 'SET_SKILL_MODIFIER':
-      return {
-        ...state,
-        skills: {
-          ...state.skills,
-          [action.key]: { ...state.skills[action.key], modifier: action.value },
-        },
-      };
     case 'SET_PROFICIENCY_BONUS':
       return { ...state, proficiencyBonus: action.value };
-    case 'SET_PASSIVE_PERCEPTION':
-      return { ...state, passivePerception: action.value };
-    case 'SET_PASSIVE_INSIGHT':
-      return { ...state, passiveInsight: action.value };
     case 'SET_ARMOR_CLASS':
       return { ...state, armorClass: action.value };
     case 'SET_INITIATIVE':
@@ -282,14 +247,9 @@ export interface CharacterContextValue {
   setClassLevel: (id: string, value: string) => void;
   toggleInspiration: () => void;
   setAbilityScore: (key: AbilityKey, value: string) => void;
-  setAbilityModifier: (key: AbilityKey, value: string) => void;
   toggleSavingThrowProficiency: (key: AbilityKey) => void;
-  setSavingThrowModifier: (key: AbilityKey, value: string) => void;
   toggleSkillProficiency: (key: SkillKey) => void;
-  setSkillModifier: (key: SkillKey, value: string) => void;
   setProficiencyBonus: (value: string) => void;
-  setPassivePerception: (value: string) => void;
-  setPassiveInsight: (value: string) => void;
   setArmorClass: (value: string) => void;
   setInitiative: (value: string) => void;
   setSpeed: (value: string) => void;
@@ -322,15 +282,9 @@ export function CharacterProvider({ children }: { children: ReactNode }) {
       setClassLevel: (id, value) => dispatch({ type: 'SET_CLASS_LEVEL', id, value }),
       toggleInspiration: () => dispatch({ type: 'TOGGLE_INSPIRATION' }),
       setAbilityScore: (key, value) => dispatch({ type: 'SET_ABILITY_SCORE', key, value }),
-      setAbilityModifier: (key, value) => dispatch({ type: 'SET_ABILITY_MODIFIER', key, value }),
       toggleSavingThrowProficiency: (key) => dispatch({ type: 'TOGGLE_SAVING_THROW', key }),
-      setSavingThrowModifier: (key, value) =>
-        dispatch({ type: 'SET_SAVING_THROW_MODIFIER', key, value }),
       toggleSkillProficiency: (key) => dispatch({ type: 'TOGGLE_SKILL', key }),
-      setSkillModifier: (key, value) => dispatch({ type: 'SET_SKILL_MODIFIER', key, value }),
       setProficiencyBonus: (value) => dispatch({ type: 'SET_PROFICIENCY_BONUS', value }),
-      setPassivePerception: (value) => dispatch({ type: 'SET_PASSIVE_PERCEPTION', value }),
-      setPassiveInsight: (value) => dispatch({ type: 'SET_PASSIVE_INSIGHT', value }),
       setArmorClass: (value) => dispatch({ type: 'SET_ARMOR_CLASS', value }),
       setInitiative: (value) => dispatch({ type: 'SET_INITIATIVE', value }),
       setSpeed: (value) => dispatch({ type: 'SET_SPEED', value }),

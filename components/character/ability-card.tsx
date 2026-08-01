@@ -12,11 +12,9 @@ interface AbilityCardProps {
   score: string;
   onScoreChange: (value: string) => void;
   modifier: string;
-  onModifierChange: (value: string) => void;
   savingThrowProficient: boolean;
   onToggleSavingThrowProficiency: () => void;
   savingThrowModifier: string;
-  onSavingThrowModifierChange: (value: string) => void;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -25,11 +23,9 @@ export function AbilityCard({
   score,
   onScoreChange,
   modifier,
-  onModifierChange,
   savingThrowProficient,
   onToggleSavingThrowProficiency,
   savingThrowModifier,
-  onSavingThrowModifierChange,
   style,
 }: AbilityCardProps) {
   const borderColor = useThemeColor({}, 'icon');
@@ -37,7 +33,7 @@ export function AbilityCard({
   return (
     <ThemedView style={[styles.card, { borderColor }, style]}>
       <ThemedText style={styles.label}>{label}</ThemedText>
-      <EditableModifier value={modifier} onChangeText={onModifierChange} style={styles.modifierInput} />
+      <EditableModifier value={modifier} editable={false} style={styles.modifierInput} />
       <EditableStat value={score} onChangeText={onScoreChange} keyboardType="number-pad" inputStyle={styles.scoreInput} />
       <View style={styles.trSection}>
         <ThemedText style={styles.trTitle} numberOfLines={1}>
@@ -45,7 +41,7 @@ export function AbilityCard({
         </ThemedText>
         <View style={styles.trRow}>
           <ProficiencyDot checked={savingThrowProficient} onToggle={onToggleSavingThrowProficiency} />
-          <EditableModifier value={savingThrowModifier} onChangeText={onSavingThrowModifierChange} style={styles.trModifierInput} />
+          <EditableModifier value={savingThrowModifier} editable={false} style={styles.trModifierInput} />
         </View>
       </View>
     </ThemedView>
@@ -75,7 +71,8 @@ const styles = StyleSheet.create({
   scoreInput: {
     borderRadius: 999,
     fontSize: 14,
-    width: 36,
+    width: 44,
+    height: 44,
   },
   trSection: {
     alignItems: 'center',
