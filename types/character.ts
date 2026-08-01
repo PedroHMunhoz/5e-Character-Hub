@@ -97,7 +97,6 @@ export interface CharacterSheet {
   race: string;
   classes: CharacterClass[];
   inspiration: boolean;
-  proficiencyBonus: string;
   abilities: Record<AbilityKey, AbilityScore>;
   savingThrows: Record<AbilityKey, SavingThrow>;
   skills: Record<SkillKey, Skill>;

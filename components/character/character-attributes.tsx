@@ -13,19 +13,22 @@ import {
   getDerivedModifier,
   getPassiveScore,
 } from '@/utils/ability-modifier';
+import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
 
 export function CharacterAttributes() {
   const { character, setAbilityScore, toggleSavingThrowProficiency, toggleSkillProficiency } = useCharacter();
 
+  const proficiencyBonus = getProficiencyBonus(getCharacterLevel(character.classes));
+
   const passivePerception = getPassiveScore(
     character.abilities.wis.score,
     character.skills.percepcao.proficient,
-    character.proficiencyBonus
+    proficiencyBonus
   );
   const passiveInsight = getPassiveScore(
     character.abilities.wis.score,
     character.skills.intuicao.proficient,
-    character.proficiencyBonus
+    proficiencyBonus
   );
 
   return (
@@ -39,7 +42,7 @@ export function CharacterAttributes() {
             const savingThrowModifier = getDerivedModifier(
               score,
               character.savingThrows[ability.key].proficient,
-              character.proficiencyBonus
+              proficiencyBonus
             );
 
             return (
@@ -77,7 +80,7 @@ export function CharacterAttributes() {
             const skillModifier = getDerivedModifier(
               character.abilities[skill.ability].score,
               character.skills[skill.key].proficient,
-              character.proficiencyBonus
+              proficiencyBonus
             );
 
             return (

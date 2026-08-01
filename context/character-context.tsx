@@ -22,7 +22,6 @@ const initialCharacter: CharacterSheet = {
   race: '',
   classes: [{ id: createClassId(), name: '', level: '' }],
   inspiration: false,
-  proficiencyBonus: '',
   abilities: Object.fromEntries(
     ABILITIES.map((ability) => [ability.key, { score: '' }])
   ) as CharacterSheet['abilities'],
@@ -73,7 +72,6 @@ type Action =
   | { type: 'SET_ABILITY_SCORE'; key: AbilityKey; value: string }
   | { type: 'TOGGLE_SAVING_THROW'; key: AbilityKey }
   | { type: 'TOGGLE_SKILL'; key: SkillKey }
-  | { type: 'SET_PROFICIENCY_BONUS'; value: string }
   | { type: 'SET_ARMOR_CLASS'; value: string }
   | { type: 'SET_INITIATIVE'; value: string }
   | { type: 'SET_SPEED'; value: string }
@@ -151,8 +149,6 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
           },
         },
       };
-    case 'SET_PROFICIENCY_BONUS':
-      return { ...state, proficiencyBonus: action.value };
     case 'SET_ARMOR_CLASS':
       return { ...state, armorClass: action.value };
     case 'SET_INITIATIVE':
@@ -249,7 +245,6 @@ export interface CharacterContextValue {
   setAbilityScore: (key: AbilityKey, value: string) => void;
   toggleSavingThrowProficiency: (key: AbilityKey) => void;
   toggleSkillProficiency: (key: SkillKey) => void;
-  setProficiencyBonus: (value: string) => void;
   setArmorClass: (value: string) => void;
   setInitiative: (value: string) => void;
   setSpeed: (value: string) => void;
@@ -284,7 +279,6 @@ export function CharacterProvider({ children }: { children: ReactNode }) {
       setAbilityScore: (key, value) => dispatch({ type: 'SET_ABILITY_SCORE', key, value }),
       toggleSavingThrowProficiency: (key) => dispatch({ type: 'TOGGLE_SAVING_THROW', key }),
       toggleSkillProficiency: (key) => dispatch({ type: 'TOGGLE_SKILL', key }),
-      setProficiencyBonus: (value) => dispatch({ type: 'SET_PROFICIENCY_BONUS', value }),
       setArmorClass: (value) => dispatch({ type: 'SET_ARMOR_CLASS', value }),
       setInitiative: (value) => dispatch({ type: 'SET_INITIATIVE', value }),
       setSpeed: (value) => dispatch({ type: 'SET_SPEED', value }),

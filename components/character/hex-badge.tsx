@@ -8,8 +8,9 @@ import { formatModifier } from '@/utils/format-modifier';
 interface HexBadgeProps {
   label: string;
   value: string;
-  onChangeText: (value: string) => void;
+  onChangeText?: (value: string) => void;
   formatAsModifier?: boolean;
+  editable?: boolean;
   keyboardType?: KeyboardTypeOptions;
 }
 
@@ -26,7 +27,14 @@ const HEX_POINTS = [
   .map(([x, y]) => `${x},${y}`)
   .join(' ');
 
-export function HexBadge({ label, value, onChangeText, formatAsModifier, keyboardType = 'default' }: HexBadgeProps) {
+export function HexBadge({
+  label,
+  value,
+  onChangeText,
+  formatAsModifier,
+  editable = true,
+  keyboardType = 'default',
+}: HexBadgeProps) {
   const borderColor = useThemeColor({}, 'icon');
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -38,10 +46,11 @@ export function HexBadge({ label, value, onChangeText, formatAsModifier, keyboar
           <Polygon points={HEX_POINTS} fill={backgroundColor} stroke={borderColor} strokeWidth={2} />
         </Svg>
         <TextInput
-          style={[styles.input, { color: textColor }]}
+          style={[styles.input, { color: textColor }, !editable && styles.readOnlyInput]}
           value={value}
           onChangeText={onChangeText}
-          onBlur={() => formatAsModifier && onChangeText(formatModifier(value))}
+          onBlur={editable && formatAsModifier && onChangeText ? () => onChangeText(formatModifier(value)) : undefined}
+          editable={editable}
           keyboardType={keyboardType}
         />
       </View>
@@ -67,6 +76,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
+  },
+  readOnlyInput: {
+    opacity: 0.7,
   },
   label: {
     fontSize: 10,

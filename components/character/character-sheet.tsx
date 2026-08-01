@@ -16,6 +16,8 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { useCharacter } from '@/hooks/use-character';
+import { formatSignedModifier } from '@/utils/ability-modifier';
+import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
 
 export function CharacterSheet() {
   const {
@@ -27,7 +29,6 @@ export function CharacterSheet() {
     setClassName,
     setClassLevel,
     toggleInspiration,
-    setProficiencyBonus,
     setArmorClass,
     setInitiative,
     setSpeed,
@@ -39,10 +40,8 @@ export function CharacterSheet() {
 
   const borderColor = useThemeColor({}, 'icon');
 
-  const characterLevel = character.classes.reduce(
-    (total, characterClass) => total + (parseInt(characterClass.level, 10) || 0),
-    0
-  );
+  const characterLevel = getCharacterLevel(character.classes);
+  const proficiencyBonus = getProficiencyBonus(characterLevel);
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
@@ -76,12 +75,7 @@ export function CharacterSheet() {
           <View style={styles.hexColumn}>
             <HexBadge label="Iniciativa" value={character.initiative} onChangeText={setInitiative} formatAsModifier />
             <HexBadge label="Desloc." value={character.speed} onChangeText={setSpeed} />
-            <HexBadge
-              label="Proficiência"
-              value={character.proficiencyBonus}
-              onChangeText={setProficiencyBonus}
-              formatAsModifier
-            />
+            <HexBadge label="Proficiência" value={formatSignedModifier(proficiencyBonus)} editable={false} />
           </View>
         </View>
 
