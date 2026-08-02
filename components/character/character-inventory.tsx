@@ -2,12 +2,13 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { CollapsibleSection } from '@/components/character/collapsible-section';
 import { CurrencyInput } from '@/components/character/currency-input';
-import { InventoryItemRow } from '@/components/character/inventory-item-row';
+import { EquipmentItemCard } from '@/components/character/equipment-item-card';
+import { StackableItemCard } from '@/components/character/stackable-item-card';
 import { CURRENCY_FIELDS, INVENTORY_SECTIONS } from '@/constants/inventory';
 import { useCharacter } from '@/hooks/use-character';
 
 export function CharacterInventory() {
-  const { character, setCurrencyField, setItemQuantity, toggleItemEquipped } = useCharacter();
+  const { character, setCurrencyField, toggleItemEquipped } = useCharacter();
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
@@ -24,18 +25,34 @@ export function CharacterInventory() {
 
       {INVENTORY_SECTIONS.map((section) => (
         <CollapsibleSection key={section.key} title={section.label}>
-          {section.items.map((item, index) => (
-            <InventoryItemRow
-              key={item.id}
-              name={item.name}
-              subtitle={item.subtitle}
-              alternate={index % 2 === 1}
-              quantity={character.inventoryItems[item.id]?.quantity ?? '1'}
-              onQuantityChange={(value) => setItemQuantity(item.id, value)}
-              equipped={character.inventoryItems[item.id]?.equipped ?? false}
-              onToggleEquipped={() => toggleItemEquipped(item.id)}
-            />
-          ))}
+          <View style={styles.cardList}>
+            {section.items.map((item) => {
+              if (section.category === 'weapon' || section.category === 'armor') {
+                return (
+                  <EquipmentItemCard
+                    key={item.id}
+                    name={item.name}
+                    properties={item.properties}
+                    weight={item.weight}
+                    statValue={section.category === 'weapon' ? item.damageDice : item.armorClassBonus}
+                    statIcon={section.category === 'weapon' ? 'sword' : 'shield'}
+                    equipped={character.inventoryItems[item.id]?.equipped ?? false}
+                    onToggleEquipped={() => toggleItemEquipped(item.id)}
+                  />
+                );
+              }
+
+              return (
+                <StackableItemCard
+                  key={item.id}
+                  name={item.name}
+                  properties={item.properties}
+                  weight={item.weight}
+                  quantity={character.inventoryItems[item.id]?.quantity ?? item.defaultQuantity ?? '1'}
+                />
+              );
+            })}
+          </View>
         </CollapsibleSection>
       ))}
     </ScrollView>
@@ -50,6 +67,9 @@ const styles = StyleSheet.create({
   currencyRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 8,
+  },
+  cardList: {
     gap: 8,
   },
 });

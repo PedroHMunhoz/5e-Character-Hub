@@ -11,7 +11,7 @@ interface CurrencyInputProps {
 
 export function CurrencyInput({ label, value, onChangeText }: CurrencyInputProps) {
   const textColor = useThemeColor({}, 'text');
-  const borderColor = useThemeColor({}, 'icon');
+  const borderColor = useThemeColor({}, 'gold');
 
   function handleChangeText(text: string) {
     onChangeText(text.replace(/[^0-9]/g, ''));
