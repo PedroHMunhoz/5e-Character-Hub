@@ -1,49 +1,51 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { AbilityCard } from '@/components/character/ability-card';
-import { EditableStat } from '@/components/character/editable-stat';
+import { SavingThrowRow } from '@/components/character/saving-throw-row';
 import { SkillRow } from '@/components/character/skill-row';
 import { ThemedText } from '@/components/themed-text';
 import { ABILITIES, ABILITIES_BY_KEY, SKILLS } from '@/constants/character';
 import { useCharacter } from '@/hooks/use-character';
-import {
-  formatPassiveScore,
-  formatSignedModifier,
-  getAbilityModifier,
-  getDerivedModifier,
-  getPassiveScore,
-} from '@/utils/ability-modifier';
+import { useThemeColor } from '@/hooks/use-theme-color';
+import { formatSignedModifier, getAbilityModifier, getDerivedModifier } from '@/utils/ability-modifier';
 import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
+
+const SKILLS_COLUMN_ONE = SKILLS.slice(0, 9);
+const SKILLS_COLUMN_TWO = SKILLS.slice(9, 18);
 
 export function CharacterAttributes() {
   const { character, setAbilityScore, toggleSavingThrowProficiency, toggleSkillProficiency } = useCharacter();
+  const dividerColor = useThemeColor({}, 'gold');
 
   const proficiencyBonus = getProficiencyBonus(getCharacterLevel(character.classes));
 
-  const passivePerception = getPassiveScore(
-    character.abilities.wis.score,
-    character.skills.percepcao.proficient,
-    proficiencyBonus
-  );
-  const passiveInsight = getPassiveScore(
-    character.abilities.wis.score,
-    character.skills.intuicao.proficient,
-    proficiencyBonus
-  );
+  function renderSkillColumn(skills: typeof SKILLS) {
+    return skills.map((skill) => {
+      const skillModifier = getDerivedModifier(
+        character.abilities[skill.ability].score,
+        character.skills[skill.key].proficient,
+        proficiencyBonus
+      );
+
+      return (
+        <SkillRow
+          key={skill.key}
+          label={`${skill.label} (${ABILITIES_BY_KEY[skill.ability].abbr})`}
+          proficient={character.skills[skill.key].proficient}
+          onToggleProficiency={() => toggleSkillProficiency(skill.key)}
+          modifier={formatSignedModifier(skillModifier)}
+        />
+      );
+    });
+  }
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
       <View style={styles.section}>
-        <ThemedText type="subtitle">Atributos</ThemedText>
         <View style={styles.abilityGrid}>
           {ABILITIES.map((ability) => {
             const score = character.abilities[ability.key].score;
             const abilityModifier = getAbilityModifier(score);
-            const savingThrowModifier = getDerivedModifier(
-              score,
-              character.savingThrows[ability.key].proficient,
-              proficiencyBonus
-            );
 
             return (
               <AbilityCard
@@ -53,9 +55,6 @@ export function CharacterAttributes() {
                 score={score}
                 onScoreChange={(value) => setAbilityScore(ability.key, value)}
                 modifier={formatSignedModifier(abilityModifier)}
-                savingThrowProficient={character.savingThrows[ability.key].proficient}
-                onToggleSavingThrowProficiency={() => toggleSavingThrowProficiency(ability.key)}
-                savingThrowModifier={formatSignedModifier(savingThrowModifier)}
               />
             );
           })}
@@ -63,36 +62,36 @@ export function CharacterAttributes() {
       </View>
 
       <View style={styles.section}>
-        <View style={styles.passiveRow}>
-          <ThemedText style={styles.passiveLabel}>Percepção Passiva</ThemedText>
-          <EditableStat value={formatPassiveScore(passivePerception)} editable={false} keyboardType="number-pad" />
-        </View>
-        <View style={styles.passiveRow}>
-          <ThemedText style={styles.passiveLabel}>Intuição Passiva</ThemedText>
-          <EditableStat value={formatPassiveScore(passiveInsight)} editable={false} keyboardType="number-pad" />
+        <ThemedText type="subtitle">Salvaguardas</ThemedText>
+        <View style={[styles.divider, { borderColor: dividerColor }]} />
+        <View style={styles.savingThrowGrid}>
+          {ABILITIES.map((ability) => {
+            const score = character.abilities[ability.key].score;
+            const savingThrowModifier = getDerivedModifier(
+              score,
+              character.savingThrows[ability.key].proficient,
+              proficiencyBonus
+            );
+
+            return (
+              <SavingThrowRow
+                key={ability.key}
+                style={styles.savingThrowRow}
+                label={ability.label}
+                proficient={character.savingThrows[ability.key].proficient}
+                onToggleProficiency={() => toggleSavingThrowProficiency(ability.key)}
+                modifier={formatSignedModifier(savingThrowModifier)}
+              />
+            );
+          })}
         </View>
       </View>
 
       <View style={styles.section}>
         <ThemedText type="subtitle">Perícias</ThemedText>
-        <View style={styles.skillsList}>
-          {SKILLS.map((skill) => {
-            const skillModifier = getDerivedModifier(
-              character.abilities[skill.ability].score,
-              character.skills[skill.key].proficient,
-              proficiencyBonus
-            );
-
-            return (
-              <SkillRow
-                key={skill.key}
-                label={`${skill.label} (${ABILITIES_BY_KEY[skill.ability].abbr})`}
-                proficient={character.skills[skill.key].proficient}
-                onToggleProficiency={() => toggleSkillProficiency(skill.key)}
-                modifier={formatSignedModifier(skillModifier)}
-              />
-            );
-          })}
+        <View style={styles.skillsGrid}>
+          <View style={styles.skillsColumn}>{renderSkillColumn(SKILLS_COLUMN_ONE)}</View>
+          <View style={styles.skillsColumn}>{renderSkillColumn(SKILLS_COLUMN_TWO)}</View>
         </View>
       </View>
 
@@ -115,23 +114,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    rowGap: 20,
   },
   abilityCard: {
     width: '30%',
     minWidth: 0,
   },
-  skillsList: {
-    alignSelf: 'center',
+  divider: {
+    borderBottomWidth: 1,
   },
-  passiveRow: {
+  savingThrowGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 10,
   },
-  passiveLabel: {
-    fontSize: 15,
-    flexShrink: 1,
+  savingThrowRow: {
+    width: '48%',
+    minWidth: 0,
+  },
+  skillsGrid: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  skillsColumn: {
+    flex: 1,
     minWidth: 0,
   },
 });

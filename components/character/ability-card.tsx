@@ -1,8 +1,7 @@
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
-import { EditableModifier } from '@/components/character/editable-modifier';
 import { EditableStat } from '@/components/character/editable-stat';
-import { ProficiencyDot } from '@/components/character/proficiency-dot';
+import { HexModifierBadge } from '@/components/character/hex-modifier-badge';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -12,38 +11,24 @@ interface AbilityCardProps {
   score: string;
   onScoreChange: (value: string) => void;
   modifier: string;
-  savingThrowProficient: boolean;
-  onToggleSavingThrowProficiency: () => void;
-  savingThrowModifier: string;
   style?: StyleProp<ViewStyle>;
 }
 
-export function AbilityCard({
-  label,
-  score,
-  onScoreChange,
-  modifier,
-  savingThrowProficient,
-  onToggleSavingThrowProficiency,
-  savingThrowModifier,
-  style,
-}: AbilityCardProps) {
-  const borderColor = useThemeColor({}, 'icon');
+export function AbilityCard({ label, score, onScoreChange, modifier, style }: AbilityCardProps) {
+  const borderColor = useThemeColor({}, 'gold');
 
   return (
     <ThemedView style={[styles.card, { borderColor }, style]}>
-      <ThemedText style={styles.label}>{label}</ThemedText>
-      <EditableModifier value={modifier} editable={false} style={styles.modifierInput} />
-      <EditableStat value={score} onChangeText={onScoreChange} keyboardType="number-pad" inputStyle={styles.scoreInput} />
-      <View style={styles.trSection}>
-        <ThemedText style={styles.trTitle} numberOfLines={1}>
-          Salvaguarda
-        </ThemedText>
-        <View style={styles.trRow}>
-          <ProficiencyDot checked={savingThrowProficient} onToggle={onToggleSavingThrowProficiency} />
-          <EditableModifier value={savingThrowModifier} editable={false} style={styles.trModifierInput} />
-        </View>
-      </View>
+      <HexModifierBadge value={modifier} style={styles.modifierBadge} />
+      <EditableStat
+        value={score}
+        onChangeText={onScoreChange}
+        keyboardType="number-pad"
+        inputStyle={styles.scoreInput}
+      />
+      <ThemedText style={styles.label} numberOfLines={1}>
+        {label}
+      </ThemedText>
     </ThemedView>
   );
 }
@@ -52,48 +37,31 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
     borderRadius: 12,
-    padding: 8,
-    alignItems: 'center',
-    gap: 6,
-    minWidth: 0,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    textAlign: 'center',
-  },
-  modifierInput: {
-    fontSize: 20,
-    height: 40,
-    width: 56,
-  },
-  scoreInput: {
-    borderRadius: 999,
-    fontSize: 14,
-    width: 44,
-    height: 44,
-  },
-  trSection: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  trTitle: {
-    fontSize: 10,
-    textAlign: 'center',
-    opacity: 0.75,
-    textTransform: 'uppercase',
-  },
-  trRow: {
-    flexDirection: 'row',
+    padding: 10,
+    paddingTop: 16,
     alignItems: 'center',
     gap: 4,
+    minWidth: 0,
+    overflow: 'visible',
   },
-  trModifierInput: {
-    fontSize: 14,
-    height: 28,
-    width: 44,
-    paddingVertical: 2,
-    paddingHorizontal: 6,
+  modifierBadge: {
+    position: 'absolute',
+    top: -16,
+    right: -10,
+  },
+  scoreInput: {
+    borderWidth: 0,
+    fontSize: 32,
+    lineHeight: 36,
+    fontWeight: '700',
+    height: 44,
+    width: 64,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

@@ -7,6 +7,7 @@ import { HexBadge } from '@/components/character/hex-badge';
 import { HPTracker } from '@/components/character/hp-tracker';
 import { InspirationToggle } from '@/components/character/inspiration-toggle';
 import { LevelBadge } from '@/components/character/level-badge';
+import { PassiveScores } from '@/components/character/passive-scores';
 import { PipRow } from '@/components/character/pip-row';
 import { PortraitPlaceholder } from '@/components/character/portrait-placeholder';
 import { ProgressBar } from '@/components/character/progress-bar';
@@ -117,6 +118,11 @@ export function CharacterSheet() {
           temporary={character.hitPoints.temporary}
           onTemporaryChange={(value) => setHitPointsField('temporary', value)}
         />
+      </View>
+
+      <PassiveScores proficiencyBonus={proficiencyBonus} />
+
+      <View style={styles.section}>
         <View style={styles.hitDiceInputs}>
           <EditableStat
             label="Atual"

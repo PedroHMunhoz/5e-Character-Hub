@@ -1,27 +1,30 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
 import { ProficiencyDot } from '@/components/character/proficiency-dot';
 import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
-interface SkillRowProps {
+interface SavingThrowRowProps {
   label: string;
   proficient: boolean;
   onToggleProficiency: () => void;
   modifier: string;
+  style?: StyleProp<ViewStyle>;
 }
 
-export function SkillRow({ label, proficient, onToggleProficiency, modifier }: SkillRowProps) {
+export function SavingThrowRow({ label, proficient, onToggleProficiency, modifier, style }: SavingThrowRowProps) {
+  const borderColor = useThemeColor({}, 'gold');
   const goldColor = useThemeColor({}, 'gold');
 
   return (
-    <View style={styles.row}>
+    <ThemedView style={[styles.row, { borderColor }, style]}>
       <ProficiencyDot checked={proficient} onToggle={onToggleProficiency} />
       <ThemedText style={styles.label} numberOfLines={1}>
         {label}
       </ThemedText>
       <ThemedText style={[styles.value, { color: goldColor }]}>{modifier}</ThemedText>
-    </View>
+    </ThemedView>
   );
 }
 
@@ -30,17 +33,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingVertical: 4,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
-  label: {
-    fontSize: 15,
-    flexShrink: 1,
-    flexGrow: 1,
-    minWidth: 0,
-  },
-  value: {
-    fontSize: 15,
-    fontWeight: '700',
-    fontVariant: ['tabular-nums'],
-  },
+  label: { fontSize: 15, flexShrink: 1, flexGrow: 1, minWidth: 0 },
+  value: { fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] },
 });
