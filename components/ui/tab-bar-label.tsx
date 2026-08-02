@@ -9,7 +9,11 @@ interface TabBarLabelProps {
 
 export function TabBarLabel({ label, color }: TabBarLabelProps) {
   return (
-    <ThemedText style={[styles.label, { color }]}>
+    <ThemedText
+      style={[styles.label, { color }]}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.75}>
       {label}
     </ThemedText>
   );
@@ -17,8 +21,8 @@ export function TabBarLabel({ label, color }: TabBarLabelProps) {
 
 const styles = StyleSheet.create({
   label: {
-    fontSize: 9,
-    lineHeight: 11,
+    fontSize: 8,
+    lineHeight: 10,
     textAlign: 'center',
     flexShrink: 1,
   },
