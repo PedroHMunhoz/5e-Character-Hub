@@ -1,37 +1,35 @@
 import { StyleSheet, View } from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { ItemIconPlaceholder } from '@/components/character/item-icon-placeholder';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
-interface StackableItemCardProps {
+interface FeatureItemCardProps {
   name: string;
-  properties?: string;
-  weight: string;
-  quantity: string;
+  usageType: 'ativa' | 'passiva';
+  maxUses?: string;
+  usesCurrent?: string;
+  recovery?: string;
 }
 
-export function StackableItemCard({ name, properties, weight, quantity }: StackableItemCardProps) {
+export function FeatureItemCard({ name, usageType, maxUses, usesCurrent, recovery }: FeatureItemCardProps) {
   const goldColor = useThemeColor({}, 'gold');
+  const isPassive = usageType === 'passiva';
 
   return (
     <ThemedView style={[styles.card, { borderColor: goldColor }]}>
-      <ItemIconPlaceholder badge={quantity} />
+      <ItemIconPlaceholder badge={maxUses ? `${usesCurrent}/${maxUses}` : undefined} />
       <View style={styles.info}>
         <ThemedText style={styles.name} numberOfLines={1}>
           {name}
         </ThemedText>
-        {properties ? (
-          <ThemedText style={styles.properties} numberOfLines={2}>
-            {properties}
-          </ThemedText>
-        ) : null}
+        <ThemedText style={styles.properties}>{isPassive ? 'Passiva' : 'Ativa'}</ThemedText>
       </View>
       <View style={styles.statRow}>
-        <MaterialCommunityIcons name="weight-kilogram" size={16} color={goldColor} />
-        <ThemedText style={styles.weightValue}>{weight}</ThemedText>
+        <ThemedText style={styles.recoveryLabel} numberOfLines={1}>
+          {`Recarga: ${isPassive ? '-' : recovery}`}
+        </ThemedText>
       </View>
     </ThemedView>
   );
@@ -65,7 +63,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  weightValue: {
-    fontSize: 14,
+  recoveryLabel: {
+    fontSize: 12,
+    opacity: 0.7,
   },
 });

@@ -4,17 +4,17 @@ import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
 interface ItemIconPlaceholderProps {
-  quantity?: string;
+  badge?: string;
 }
 
-export function ItemIconPlaceholder({ quantity }: ItemIconPlaceholderProps) {
+export function ItemIconPlaceholder({ badge }: ItemIconPlaceholderProps) {
   const borderColor = useThemeColor({}, 'gold');
 
   return (
     <View style={[styles.container, { borderColor }]}>
-      {quantity ? (
+      {badge ? (
         <View style={[styles.badge, { borderColor }]}>
-          <ThemedText style={[styles.badgeText, { color: borderColor }]}>{quantity}</ThemedText>
+          <ThemedText style={[styles.badgeText, { color: borderColor }]}>{badge}</ThemedText>
         </View>
       ) : null}
     </View>
