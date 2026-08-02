@@ -20,16 +20,16 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Início',
-          tabBarIcon: ({ color }) => <IconSymbol size={22} name="house.fill" color={color} />,
-          tabBarLabel: ({ color }) => <TabBarLabel label="Início" color={color} />,
+          title: 'Resumo',
+          tabBarIcon: ({ color }) => <IconSymbol size={22} name="shield.fill" color={color} />,
+          tabBarLabel: ({ color }) => <TabBarLabel label="Resumo" color={color} />,
         }}
       />
       <Tabs.Screen
         name="attributes"
         options={{
           title: 'Atributos',
-          tabBarIcon: ({ color }) => <IconSymbol size={22} name="person.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={22} name="chart.bar.fill" color={color} />,
           tabBarLabel: ({ color }) => <TabBarLabel label="Atributos" color={color} />,
         }}
       />

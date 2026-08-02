@@ -47,3 +47,7 @@ export function getPassiveScore(
 export function formatPassiveScore(value: number | null): string {
   return value === null ? '' : `${value}`;
 }
+
+export function getArmorClass(dexScore: string): number {
+  return 10 + (getAbilityModifier(dexScore) ?? 0);
+}

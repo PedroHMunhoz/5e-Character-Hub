@@ -22,7 +22,7 @@ export function HPTracker({
   temporary,
   onTemporaryChange,
 }: HPTrackerProps) {
-  const borderColor = useThemeColor({}, 'icon');
+  const goldColor = useThemeColor({}, 'gold');
   const tintColor = useThemeColor({}, 'tint');
 
   const currentNum = parseInt(current, 10) || 0;
@@ -39,7 +39,7 @@ export function HPTracker({
   }
 
   return (
-    <ThemedView style={[styles.card, { borderColor }]}>
+    <ThemedView style={[styles.card, { borderColor: goldColor }]}>
       <View style={styles.buttonRow}>
         <Pressable onPress={handleHeal} style={[styles.button, { borderColor: tintColor }]}>
           <ThemedText style={[styles.buttonLabel, { color: tintColor }]}>Cura</ThemedText>
@@ -55,7 +55,7 @@ export function HPTracker({
           onChangeText={onCurrentChange}
           keyboardType="number-pad"
           style={styles.item}
-          inputStyle={styles.currentInput}
+          inputStyle={[styles.currentInput, { borderColor: goldColor, color: goldColor }]}
         />
         <ThemedText style={styles.separator}>/</ThemedText>
         <EditableStat
@@ -64,7 +64,7 @@ export function HPTracker({
           onChangeText={onMaxChange}
           keyboardType="number-pad"
           style={styles.item}
-          inputStyle={styles.input}
+          inputStyle={[styles.input, { borderColor: goldColor, color: goldColor }]}
         />
         <EditableStat
           label="Temp."
@@ -72,7 +72,7 @@ export function HPTracker({
           onChangeText={onTemporaryChange}
           keyboardType="number-pad"
           style={styles.item}
-          inputStyle={styles.input}
+          inputStyle={[styles.input, { borderColor: goldColor, color: goldColor }]}
         />
       </View>
     </ThemedView>

@@ -4,20 +4,19 @@ import { ClassLevels } from '@/components/character/class-levels';
 import { DeathSaves } from '@/components/character/death-saves';
 import { EditableStat } from '@/components/character/editable-stat';
 import { HexBadge } from '@/components/character/hex-badge';
+import { HexModifierBadge } from '@/components/character/hex-modifier-badge';
 import { HPTracker } from '@/components/character/hp-tracker';
 import { InspirationToggle } from '@/components/character/inspiration-toggle';
-import { LevelBadge } from '@/components/character/level-badge';
 import { PassiveScores } from '@/components/character/passive-scores';
 import { PipRow } from '@/components/character/pip-row';
 import { PortraitPlaceholder } from '@/components/character/portrait-placeholder';
-import { ProgressBar } from '@/components/character/progress-bar';
 import { RestButtons } from '@/components/character/rest-buttons';
-import { RoundBadge } from '@/components/character/round-badge';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { useCharacter } from '@/hooks/use-character';
-import { formatSignedModifier } from '@/utils/ability-modifier';
+import { VitalBar } from '@/components/character/vital-bar';
+import { formatSignedModifier, getAbilityModifier, getArmorClass } from '@/utils/ability-modifier';
 import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
 
 export function CharacterSheet() {
@@ -30,8 +29,6 @@ export function CharacterSheet() {
     setClassName,
     setClassLevel,
     toggleInspiration,
-    setArmorClass,
-    setInitiative,
     setSpeed,
     setHitPointsField,
     setHitDiceField,
@@ -39,10 +36,12 @@ export function CharacterSheet() {
     setDeathSaves,
   } = useCharacter();
 
-  const borderColor = useThemeColor({}, 'icon');
+  const goldColor = useThemeColor({}, 'gold');
 
   const characterLevel = getCharacterLevel(character.classes);
   const proficiencyBonus = getProficiencyBonus(characterLevel);
+  const dexModifier = getAbilityModifier(character.abilities.dex.score);
+  const armorClass = getArmorClass(character.abilities.dex.score);
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
@@ -62,44 +61,47 @@ export function CharacterSheet() {
           <RestButtons />
         </View>
         <View style={styles.headerRight}>
-          <LevelBadge level={characterLevel} />
+          <HexModifierBadge value={String(characterLevel)} valueColor={goldColor} />
           <InspirationToggle value={character.inspiration} onValueChange={toggleInspiration} />
         </View>
       </View>
 
-      <ThemedView style={[styles.summaryCard, { borderColor }]}>
+      <ThemedView style={[styles.summaryCard, { borderColor: goldColor }]}>
         <View style={styles.summaryTopRow}>
-          <RoundBadge label="CA" value={character.armorClass} onChangeText={setArmorClass} />
+          <HexBadge label="CA" value={String(armorClass)} editable={false} />
           <View style={styles.summaryPortrait}>
             <PortraitPlaceholder />
           </View>
           <View style={styles.hexColumn}>
-            <HexBadge label="Iniciativa" value={character.initiative} onChangeText={setInitiative} formatAsModifier />
+            <HexBadge label="Iniciativa" value={formatSignedModifier(dexModifier ?? 0)} editable={false} />
             <HexBadge label="Desloc." value={character.speed} onChangeText={setSpeed} />
             <HexBadge label="Proficiência" value={formatSignedModifier(proficiencyBonus)} editable={false} />
           </View>
         </View>
 
-        <View style={styles.section}>
-          <ThemedText style={styles.sectionLabel}>Pontos de Vida</ThemedText>
-          <ProgressBar
-            current={character.hitPoints.current}
-            max={character.hitPoints.max}
-            extra={character.hitPoints.temporary}
-          />
-        </View>
+        <VitalBar
+          label="Pontos de Vida"
+          current={character.hitPoints.current}
+          max={character.hitPoints.max}
+          extra={character.hitPoints.temporary}
+          gradientColors={['#5c1414', '#8b1e1e']}
+        />
+
+        <VitalBar
+          label="Dados de Vida"
+          current={character.hitDice.current}
+          max={character.hitDice.max}
+          gradientColors={['#14401a', '#2e6b34']}
+        />
 
         <View style={styles.section}>
-          <ThemedText style={styles.sectionLabel}>Dados de Vida</ThemedText>
-          <ProgressBar current={character.hitDice.current} max={character.hitDice.max} />
-        </View>
-
-        <View style={styles.section}>
-          <ThemedText style={styles.sectionLabel}>Exaustão</ThemedText>
+          <ThemedText type="subtitle" style={styles.sectionLabel}>
+            Exaustão
+          </ThemedText>
           <PipRow count={6} filled={character.exhaustion} onSetFilled={setExhaustion} />
         </View>
 
-        <View style={[styles.divider, { borderColor }]} />
+        <View style={[styles.divider, { borderColor: goldColor }]} />
 
         <DeathSaves
           successes={character.deathSaves.successes}
@@ -108,6 +110,8 @@ export function CharacterSheet() {
           onFailuresChange={(value) => setDeathSaves('failures', value)}
         />
       </ThemedView>
+
+      <PassiveScores proficiencyBonus={proficiencyBonus} />
 
       <View style={styles.section}>
         <HPTracker
@@ -120,8 +124,6 @@ export function CharacterSheet() {
         />
       </View>
 
-      <PassiveScores proficiencyBonus={proficiencyBonus} />
-
       <View style={styles.section}>
         <View style={styles.hitDiceInputs}>
           <EditableStat
@@ -129,12 +131,14 @@ export function CharacterSheet() {
             value={character.hitDice.current}
             onChangeText={(value) => setHitDiceField('current', value)}
             keyboardType="number-pad"
+            inputStyle={{ borderColor: goldColor, color: goldColor }}
           />
           <EditableStat
             label="Máximo"
             value={character.hitDice.max}
             onChangeText={(value) => setHitDiceField('max', value)}
             keyboardType="number-pad"
+            inputStyle={{ borderColor: goldColor, color: goldColor }}
           />
         </View>
       </View>
@@ -186,10 +190,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   sectionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    opacity: 0.7,
+    fontSize: 16,
   },
   hitDiceInputs: {
     flexDirection: 'row',

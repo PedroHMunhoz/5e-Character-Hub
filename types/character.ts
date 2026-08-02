@@ -100,8 +100,6 @@ export interface CharacterSheet {
   abilities: Record<AbilityKey, AbilityScore>;
   savingThrows: Record<AbilityKey, SavingThrow>;
   skills: Record<SkillKey, Skill>;
-  armorClass: string;
-  initiative: string;
   speed: string;
   hitPoints: HitPoints;
   hitDice: HitDice;

@@ -14,18 +14,9 @@ interface HexBadgeProps {
   keyboardType?: KeyboardTypeOptions;
 }
 
-const HEX_WIDTH = 104;
-const HEX_HEIGHT = 44;
-const HEX_POINTS = [
-  [HEX_WIDTH / 2, 0],
-  [HEX_WIDTH, HEX_HEIGHT * 0.32],
-  [HEX_WIDTH, HEX_HEIGHT * 0.68],
-  [HEX_WIDTH / 2, HEX_HEIGHT],
-  [0, HEX_HEIGHT * 0.68],
-  [0, HEX_HEIGHT * 0.32],
-]
-  .map(([x, y]) => `${x},${y}`)
-  .join(' ');
+const HEX_WIDTH = 82;
+const HEX_HEIGHT = 52;
+const HEX_POINTS = `${HEX_WIDTH * 0.28},2 ${HEX_WIDTH * 0.72},2 ${HEX_WIDTH - 2},${HEX_HEIGHT / 2} ${HEX_WIDTH * 0.72},${HEX_HEIGHT - 2} ${HEX_WIDTH * 0.28},${HEX_HEIGHT - 2} 2,${HEX_HEIGHT / 2}`;
 
 export function HexBadge({
   label,
@@ -35,18 +26,17 @@ export function HexBadge({
   editable = true,
   keyboardType = 'default',
 }: HexBadgeProps) {
-  const borderColor = useThemeColor({}, 'icon');
+  const goldColor = useThemeColor({}, 'gold');
   const backgroundColor = useThemeColor({}, 'background');
-  const textColor = useThemeColor({}, 'text');
 
   return (
     <View style={styles.container}>
       <View style={styles.hexWrapper}>
-        <Svg width={HEX_WIDTH} height={HEX_HEIGHT} style={StyleSheet.absoluteFill}>
-          <Polygon points={HEX_POINTS} fill={backgroundColor} stroke={borderColor} strokeWidth={2} />
+        <Svg width={HEX_WIDTH} height={HEX_HEIGHT} style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Polygon points={HEX_POINTS} fill={backgroundColor} stroke={goldColor} strokeWidth={2} />
         </Svg>
         <TextInput
-          style={[styles.input, { color: textColor }, !editable && styles.readOnlyInput]}
+          style={[styles.input, { color: goldColor }, !editable && styles.readOnlyInput]}
           value={value}
           onChangeText={onChangeText}
           onBlur={editable && formatAsModifier && onChangeText ? () => onChangeText(formatModifier(value)) : undefined}
@@ -76,6 +66,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
+    position: 'relative',
+    zIndex: 1,
   },
   readOnlyInput: {
     opacity: 0.7,

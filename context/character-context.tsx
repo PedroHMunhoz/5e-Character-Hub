@@ -31,8 +31,6 @@ const initialCharacter: CharacterSheet = {
   skills: Object.fromEntries(
     SKILLS.map((skill) => [skill.key, { proficient: false }])
   ) as CharacterSheet['skills'],
-  armorClass: '',
-  initiative: '',
   speed: '',
   hitPoints: { max: '', current: '', temporary: '' },
   hitDice: { current: '', max: '' },
@@ -72,8 +70,6 @@ type Action =
   | { type: 'SET_ABILITY_SCORE'; key: AbilityKey; value: string }
   | { type: 'TOGGLE_SAVING_THROW'; key: AbilityKey }
   | { type: 'TOGGLE_SKILL'; key: SkillKey }
-  | { type: 'SET_ARMOR_CLASS'; value: string }
-  | { type: 'SET_INITIATIVE'; value: string }
   | { type: 'SET_SPEED'; value: string }
   | { type: 'SET_HP_FIELD'; field: keyof HitPoints; value: string }
   | { type: 'SET_HIT_DICE_FIELD'; field: keyof HitDice; value: string }
@@ -149,10 +145,6 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
           },
         },
       };
-    case 'SET_ARMOR_CLASS':
-      return { ...state, armorClass: action.value };
-    case 'SET_INITIATIVE':
-      return { ...state, initiative: action.value };
     case 'SET_SPEED':
       return { ...state, speed: action.value };
     case 'SET_HP_FIELD':
@@ -245,8 +237,6 @@ export interface CharacterContextValue {
   setAbilityScore: (key: AbilityKey, value: string) => void;
   toggleSavingThrowProficiency: (key: AbilityKey) => void;
   toggleSkillProficiency: (key: SkillKey) => void;
-  setArmorClass: (value: string) => void;
-  setInitiative: (value: string) => void;
   setSpeed: (value: string) => void;
   setHitPointsField: (field: keyof HitPoints, value: string) => void;
   setHitDiceField: (field: keyof HitDice, value: string) => void;
@@ -279,8 +269,6 @@ export function CharacterProvider({ children }: { children: ReactNode }) {
       setAbilityScore: (key, value) => dispatch({ type: 'SET_ABILITY_SCORE', key, value }),
       toggleSavingThrowProficiency: (key) => dispatch({ type: 'TOGGLE_SAVING_THROW', key }),
       toggleSkillProficiency: (key) => dispatch({ type: 'TOGGLE_SKILL', key }),
-      setArmorClass: (value) => dispatch({ type: 'SET_ARMOR_CLASS', value }),
-      setInitiative: (value) => dispatch({ type: 'SET_INITIATIVE', value }),
       setSpeed: (value) => dispatch({ type: 'SET_SPEED', value }),
       setHitPointsField: (field, value) => dispatch({ type: 'SET_HP_FIELD', field, value }),
       setHitDiceField: (field, value) => dispatch({ type: 'SET_HIT_DICE_FIELD', field, value }),

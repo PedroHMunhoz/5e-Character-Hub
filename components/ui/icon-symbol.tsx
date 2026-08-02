@@ -24,6 +24,8 @@ const MAPPING = {
   'list.bullet': 'format-list-bulleted',
   'wand.and.sparkles': 'auto-fix-high',
   'square.and.pencil': 'edit',
+  'shield.fill': 'shield',
+  'chart.bar.fill': 'bar-chart',
 } as IconMapping;
 
 // Icons without a good MaterialIcons equivalent — rendered via MaterialCommunityIcons instead.

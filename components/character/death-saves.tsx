@@ -21,7 +21,7 @@ export function DeathSaves({ successes, failures, onSuccessesChange, onFailuresC
         <PipRow count={3} filled={successes} onSetFilled={onSuccessesChange} color="#2e9e44" icon="check-bold" />
       </View>
       <View style={styles.row}>
-        <ThemedText style={styles.label}>Erro</ThemedText>
+        <ThemedText style={styles.label}>Falha</ThemedText>
         <PipRow count={3} filled={failures} onSetFilled={onFailuresChange} color="#c0392b" icon="skull" />
       </View>
     </View>
