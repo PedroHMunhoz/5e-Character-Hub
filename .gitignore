@@ -41,3 +41,8 @@ app-example
 # generated native folders
 /ios
 /android
+
+# 5e reference data: raw source dump and compiled db are build
+# artifacts derived from copyrighted sourcebooks, never commit them
+/5e-2014-data/
+/assets/data/*.db

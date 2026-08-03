@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useSQLiteContext } from 'expo-sqlite';
 
 import { CollapsibleSection } from '@/components/character/collapsible-section';
 import { SpellRow } from '@/components/character/spell-row';
@@ -9,25 +10,60 @@ import {
   MOCK_MAX_PREPARED_SPELLS,
   MOCK_SPELL_ATTACK_BONUS,
   MOCK_SPELL_SAVE_DC,
-  SPELL_LEVEL_SECTIONS,
+  SPELL_LEVEL_LABELS,
+  SPELL_LOADING_MESSAGES,
+  SPELL_SCHOOL_LABELS,
   SPELL_SLOT_MAX,
 } from '@/constants/spells';
+import { getAllSpells } from '@/data/queries/spells';
 import { useCharacter } from '@/hooks/use-character';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import type { Spell } from '@/types/reference';
 
 export function CharacterSpells() {
+  const db = useSQLiteContext();
   const { character, toggleSpellPrepared, setSpellSlotUsed } = useCharacter();
   const [search, setSearch] = useState('');
+  const [spells, setSpells] = useState<Spell[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMessage] = useState(
+    () => SPELL_LOADING_MESSAGES[Math.floor(Math.random() * SPELL_LOADING_MESSAGES.length)]
+  );
   const goldColor = useThemeColor({}, 'gold');
   const textColor = useThemeColor({}, 'text');
 
+  useEffect(() => {
+    getAllSpells(db).then((data) => {
+      setSpells(data);
+      setLoading(false);
+    });
+  }, [db]);
+
+  const sections = useMemo(
+    () =>
+      SPELL_LEVEL_LABELS.map(({ key, label, level }) => ({
+        key,
+        label,
+        level,
+        items: spells.filter((spell) => spell.level === level),
+      })),
+    [spells]
+  );
+
   const preparedCount = useMemo(() => {
-    return SPELL_LEVEL_SECTIONS.filter((section) => section.level >= 1)
-      .flatMap((section) => section.items)
-      .filter((item) => character.spells[item.id]?.prepared).length;
-  }, [character.spells]);
+    return spells.filter((spell) => spell.level >= 1 && character.spells[String(spell.id)]?.prepared).length;
+  }, [character.spells, spells]);
 
   const normalizedSearch = search.trim().toLowerCase();
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={goldColor} />
+        <ThemedText style={[styles.loadingMessage, { color: goldColor }]}>{loadingMessage}</ThemedText>
+      </View>
+    );
+  }
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
@@ -58,9 +94,9 @@ export function CharacterSpells() {
         />
       </View>
 
-      {SPELL_LEVEL_SECTIONS.map((section) => {
+      {sections.map((section) => {
         const items = normalizedSearch
-          ? section.items.filter((item) => item.name.toLowerCase().includes(normalizedSearch))
+          ? section.items.filter((spell) => spell.name.toLowerCase().includes(normalizedSearch))
           : section.items;
 
         return (
@@ -77,14 +113,14 @@ export function CharacterSpells() {
               ) : undefined
             }>
             <View style={styles.cardList}>
-              {items.map((item) => (
+              {items.map((spell) => (
                 <SpellRow
-                  key={item.id}
-                  name={item.name}
-                  school={item.school}
-                  ritual={item.ritual}
-                  prepared={section.level >= 1 ? (character.spells[item.id]?.prepared ?? false) : undefined}
-                  onTogglePrepared={section.level >= 1 ? () => toggleSpellPrepared(item.id) : undefined}
+                  key={spell.id}
+                  name={spell.name}
+                  school={SPELL_SCHOOL_LABELS[spell.school] ?? spell.school}
+                  ritual={spell.ritual}
+                  prepared={section.level >= 1 ? (character.spells[String(spell.id)]?.prepared ?? false) : undefined}
+                  onTogglePrepared={section.level >= 1 ? () => toggleSpellPrepared(String(spell.id)) : undefined}
                 />
               ))}
             </View>
@@ -96,6 +132,16 @@ export function CharacterSpells() {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  loadingMessage: {
+    fontSize: 15,
+    fontStyle: 'italic',
+  },
   content: {
     padding: 16,
     gap: 20,
