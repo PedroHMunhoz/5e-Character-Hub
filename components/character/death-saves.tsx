@@ -14,7 +14,7 @@ export function DeathSaves({ successes, failures, onSuccessesChange, onFailuresC
   return (
     <View style={styles.container}>
       <ThemedText type="subtitle" style={styles.title}>
-        Resistência à Morte
+        Salvaguarda contra Morte
       </ThemedText>
       <View style={styles.row}>
         <ThemedText style={styles.label}>Sucesso</ThemedText>

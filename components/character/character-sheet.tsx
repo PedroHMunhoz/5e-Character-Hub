@@ -2,22 +2,19 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ClassLevels } from '@/components/character/class-levels';
 import { DeathSaves } from '@/components/character/death-saves';
-import { EditableStat } from '@/components/character/editable-stat';
-import { HexBadge } from '@/components/character/hex-badge';
 import { HexModifierBadge } from '@/components/character/hex-modifier-badge';
-import { HPTracker } from '@/components/character/hp-tracker';
 import { InspirationToggle } from '@/components/character/inspiration-toggle';
 import { PassiveScores } from '@/components/character/passive-scores';
 import { PipRow } from '@/components/character/pip-row';
 import { PortraitPlaceholder } from '@/components/character/portrait-placeholder';
-import { RestButtons } from '@/components/character/rest-buttons';
+import { StatField } from '@/components/character/stat-field';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { useCharacter } from '@/hooks/use-character';
 import { VitalBar } from '@/components/character/vital-bar';
 import { formatSignedModifier, getAbilityModifier, getArmorClass } from '@/utils/ability-modifier';
 import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
+import { formatSpeed } from '@/utils/speed';
 
 export function CharacterSheet() {
   const {
@@ -29,9 +26,6 @@ export function CharacterSheet() {
     setClassName,
     setClassLevel,
     toggleInspiration,
-    setSpeed,
-    setHitPointsField,
-    setHitDiceField,
     setExhaustion,
     setDeathSaves,
   } = useCharacter();
@@ -58,50 +52,57 @@ export function CharacterSheet() {
             onAddClass={addClass}
             onRemoveClass={removeClass}
           />
-          <RestButtons />
         </View>
         <View style={styles.headerRight}>
-          <HexModifierBadge value={String(characterLevel)} valueColor={goldColor} />
           <InspirationToggle value={character.inspiration} onValueChange={toggleInspiration} />
+          <HexModifierBadge value={String(characterLevel)} valueColor={goldColor} label="Nível" />
         </View>
       </View>
 
-      <ThemedView style={[styles.summaryCard, { borderColor: goldColor }]}>
-        <View style={styles.summaryTopRow}>
-          <HexBadge label="CA" value={String(armorClass)} editable={false} />
-          <View style={styles.summaryPortrait}>
-            <PortraitPlaceholder />
+      <View style={styles.summaryCard}>
+        <View style={styles.combatRow}>
+          <View style={styles.combatFields}>
+            <VitalBar
+              label="Pontos de Vida"
+              current={character.hitPoints.current}
+              max={character.hitPoints.max}
+              gradientColors={['#5c1414', '#8b1e1e']}
+            />
+            <StatField label="CA" value={String(armorClass)} />
+            <StatField label="Iniciativa" value={formatSignedModifier(dexModifier ?? 0)} />
+            <StatField label="Deslocamento" value={formatSpeed(character.speed)} />
           </View>
-          <View style={styles.hexColumn}>
-            <HexBadge label="Iniciativa" value={formatSignedModifier(dexModifier ?? 0)} editable={false} />
-            <HexBadge label="Desloc." value={character.speed} onChangeText={setSpeed} />
-            <HexBadge label="Proficiência" value={formatSignedModifier(proficiencyBonus)} editable={false} />
+          <View style={styles.portraitWrapper}>
+            <PortraitPlaceholder style={styles.portraitImage} />
           </View>
         </View>
 
-        <VitalBar
-          label="Pontos de Vida"
-          current={character.hitPoints.current}
-          max={character.hitPoints.max}
-          extra={character.hitPoints.temporary}
-          gradientColors={['#5c1414', '#8b1e1e']}
-        />
+        <View style={styles.secondaryRow}>
+          <StatField label="PV Temporário" value={character.hitPoints.temporary} style={styles.secondaryField} />
+          <StatField
+            label="Proficiência"
+            value={formatSignedModifier(proficiencyBonus)}
+            style={styles.secondaryField}
+          />
+        </View>
 
         <VitalBar
-          label="Dados de Vida"
+          label="Dado de Vida"
           current={character.hitDice.current}
           max={character.hitDice.max}
           gradientColors={['#14401a', '#2e6b34']}
         />
 
-        <View style={styles.section}>
+        <PassiveScores proficiencyBonus={proficiencyBonus} />
+
+        <View style={[styles.divider, { borderColor: goldColor }]} />
+
+        <View style={styles.exhaustionRow}>
           <ThemedText type="subtitle" style={styles.sectionLabel}>
             Exaustão
           </ThemedText>
           <PipRow count={6} filled={character.exhaustion} onSetFilled={setExhaustion} />
         </View>
-
-        <View style={[styles.divider, { borderColor: goldColor }]} />
 
         <DeathSaves
           successes={character.deathSaves.successes}
@@ -109,38 +110,6 @@ export function CharacterSheet() {
           onSuccessesChange={(value) => setDeathSaves('successes', value)}
           onFailuresChange={(value) => setDeathSaves('failures', value)}
         />
-      </ThemedView>
-
-      <PassiveScores proficiencyBonus={proficiencyBonus} />
-
-      <View style={styles.section}>
-        <HPTracker
-          max={character.hitPoints.max}
-          onMaxChange={(value) => setHitPointsField('max', value)}
-          current={character.hitPoints.current}
-          onCurrentChange={(value) => setHitPointsField('current', value)}
-          temporary={character.hitPoints.temporary}
-          onTemporaryChange={(value) => setHitPointsField('temporary', value)}
-        />
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.hitDiceInputs}>
-          <EditableStat
-            label="Atual"
-            value={character.hitDice.current}
-            onChangeText={(value) => setHitDiceField('current', value)}
-            keyboardType="number-pad"
-            inputStyle={{ borderColor: goldColor, color: goldColor }}
-          />
-          <EditableStat
-            label="Máximo"
-            value={character.hitDice.max}
-            onChangeText={(value) => setHitDiceField('max', value)}
-            keyboardType="number-pad"
-            inputStyle={{ borderColor: goldColor, color: goldColor }}
-          />
-        </View>
       </View>
     </ScrollView>
   );
@@ -154,7 +123,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 12,
   },
   headerLeft: {
@@ -167,35 +136,40 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   summaryCard: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    gap: 16,
+    paddingVertical: 12,
+    gap: 12,
   },
-  summaryTopRow: {
+  combatRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
   },
-  summaryPortrait: {
+  combatFields: {
     flex: 1,
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: 6,
   },
-  hexColumn: {
+  portraitWrapper: {
+    width: 128,
+    height: 128,
+  },
+  portraitImage: {
+    width: '100%',
+    height: '100%',
+  },
+  secondaryRow: {
+    flexDirection: 'row',
     gap: 8,
   },
-  section: {
-    gap: 10,
+  secondaryField: {
+    flex: 1,
+  },
+  exhaustionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   sectionLabel: {
     fontSize: 16,
-  },
-  hitDiceInputs: {
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'center',
   },
   divider: {
     borderBottomWidth: 1,

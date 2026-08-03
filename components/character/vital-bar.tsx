@@ -13,7 +13,7 @@ interface VitalBarProps {
   extra?: string;
 }
 
-const TRACK_HEIGHT = 44;
+const TRACK_HEIGHT = 36;
 const TRACK_EMPTY_COLOR = '#1a1a1a';
 
 export function VitalBar({ label, current, max, gradientColors, extra }: VitalBarProps) {
@@ -94,12 +94,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   label: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
   },
   value: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },
@@ -113,10 +113,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   extraText: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '700',
   },
   extraPlaceholder: {
-    fontSize: 10,
+    fontSize: 8,
   },
 });

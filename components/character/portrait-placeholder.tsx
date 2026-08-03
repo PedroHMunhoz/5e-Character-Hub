@@ -1,15 +1,19 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Image } from 'expo-image';
 
 import { useThemeColor } from '@/hooks/use-theme-color';
 
 const PLACEHOLDER_URI = 'https://placecage.lucidinternets.com/700/600';
 
-export function PortraitPlaceholder() {
-  const borderColor = useThemeColor({}, 'icon');
+interface PortraitPlaceholderProps {
+  style?: StyleProp<ViewStyle>;
+}
+
+export function PortraitPlaceholder({ style }: PortraitPlaceholderProps) {
+  const borderColor = useThemeColor({}, 'gold');
 
   return (
-    <View style={[styles.container, { borderColor }]}>
+    <View style={[styles.container, { borderColor }, style]}>
       <Image source={{ uri: PLACEHOLDER_URI }} style={styles.image} contentFit="cover" />
     </View>
   );

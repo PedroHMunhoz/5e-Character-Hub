@@ -31,9 +31,9 @@ const initialCharacter: CharacterSheet = {
   skills: Object.fromEntries(
     SKILLS.map((skill) => [skill.key, { proficient: false }])
   ) as CharacterSheet['skills'],
-  speed: '',
-  hitPoints: { max: '', current: '', temporary: '' },
-  hitDice: { current: '', max: '' },
+  speed: '9',
+  hitPoints: { max: '100', current: '87', temporary: '100' },
+  hitDice: { current: '3', max: '6' },
   exhaustion: 0,
   deathSaves: { successes: 0, failures: 0 },
   currency: { pl: '', po: '', pp: '', pe: '', pc: '' },

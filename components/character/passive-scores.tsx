@@ -35,41 +35,46 @@ export function PassiveScores({ proficiencyBonus }: PassiveScoresProps) {
   );
 
   return (
-    <View style={styles.grid}>
-      <View style={styles.column}>
-        <View style={styles.passiveRow}>
-          <ThemedText style={styles.passiveLabel} numberOfLines={1}>
-            Arcanismo Passivo
-          </ThemedText>
-          <ThemedText style={[styles.passiveValue, { color: goldColor }]}>
-            {formatPassiveScore(passiveArcana)}
-          </ThemedText>
+    <View style={styles.container}>
+      <ThemedText type="subtitle" style={styles.title}>
+        Perícias Passivas
+      </ThemedText>
+      <View style={styles.grid}>
+        <View style={styles.column}>
+          <View style={styles.passiveRow}>
+            <ThemedText style={styles.passiveLabel} numberOfLines={1}>
+              Arcanismo Passivo
+            </ThemedText>
+            <ThemedText style={[styles.passiveValue, { color: goldColor }]}>
+              {formatPassiveScore(passiveArcana)}
+            </ThemedText>
+          </View>
+          <View style={styles.passiveRow}>
+            <ThemedText style={styles.passiveLabel} numberOfLines={1}>
+              Percepção Passiva
+            </ThemedText>
+            <ThemedText style={[styles.passiveValue, { color: goldColor }]}>
+              {formatPassiveScore(passivePerception)}
+            </ThemedText>
+          </View>
         </View>
-        <View style={styles.passiveRow}>
-          <ThemedText style={styles.passiveLabel} numberOfLines={1}>
-            Percepção Passiva
-          </ThemedText>
-          <ThemedText style={[styles.passiveValue, { color: goldColor }]}>
-            {formatPassiveScore(passivePerception)}
-          </ThemedText>
-        </View>
-      </View>
-      <View style={styles.column}>
-        <View style={styles.passiveRow}>
-          <ThemedText style={styles.passiveLabel} numberOfLines={1}>
-            Intuição Passiva
-          </ThemedText>
-          <ThemedText style={[styles.passiveValue, { color: goldColor }]}>
-            {formatPassiveScore(passiveInsight)}
-          </ThemedText>
-        </View>
-        <View style={styles.passiveRow}>
-          <ThemedText style={styles.passiveLabel} numberOfLines={1}>
-            Investigação Passiva
-          </ThemedText>
-          <ThemedText style={[styles.passiveValue, { color: goldColor }]}>
-            {formatPassiveScore(passiveInvestigation)}
-          </ThemedText>
+        <View style={styles.column}>
+          <View style={styles.passiveRow}>
+            <ThemedText style={styles.passiveLabel} numberOfLines={1}>
+              Intuição Passiva
+            </ThemedText>
+            <ThemedText style={[styles.passiveValue, { color: goldColor }]}>
+              {formatPassiveScore(passiveInsight)}
+            </ThemedText>
+          </View>
+          <View style={styles.passiveRow}>
+            <ThemedText style={styles.passiveLabel} numberOfLines={1}>
+              Investigação Passiva
+            </ThemedText>
+            <ThemedText style={[styles.passiveValue, { color: goldColor }]}>
+              {formatPassiveScore(passiveInvestigation)}
+            </ThemedText>
+          </View>
         </View>
       </View>
     </View>
@@ -77,6 +82,8 @@ export function PassiveScores({ proficiencyBonus }: PassiveScoresProps) {
 }
 
 const styles = StyleSheet.create({
+  container: { gap: 8 },
+  title: { fontSize: 16 },
   grid: { flexDirection: "row", gap: 16 },
   column: { flex: 1, minWidth: 0, gap: 10 },
   passiveRow: {
