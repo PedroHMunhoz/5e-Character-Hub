@@ -19,7 +19,7 @@ export function BiographyTextarea({
   style,
 }: BiographyTextareaProps) {
   const textColor = useThemeColor({}, 'text');
-  const borderColor = useThemeColor({}, 'icon');
+  const borderColor = useThemeColor({}, 'gold');
 
   return (
     <View style={[styles.container, { borderColor }, style]}>

@@ -11,7 +11,7 @@ interface BiographyTextFieldProps {
 
 export function BiographyTextField({ label, value, onChangeText }: BiographyTextFieldProps) {
   const textColor = useThemeColor({}, 'text');
-  const borderColor = useThemeColor({}, 'icon');
+  const borderColor = useThemeColor({}, 'gold');
 
   return (
     <View style={[styles.container, { borderColor }]}>
