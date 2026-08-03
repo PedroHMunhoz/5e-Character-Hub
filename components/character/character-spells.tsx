@@ -1,19 +1,24 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { CollapsibleSection } from '@/components/character/collapsible-section';
 import { SpellRow } from '@/components/character/spell-row';
 import { SpellSlotPips } from '@/components/character/spell-slot-pips';
 import { ThemedText } from '@/components/themed-text';
-import { MOCK_MAX_PREPARED_SPELLS, MOCK_SPELL_SAVE_DC, SPELL_LEVEL_SECTIONS, SPELL_SLOT_MAX } from '@/constants/spells';
+import {
+  MOCK_MAX_PREPARED_SPELLS,
+  MOCK_SPELL_ATTACK_BONUS,
+  MOCK_SPELL_SAVE_DC,
+  SPELL_LEVEL_SECTIONS,
+  SPELL_SLOT_MAX,
+} from '@/constants/spells';
 import { useCharacter } from '@/hooks/use-character';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
 export function CharacterSpells() {
   const { character, toggleSpellPrepared, setSpellSlotUsed } = useCharacter();
   const [search, setSearch] = useState('');
-  const borderColor = useThemeColor({}, 'icon');
+  const goldColor = useThemeColor({}, 'gold');
   const textColor = useThemeColor({}, 'text');
 
   const preparedCount = useMemo(() => {
@@ -27,27 +32,30 @@ export function CharacterSpells() {
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
       <View style={styles.statsRow}>
-        <View style={[styles.statBox, { borderColor }]}>
-          <ThemedText style={styles.statLabel}>CD de Magia</ThemedText>
+        <View style={[styles.statBox, { borderColor: goldColor }]}>
+          <ThemedText style={[styles.statLabel, { color: goldColor }]}>CD de Magia</ThemedText>
           <ThemedText style={[styles.statValue, { color: textColor }]}>{MOCK_SPELL_SAVE_DC}</ThemedText>
         </View>
-        <View style={[styles.statBox, { borderColor }]}>
-          <ThemedText style={styles.statLabel}>Preparadas</ThemedText>
+        <View style={[styles.statBox, { borderColor: goldColor }]}>
+          <ThemedText style={[styles.statLabel, { color: goldColor }]}>Bônus de Ataque</ThemedText>
+          <ThemedText style={[styles.statValue, { color: textColor }]}>{MOCK_SPELL_ATTACK_BONUS}</ThemedText>
+        </View>
+        <View style={[styles.statBox, { borderColor: goldColor }]}>
+          <ThemedText style={[styles.statLabel, { color: goldColor }]}>Preparadas</ThemedText>
           <ThemedText style={[styles.statValue, { color: textColor }]}>
-            {preparedCount} ({MOCK_MAX_PREPARED_SPELLS})
+            {preparedCount}/{MOCK_MAX_PREPARED_SPELLS}
           </ThemedText>
         </View>
       </View>
 
-      <View style={[styles.searchRow, { borderColor }]}>
+      <View style={[styles.searchRow, { borderColor: goldColor }]}>
         <TextInput
           style={[styles.searchInput, { color: textColor }]}
           value={search}
           onChangeText={setSearch}
           placeholder="Buscar magias..."
-          placeholderTextColor={borderColor}
+          placeholderTextColor={goldColor}
         />
-        <MaterialCommunityIcons name="filter-variant" size={20} color={borderColor} />
       </View>
 
       {SPELL_LEVEL_SECTIONS.map((section) => {
@@ -68,17 +76,18 @@ export function CharacterSpells() {
                 />
               ) : undefined
             }>
-            {items.map((item, index) => (
-              <SpellRow
-                key={item.id}
-                name={item.name}
-                subtitle={item.castingTime}
-                ritual={item.ritual}
-                alternate={index % 2 === 1}
-                prepared={character.spells[item.id]?.prepared ?? false}
-                onTogglePrepared={() => toggleSpellPrepared(item.id)}
-              />
-            ))}
+            <View style={styles.cardList}>
+              {items.map((item) => (
+                <SpellRow
+                  key={item.id}
+                  name={item.name}
+                  school={item.school}
+                  ritual={item.ritual}
+                  prepared={section.level >= 1 ? (character.spells[item.id]?.prepared ?? false) : undefined}
+                  onTogglePrepared={section.level >= 1 ? () => toggleSpellPrepared(item.id) : undefined}
+                />
+              ))}
+            </View>
           </CollapsibleSection>
         );
       })}
@@ -105,7 +114,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 9,
     textTransform: 'uppercase',
     opacity: 0.7,
     textAlign: 'center',
@@ -122,11 +131,14 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 1,
     borderRadius: 8,
-    paddingVertical: 8,
+    paddingVertical: 4,
     paddingHorizontal: 12,
   },
   searchInput: {
     flex: 1,
     fontSize: 15,
+  },
+  cardList: {
+    gap: 8,
   },
 });

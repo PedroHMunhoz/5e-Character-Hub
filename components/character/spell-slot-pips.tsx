@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { useThemeColor } from '@/hooks/use-theme-color';
 
@@ -9,8 +10,7 @@ interface SpellSlotPipsProps {
 }
 
 export function SpellSlotPips({ max, used, onChange }: SpellSlotPipsProps) {
-  const borderColor = useThemeColor({}, 'icon');
-  const fillColor = useThemeColor({}, 'text');
+  const goldColor = useThemeColor({}, 'gold');
 
   const available = Math.max(max - used, 0);
 
@@ -35,8 +35,8 @@ export function SpellSlotPips({ max, used, onChange }: SpellSlotPipsProps) {
             accessibilityRole="checkbox"
             accessibilityState={{ checked: isAvailable }}
             hitSlop={6}
-            style={[styles.pip, { borderColor }]}>
-            {isAvailable ? <View style={[styles.dot, { backgroundColor: fillColor }]} /> : null}
+            style={[styles.box, { borderColor: goldColor }]}>
+            {isAvailable ? <MaterialCommunityIcons name="check" size={14} color={goldColor} /> : null}
           </Pressable>
         );
       })}
@@ -49,17 +49,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 6,
   },
-  pip: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+  box: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
   },
 });

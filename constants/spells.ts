@@ -3,6 +3,7 @@ export interface SpellItemDefinition {
   name: string;
   castingTime?: string;
   ritual?: boolean;
+  school?: string;
 }
 
 export interface SpellLevelSection {
@@ -18,9 +19,9 @@ export const SPELL_LEVEL_SECTIONS: SpellLevelSection[] = [
     label: 'Truques',
     level: 0,
     items: [
-      { id: 'fire-bolt', name: 'Raio de Fogo', castingTime: 'Ação' },
-      { id: 'light', name: 'Luz', castingTime: 'Ação' },
-      { id: 'mage-hand', name: 'Mão Mágica', castingTime: 'Ação' },
+      { id: 'fire-bolt', name: 'Raio de Fogo', castingTime: 'Ação', school: 'Evocação' },
+      { id: 'light', name: 'Luz', castingTime: 'Ação', school: 'Evocação' },
+      { id: 'mage-hand', name: 'Mão Mágica', castingTime: 'Ação', school: 'Conjuração' },
     ],
   },
   {
@@ -28,10 +29,10 @@ export const SPELL_LEVEL_SECTIONS: SpellLevelSection[] = [
     label: 'Nível 1',
     level: 1,
     items: [
-      { id: 'alarm', name: 'Alarme', castingTime: '1 Minuto', ritual: true },
-      { id: 'burning-hands', name: 'Mãos Flamejantes', castingTime: 'Ação' },
-      { id: 'cure-wounds', name: 'Curar Ferimentos', castingTime: 'Ação' },
-      { id: 'find-familiar', name: 'Encontrar Familiar', castingTime: '1 Hora', ritual: true },
+      { id: 'alarm', name: 'Alarme', castingTime: '1 Minuto', ritual: true, school: 'Abjuração' },
+      { id: 'burning-hands', name: 'Mãos Flamejantes', castingTime: 'Ação', school: 'Evocação' },
+      { id: 'cure-wounds', name: 'Curar Ferimentos', castingTime: 'Ação', school: 'Evocação' },
+      { id: 'find-familiar', name: 'Encontrar Familiar', castingTime: '1 Hora', ritual: true, school: 'Conjuração' },
     ],
   },
   { key: 'nivel-2', label: 'Nível 2', level: 2, items: [] },
@@ -58,3 +59,4 @@ export const SPELL_SLOT_MAX: Record<string, string> = {
 
 export const MOCK_MAX_PREPARED_SPELLS = 7;
 export const MOCK_SPELL_SAVE_DC = 15;
+export const MOCK_SPELL_ATTACK_BONUS = '+2';
