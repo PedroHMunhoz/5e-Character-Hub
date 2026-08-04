@@ -2,6 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { Spell } from '@/types/reference';
 import { parseJson, toEntries } from '../rows';
+import { getTranslations, localizedEntries, localizedName, type TranslationDict } from './localize';
 
 interface SpellRow {
   id: number;
@@ -21,10 +22,10 @@ interface SpellRow {
   details: string | null;
 }
 
-function mapSpellRow(row: SpellRow): Spell {
+function mapSpellRow(row: SpellRow, translations: TranslationDict): Spell {
   return {
     id: row.id,
-    name: row.name,
+    name: localizedName(row.id, row.name, translations),
     source: row.source,
     srd: !!row.srd,
     basicRules: !!row.basic_rules,
@@ -36,14 +37,21 @@ function mapSpellRow(row: SpellRow): Spell {
     duration: parseJson(row.duration),
     ritual: !!row.ritual,
     concentration: !!row.concentration,
-    entries: toEntries(row.entries),
+    entries: localizedEntries(row.id, toEntries(row.entries), translations),
     details: parseJson(row.details),
   };
 }
 
+// expo-sqlite's SQLiteDatabase isn't safe for overlapping queries on the same
+// connection (see the lifecycle note in app/_layout.tsx) - queries against a
+// shared `db` must be sequential (await one, then the other), never
+// Promise.all'd, or native builds intermittently throw "Cannot use shared
+// object that was already released".
+
 export async function getAllSpells(db: SQLiteDatabase): Promise<Spell[]> {
   const rows = await db.getAllAsync<SpellRow>('SELECT * FROM spells ORDER BY level, name');
-  return rows.map(mapSpellRow);
+  const translations = await getTranslations(db, 'spell');
+  return rows.map((row) => mapSpellRow(row, translations));
 }
 
 export async function getSpellsForClass(db: SQLiteDatabase, className: string): Promise<Spell[]> {
@@ -54,12 +62,14 @@ export async function getSpellsForClass(db: SQLiteDatabase, className: string): 
      ORDER BY s.level, s.name`,
     className
   );
-  return rows.map(mapSpellRow);
+  const translations = await getTranslations(db, 'spell');
+  return rows.map((row) => mapSpellRow(row, translations));
 }
 
 export async function getSpellById(db: SQLiteDatabase, id: number): Promise<Spell | null> {
   const row = await db.getFirstAsync<SpellRow>('SELECT * FROM spells WHERE id = ?', id);
-  return row ? mapSpellRow(row) : null;
+  const translations = await getTranslations(db, 'spell');
+  return row ? mapSpellRow(row, translations) : null;
 }
 
 // Sanitizes to alphanumerics/spaces only, then does a prefix match per term -
@@ -79,5 +89,33 @@ export async function searchSpells(db: SQLiteDatabase, query: string): Promise<S
      ORDER BY s.name`,
     match
   );
-  return rows.map(mapSpellRow);
+  const translations = await getTranslations(db, 'spell');
+  return rows.map((row) => mapSpellRow(row, translations));
+}
+
+// Curated spellbook for the app's level-2 Evocation Wizard demo character:
+// the 3 cantrips known at level 1-3, plus the 8 1st-level spells in their
+// spellbook (6 learned at level 1 + 2 more learned on reaching level 2).
+const CURATED_SPELLBOOK_NAMES = [
+  'Fire Bolt',
+  'Mage Hand',
+  'Prestidigitation',
+  'Magic Missile',
+  'Burning Hands',
+  'Shield',
+  'Mage Armor',
+  'Detect Magic',
+  'Identify',
+  'Thunderwave',
+  'Sleep',
+];
+
+export async function getCuratedSpellbook(db: SQLiteDatabase): Promise<Spell[]> {
+  const placeholders = CURATED_SPELLBOOK_NAMES.map(() => '?').join(', ');
+  const rows = await db.getAllAsync<SpellRow>(
+    `SELECT * FROM spells WHERE source = 'PHB' AND name IN (${placeholders}) ORDER BY level, name`,
+    ...CURATED_SPELLBOOK_NAMES
+  );
+  const translations = await getTranslations(db, 'spell');
+  return rows.map((row) => mapSpellRow(row, translations));
 }

@@ -17,17 +17,17 @@ export const SPELL_LEVEL_LABELS: SpellLevelLabel[] = [
   { key: 'nivel-9', label: 'Nível 9', level: 9 },
 ];
 
-// 5etools school codes -> display label. Content stays in English until the
-// localization pipeline (see docs/data-schema.md) exists.
+// 5etools school codes -> pt-BR display label. Verified against
+// translations/pt-BR/_raw-extracts/PHB.txt (spell list parentheticals).
 export const SPELL_SCHOOL_LABELS: Record<string, string> = {
-  A: 'Abjuration',
-  C: 'Conjuration',
-  D: 'Divination',
-  E: 'Enchantment',
-  V: 'Evocation',
-  I: 'Illusion',
-  N: 'Necromancy',
-  T: 'Transmutation',
+  A: 'Abjuração',
+  C: 'Conjuração',
+  D: 'Adivinhação',
+  E: 'Encantamento',
+  V: 'Evocação',
+  I: 'Ilusão',
+  N: 'Necromancia',
+  T: 'Transmutação',
 };
 
 export const SPELL_SLOT_MAX: Record<string, string> = {

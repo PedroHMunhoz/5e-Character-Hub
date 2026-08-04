@@ -15,7 +15,7 @@ import {
   SPELL_SCHOOL_LABELS,
   SPELL_SLOT_MAX,
 } from '@/constants/spells';
-import { getAllSpells } from '@/data/queries/spells';
+import { getCuratedSpellbook } from '@/data/queries/spells';
 import { useCharacter } from '@/hooks/use-character';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import type { Spell } from '@/types/reference';
@@ -33,10 +33,30 @@ export function CharacterSpells() {
   const textColor = useThemeColor({}, 'text');
 
   useEffect(() => {
-    getAllSpells(db).then((data) => {
-      setSpells(data);
-      setLoading(false);
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const start = Date.now();
+
+    getCuratedSpellbook(db).then((data) => {
+      if (cancelled) return;
+      // Empty spellbook: nothing to read, so skip the artificial delay. When
+      // there are spells, keep the indicator up for at least 3s (long enough
+      // to actually read the flavor message) unless loading itself took
+      // longer, in which case just show it until the data is ready.
+      const minDisplayMs = data.length > 0 ? 3000 : 0;
+      const remaining = Math.max(0, minDisplayMs - (Date.now() - start));
+
+      timeoutId = setTimeout(() => {
+        if (cancelled) return;
+        setSpells(data);
+        setLoading(false);
+      }, remaining);
     });
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [db]);
 
   const sections = useMemo(

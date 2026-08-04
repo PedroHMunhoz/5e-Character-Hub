@@ -20,7 +20,13 @@ export default function RootLayout() {
     // open access handle per file) whenever React re-renders before the
     // first open settles. This mode opens inside a useEffect instead, which
     // has proper open/close lifecycle handling.
-    <SQLiteProvider databaseName="dnd5e.db" assetSource={{ assetId: require('@/assets/data/dnd5e.db') }}>
+    // forceOverwrite: true because assets/data/dnd5e.db is still actively
+    // regenerated (import pipeline, translations) during development —
+    // without it, a device/simulator that already has a copy from a
+    // previous install keeps using that stale file forever.
+    <SQLiteProvider
+      databaseName="dnd5e.db"
+      assetSource={{ assetId: require('@/assets/data/dnd5e.db'), forceOverwrite: true }}>
       <CharacterProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <Stack>
