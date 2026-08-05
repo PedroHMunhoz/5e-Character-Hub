@@ -54,7 +54,7 @@ function categorize(type: string | null): CuratedItemCategory {
 
 // lb -> kg, formatted with a pt-BR comma decimal. Falls back to a plain
 // conversion only when there's no verified book weight in
-// ITEM_WEIGHT_KG_OVERRIDES - Devir's official PHB rounds to cleaner metric
+// ITEM_WEIGHT_KG_OVERRIDES - Galápagos's official PHB rounds to cleaner metric
 // figures rather than converting precisely, so the override always wins for
 // items we've checked against the printed book.
 function formatWeightKg(name: string, weightLb: number | null): string {

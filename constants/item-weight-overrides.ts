@@ -1,4 +1,4 @@
-// Devir's official pt-BR PHB doesn't do a precise lb->kg conversion - it
+// Galápagos's official pt-BR PHB doesn't do a precise lb->kg conversion - it
 // rounds to cleaner metric figures in the printed equipment tables (e.g.
 // Shield is 6 lb, which converts to 2,7 kg, but the book prints "3 kg").
 // Verified against translations/pt-BR/_raw-extracts/PHB.txt (pages 148/151).
