@@ -93,6 +93,18 @@ function flattenEntries(entries, out = []) {
   return out;
 }
 
+// Manual corrections/fill-ins for base_items.weight_lb, verified against the
+// printed sourcebooks. Only entries that actually need fixing live here -
+// see db/overrides/base-item-weights.json.
+const weightOverridesPath = path.join(repoRoot, 'db', 'overrides', 'base-item-weights.json');
+const weightOverrides = fs.existsSync(weightOverridesPath)
+  ? JSON.parse(fs.readFileSync(weightOverridesPath, 'utf8'))
+  : {};
+function overrideWeight(name, source, fallback) {
+  const key = `${name}|${source}`;
+  return Object.prototype.hasOwnProperty.call(weightOverrides, key) ? weightOverrides[key] : fallback;
+}
+
 const db = new DatabaseSync(outPath);
 db.exec(fs.readFileSync(path.join(repoRoot, 'db', 'schema.sql'), 'utf8'));
 
@@ -387,7 +399,7 @@ runSection('base_items', () => {
       bit(i.basicRules),
       i.type ?? null,
       i.value ?? null,
-      i.weight ?? null,
+      overrideWeight(i.name, i.source, i.weight ?? null),
       json(itemDamage(i)),
       json(i.property ?? null),
       flat.length ? json(flat) : null,

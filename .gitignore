@@ -42,7 +42,10 @@ app-example
 /ios
 /android
 
-# 5e reference data: raw source dump and compiled db are build
-# artifacts derived from copyrighted sourcebooks, never commit them
+# 5e reference data
 /5e-2014-data/
 /assets/data/*.db
+
+# pt-BR localization
+/books/
+/translations/

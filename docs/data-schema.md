@@ -67,11 +67,10 @@ precisar carregar e fazer parse de JSON inteiro em runtime no celular.
 | `translations` | Preparação para localização (ver abaixo) |
 | `content_fts` | Tabela virtual FTS5 para busca por nome/texto entre categorias (`entity_type` diferencia a origem) |
 
-## Localização (preparado, não implementado)
+## Localização (pt-BR)
 
-A tabela `translations` existe desde já para evitar migração de schema no
-futuro, mas **não é populada por este pipeline** — não há parsing de PDF nem
-troca de idioma na UI neste momento. Formato:
+A tabela `translations` é populada por um segundo pipeline, separado do
+import principal:
 
 ```
 translations(entity_type, entity_id, locale, field, value)
@@ -79,10 +78,24 @@ translations(entity_type, entity_id, locale, field, value)
 
 Ex: `('spell', 42, 'pt-BR', 'name', 'Rajada Ácida')`.
 
-Nota legal: caso um pipeline de tradução seja construído a partir de PDFs
-traduzidos (oficiais ou de fã), esse conteúdo tem direitos autorais **mais
-restritivos** que o dataset em inglês do 5etools e não deve acompanhar um
-repositório público.
+- `translations/pt-BR/<CODIGO_DO_LIVRO>/<categoria>.json` guarda o texto
+  extraído dos livros oficiais traduzidos (ex: `translations/pt-BR/PHB/spells.json`),
+  indexado por **chave natural** (`"Nome em Inglês|FONTE"`, ou uma cadeia mais
+  longa para entidades filhas como features de classe — ver comentários em
+  `scripts/import-translations.mjs`) em vez do `id` numérico da linha. Isso é
+  proposital: o `id` é reatribuído a cada `npm run db:import`, então indexar
+  por chave natural é o que permite reaplicar a tradução depois de um
+  re-import sem perder nada.
+- `scripts/import-translations.mjs` (rodado via `npm run db:translate`, depois
+  de `npm run db:import`) lê esses arquivos, resolve o `id` atual de cada
+  entidade e povoa `translations`. Se `translations/pt-BR/` não existir (clone
+  sem os livros processados), o script não faz nada.
+- Termos sem tradução oficial clara (ambíguos, ou nome que colidiria com
+  outro) ficam registrados em `translations/pt-BR/DUVIDAS.md` em vez de virar
+  uma linha adivinhada.
+
+`books/` (os PDFs) e `translations/` (o texto extraído deles) estão no
+`.gitignore` e nunca são commitados.
 
 ## Distribuição de dados vs. código
 
@@ -91,3 +104,8 @@ repositório público.
 - O dump bruto (`5e-2014-data/`) e o `.db` compilado (`assets/data/*.db`) estão
   no `.gitignore` — nunca são commitados. O `.db` que vai dentro do app é
   gerado localmente a cada build via `npm run db:import`.
+- `db/overrides/*.json` (ex: `base-item-weights.json`) **é** versionado — são
+  correções pontuais de fatos (peso, valor etc.) verificados contra os livros
+  impressos. Aplicado automaticamente por `npm run db:import`.
+- `books/` (PDFs) e `translations/` (texto extraído deles) — ver seção
+  "Localização" acima — também estão no `.gitignore`.
