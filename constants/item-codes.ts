@@ -8,13 +8,13 @@ export const WEAPON_CATEGORY_LABELS: Record<string, string> = {
 };
 
 export const WEAPON_PROPERTY_LABELS: Record<string, string> = {
-  F: 'Precisão',
+  F: 'Acuidade',
   H: 'Pesada',
   L: 'Leve',
-  LD: 'Recarregar',
+  LD: 'Recarga',
   R: 'Alcance',
   S: 'Especial',
-  T: 'Arremessável',
+  T: 'Arremesso',
   V: 'Versátil',
 };
 

@@ -134,6 +134,7 @@ const RESOLVERS = {
   feats: simpleResolver('feats', 'feat'),
   'optional-features': simpleResolver('optional_features', 'optional_feature'),
   'base-items': simpleResolver('base_items', 'base_item'),
+  'item-properties': simpleResolver('item_properties', 'item_property'),
   items: simpleResolver('items', 'item'),
   'magic-variants': simpleResolver('magic_variants', 'magic_variant'),
   spells: simpleResolver('spells', 'spell'),

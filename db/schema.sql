@@ -262,6 +262,15 @@ CREATE TABLE actions (
   UNIQUE (name, source)
 );
 
+CREATE TABLE item_properties (
+  id INTEGER PRIMARY KEY,
+  code TEXT NOT NULL, -- 5etools abbreviation, e.g. 'F', 'LD', '2H'
+  name TEXT NOT NULL,
+  source TEXT NOT NULL REFERENCES sources(code),
+  entries TEXT, -- JSON array; null for properties with no rules text (e.g. 'special')
+  UNIQUE (code, source)
+);
+
 -- ---------------------------------------------------------------------------
 -- Low priority / optional
 -- ---------------------------------------------------------------------------

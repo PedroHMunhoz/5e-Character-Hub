@@ -613,6 +613,28 @@ runSection('actions', () => {
   }
 });
 
+// Weapon property codes actually used by base_items/items.properties in this
+// dataset - the rest of items-base.json's itemProperty array (AF, BF, RLD,
+// Vst, ...) are DMG/other-supplement variants not present in our data.
+const WEAPON_PROPERTY_CODES = new Set(['2H', 'A', 'F', 'H', 'L', 'LD', 'R', 'S', 'T', 'V']);
+
+runSection('item_properties', () => {
+  const insertItemProperty = db.prepare(
+    'INSERT INTO item_properties (code, name, source, entries) VALUES (?,?,?,?)'
+  );
+  const data = readJson('items-base.json');
+  for (const p of data.itemProperty || []) {
+    if (!WEAPON_PROPERTY_CODES.has(p.abbreviation)) continue;
+    ensureSource(p.source);
+    const sub = p.entries?.[0];
+    const name = sub?.name ?? p.name;
+    const flat = sub?.entries ? flattenEntries(sub.entries) : [];
+    const info = insertItemProperty.run(p.abbreviation, name, p.source, flat.length ? json(flat) : null);
+    bump('item_properties');
+    addToFts('item_property', info.lastInsertRowid, name, flat);
+  }
+});
+
 // ---------------------------------------------------------------------------
 // Low priority / optional
 // ---------------------------------------------------------------------------

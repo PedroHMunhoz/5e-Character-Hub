@@ -61,6 +61,7 @@ precisar carregar e fazer parse de JSON inteiro em runtime no celular.
 | `feats` | Talentos |
 | `optional_features` | Invocações Místicas, Estilos de Luta, e outras "opcionais" que não são talento nem feature fixa de classe |
 | `base_items`, `items`, `magic_variants` | Itens mundanos, itens (incluindo mágicos) e variantes mágicas aplicáveis a itens base |
+| `item_properties` | Nome e descrição de regra das propriedades de arma referenciadas por código em `base_items.properties`/`items.properties` (ex: `F` → Acuidade) |
 | `spells`, `spell_classes` | Magias e a relação many-to-many com quais classes podem aprendê-las |
 | `languages`, `conditions`, `skills`, `actions` | Glossário de regras — categorias quase inteiramente cobertas pelo SRD |
 | `vehicles`, `deities` | Baixa prioridade, incluídas por completude |
