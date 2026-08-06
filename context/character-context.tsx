@@ -16,6 +16,11 @@ import type {
   WeaponSlot,
 } from '@/types/character';
 
+export type WeaponEquipOutcome =
+  | { kind: 'applied' }
+  | { kind: 'blocked'; message: string }
+  | { kind: 'confirmShieldUnequip'; slot: WeaponSlot };
+
 function createClassId() {
   return `class-${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -93,6 +98,29 @@ type Action =
 function weaponSlotsConflict(existingSlot: WeaponSlot | undefined, newSlot: WeaponSlot): boolean {
   if (!existingSlot) return false;
   return existingSlot === newSlot || existingSlot === 'twoHanded' || newSlot === 'twoHanded';
+}
+
+// A two-handed weapon occupies both hands, so it counts as occupying
+// whichever single hand is being checked.
+function isHandOccupied(
+  inventoryItems: CharacterSheet['inventoryItems'],
+  hand: 'main' | 'off',
+  excludeId?: string
+): boolean {
+  return Object.entries(inventoryItems).some(
+    ([itemId, itemState]) =>
+      itemId !== excludeId && (itemState.weaponSlot === hand || itemState.weaponSlot === 'twoHanded')
+  );
+}
+
+function findEquippedShieldId(
+  inventoryItems: CharacterSheet['inventoryItems'],
+  excludeId?: string
+): string | undefined {
+  const entry = Object.entries(inventoryItems).find(
+    ([itemId, itemState]) => itemId !== excludeId && itemState.armorSlot === 'shield'
+  );
+  return entry?.[0];
 }
 
 function characterReducer(state: CharacterSheet, action: Action): CharacterSheet {
@@ -286,8 +314,9 @@ export interface CharacterContextValue {
   setCurrencyField: (field: keyof Currency, value: string) => void;
   setItemQuantity: (id: string, value: string) => void;
   setWeaponSlot: (id: string, slot: WeaponSlot | 'none') => void;
-  toggleWeaponEquipped: (id: string, handedness: WeaponHandedness) => string | null;
+  toggleWeaponEquipped: (id: string, handedness: WeaponHandedness) => WeaponEquipOutcome;
   toggleArmorEquipped: (id: string, slotKind: ArmorSlot) => string | null;
+  hasEquippedShield: (excludeId?: string) => boolean;
   setFeatureUses: (id: string, value: string) => void;
   toggleSpellPrepared: (id: string) => void;
   setSpellSlotUsed: (level: string, value: number) => void;
@@ -319,39 +348,47 @@ export function CharacterProvider({ children }: { children: ReactNode }) {
       setDeathSaves: (field, value) => dispatch({ type: 'SET_DEATH_SAVES', field, value }),
       setCurrencyField: (field, value) => dispatch({ type: 'SET_CURRENCY_FIELD', field, value }),
       setItemQuantity: (id, value) => dispatch({ type: 'SET_ITEM_QUANTITY', id, value }),
-      setWeaponSlot: (id, slot) => dispatch({ type: 'SET_WEAPON_SLOT', id, slot }),
+      setWeaponSlot: (id, slot) => {
+        // Occupying the off hand (directly or via a two-handed grip) leaves
+        // no free hand for a shield, so drop it rather than allow both.
+        if (slot === 'off' || slot === 'twoHanded') {
+          const shieldId = findEquippedShieldId(character.inventoryItems, id);
+          if (shieldId) dispatch({ type: 'SET_ARMOR_SLOT', id: shieldId, slot: 'none' });
+        }
+        dispatch({ type: 'SET_WEAPON_SLOT', id, slot });
+      },
       toggleWeaponEquipped: (id, handedness) => {
         if (character.inventoryItems[id]?.weaponSlot) {
           dispatch({ type: 'SET_WEAPON_SLOT', id, slot: 'none' });
-          return null;
+          return { kind: 'applied' };
         }
 
-        const mainOccupied = Object.entries(character.inventoryItems).some(
-          ([itemId, itemState]) =>
-            itemId !== id && (itemState.weaponSlot === 'main' || itemState.weaponSlot === 'twoHanded')
-        );
-        const offOccupied = Object.entries(character.inventoryItems).some(
-          ([itemId, itemState]) =>
-            itemId !== id && (itemState.weaponSlot === 'off' || itemState.weaponSlot === 'twoHanded')
-        );
+        const mainOccupied = isHandOccupied(character.inventoryItems, 'main', id);
+        const offOccupied = isHandOccupied(character.inventoryItems, 'off', id);
 
         if (handedness === 'twoHanded') {
           if (mainOccupied || offOccupied) {
-            return 'Desequipe uma arma antes de equipar esta arma de duas mãos.';
+            return { kind: 'blocked', message: 'Desequipe uma arma antes de equipar esta arma de duas mãos.' };
+          }
+          if (findEquippedShieldId(character.inventoryItems, id)) {
+            return { kind: 'confirmShieldUnequip', slot: 'twoHanded' };
           }
           dispatch({ type: 'SET_WEAPON_SLOT', id, slot: 'twoHanded' });
-          return null;
+          return { kind: 'applied' };
         }
 
         if (!mainOccupied) {
           dispatch({ type: 'SET_WEAPON_SLOT', id, slot: 'main' });
-          return null;
+          return { kind: 'applied' };
         }
         if (!offOccupied) {
+          if (findEquippedShieldId(character.inventoryItems, id)) {
+            return { kind: 'confirmShieldUnequip', slot: 'off' };
+          }
           dispatch({ type: 'SET_WEAPON_SLOT', id, slot: 'off' });
-          return null;
+          return { kind: 'applied' };
         }
-        return 'Desequipe uma arma antes de equipar esta.';
+        return { kind: 'blocked', message: 'Desequipe uma arma antes de equipar esta.' };
       },
       toggleArmorEquipped: (id, slotKind) => {
         if (character.inventoryItems[id]?.armorSlot) {
@@ -368,9 +405,26 @@ export function CharacterProvider({ children }: { children: ReactNode }) {
             : 'Desequipe a armadura atual antes de equipar esta.';
         }
 
+        if (slotKind === 'shield' && isHandOccupied(character.inventoryItems, 'off', id)) {
+          // A one-handed weapon in the off hand can simply move to the main
+          // hand to make room, sparing the player a manual re-equip - but
+          // only if the main hand is actually free to receive it.
+          const offHandWeapon = Object.entries(character.inventoryItems).find(
+            ([itemId, itemState]) => itemId !== id && itemState.weaponSlot === 'off'
+          );
+          const mainHandFree = !isHandOccupied(character.inventoryItems, 'main', id);
+
+          if (offHandWeapon && mainHandFree) {
+            dispatch({ type: 'SET_WEAPON_SLOT', id: offHandWeapon[0], slot: 'main' });
+          } else {
+            return 'Sua mão secundária precisa estar livre para equipar um escudo.';
+          }
+        }
+
         dispatch({ type: 'SET_ARMOR_SLOT', id, slot: slotKind });
         return null;
       },
+      hasEquippedShield: (excludeId) => findEquippedShieldId(character.inventoryItems, excludeId) != null,
       setFeatureUses: (id, value) => dispatch({ type: 'SET_FEATURE_USES', id, value }),
       toggleSpellPrepared: (id) => dispatch({ type: 'TOGGLE_SPELL_PREPARED', id }),
       setSpellSlotUsed: (level, value) => dispatch({ type: 'SET_SPELL_SLOT_USED', level, value }),

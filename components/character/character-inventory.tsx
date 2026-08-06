@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { CollapsibleSection } from '@/components/character/collapsible-section';
+import { ConfirmModal } from '@/components/character/confirm-modal';
 import { CurrencyInput } from '@/components/character/currency-input';
 import { EquipmentItemCard } from '@/components/character/equipment-item-card';
 import { MessageModal } from '@/components/character/message-modal';
@@ -12,14 +13,17 @@ import { CURRENCY_FIELDS, INVENTORY_CATEGORY_SECTIONS } from '@/constants/invent
 import { getCuratedInventoryBaseItems, type CuratedBaseItem } from '@/data/queries/base-items';
 import { useCharacter } from '@/hooks/use-character';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import type { WeaponSlot } from '@/types/character';
 
 export function CharacterInventory() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { character, setCurrencyField, toggleArmorEquipped, toggleWeaponEquipped } = useCharacter();
+  const { character, setCurrencyField, toggleArmorEquipped, toggleWeaponEquipped, setWeaponSlot } =
+    useCharacter();
   const [items, setItems] = useState<CuratedBaseItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
+  const [shieldConfirm, setShieldConfirm] = useState<{ id: string; slot: WeaponSlot } | null>(null);
   const goldColor = useThemeColor({}, 'gold');
 
   useEffect(() => {
@@ -86,9 +90,15 @@ export function CharacterInventory() {
                             : character.inventoryItems[itemId]?.armorSlot != null
                         }
                         onToggleEquipped={() => {
-                          const message = isWeapon
-                            ? toggleWeaponEquipped(itemId, item.handedness ?? 'oneHanded')
-                            : toggleArmorEquipped(itemId, item.armorSlotKind ?? 'body');
+                          if (isWeapon) {
+                            const outcome = toggleWeaponEquipped(itemId, item.handedness ?? 'oneHanded');
+                            if (outcome.kind === 'blocked') setBlockedMessage(outcome.message);
+                            else if (outcome.kind === 'confirmShieldUnequip') {
+                              setShieldConfirm({ id: itemId, slot: outcome.slot });
+                            }
+                            return;
+                          }
+                          const message = toggleArmorEquipped(itemId, item.armorSlotKind ?? 'body');
                           if (message) setBlockedMessage(message);
                         }}
                       />
@@ -119,6 +129,17 @@ export function CharacterInventory() {
         title="Atenção"
         message={blockedMessage ?? undefined}
         onClose={() => setBlockedMessage(null)}
+      />
+
+      <ConfirmModal
+        visible={shieldConfirm != null}
+        title="Atenção"
+        message="Equipar esta arma vai desequipar o escudo atual. Deseja continuar?"
+        onCancel={() => setShieldConfirm(null)}
+        onConfirm={() => {
+          if (shieldConfirm) setWeaponSlot(shieldConfirm.id, shieldConfirm.slot);
+          setShieldConfirm(null);
+        }}
       />
     </>
   );

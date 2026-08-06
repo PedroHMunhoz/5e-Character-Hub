@@ -4,6 +4,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { CheckboxToggle } from '@/components/character/checkbox-toggle';
+import { ConfirmModal } from '@/components/character/confirm-modal';
 import { ItemIconPlaceholder } from '@/components/character/item-icon-placeholder';
 import { MessageModal } from '@/components/character/message-modal';
 import { PropertyPill } from '@/components/character/property-pill';
@@ -91,7 +92,7 @@ function Field({ label, value }: { label: string; value: string }) {
 export default function ItemDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const db = useSQLiteContext();
-  const { character, setItemQuantity, toggleArmorEquipped, setWeaponSlot } = useCharacter();
+  const { character, setItemQuantity, toggleArmorEquipped, setWeaponSlot, hasEquippedShield } = useCharacter();
   const goldColor = useThemeColor({}, 'gold');
 
   const [item, setItem] = useState<ItemDetail | null>(null);
@@ -99,6 +100,7 @@ export default function ItemDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [selectedPropertyCode, setSelectedPropertyCode] = useState<string | null>(null);
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
+  const [pendingSlot, setPendingSlot] = useState<WeaponSlotValue | null>(null);
 
   useEffect(() => {
     const numericId = Number(id);
@@ -153,7 +155,13 @@ export default function ItemDetailScreen() {
           <WeaponSection
             item={item}
             slot={inventoryState?.weaponSlot ?? 'none'}
-            onSlotChange={(slot) => setWeaponSlot(itemId, slot)}
+            onSlotChange={(slot) => {
+              if ((slot === 'off' || slot === 'twoHanded') && hasEquippedShield(itemId)) {
+                setPendingSlot(slot);
+                return;
+              }
+              setWeaponSlot(itemId, slot);
+            }}
             strScore={character.abilities.str.score}
             dexScore={character.abilities.dex.score}
             proficiencyBonus={getProficiencyBonus(getCharacterLevel(character.classes)) ?? 0}
@@ -213,6 +221,17 @@ export default function ItemDetailScreen() {
         title="Atenção"
         message={blockedMessage ?? undefined}
         onClose={() => setBlockedMessage(null)}
+      />
+
+      <ConfirmModal
+        visible={pendingSlot != null}
+        title="Atenção"
+        message="Equipar esta arma vai desequipar o escudo atual. Deseja continuar?"
+        onCancel={() => setPendingSlot(null)}
+        onConfirm={() => {
+          if (pendingSlot) setWeaponSlot(itemId, pendingSlot);
+          setPendingSlot(null);
+        }}
       />
     </>
   );
