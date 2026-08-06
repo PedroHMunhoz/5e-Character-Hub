@@ -1,6 +1,13 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { ARMOR_TYPE_LABELS, WEAPON_CATEGORY_LABELS, WEAPON_PROPERTY_LABELS } from '@/constants/item-codes';
+import {
+  ARMOR_TYPE_LABELS,
+  getArmorSlotKind,
+  getWeaponHandedness,
+  WEAPON_CATEGORY_LABELS,
+  WEAPON_PROPERTY_LABELS,
+  type WeaponHandedness,
+} from '@/constants/item-codes';
 import { ITEM_WEIGHT_KG_OVERRIDES } from '@/constants/item-weight-overrides';
 import { parseJson } from '../rows';
 import { getTranslations, localizedName, type TranslationDict } from './localize';
@@ -19,7 +26,9 @@ export interface CuratedBaseItem {
   properties?: string;
   weight: string;
   damageDice?: string;
+  handedness?: WeaponHandedness;
   armorClassBonus?: string;
+  armorSlotKind?: 'body' | 'shield';
   defaultQuantity?: string;
 }
 
@@ -46,7 +55,7 @@ interface ArmorDetails {
   ac?: number;
 }
 
-function categorize(type: string | null): CuratedItemCategory {
+export function categorize(type: string | null): CuratedItemCategory {
   if (type === 'R' || type === 'M') return 'weapon';
   if (type === 'MA' || type === 'HA' || type === 'LA' || type === 'S') return 'armor';
   return 'consumable';
@@ -57,7 +66,7 @@ function categorize(type: string | null): CuratedItemCategory {
 // ITEM_WEIGHT_KG_OVERRIDES - Galápagos's official PHB rounds to cleaner metric
 // figures rather than converting precisely, so the override always wins for
 // items we've checked against the printed book.
-function formatWeightKg(name: string, weightLb: number | null): string {
+export function formatWeightKg(name: string, weightLb: number | null): string {
   const override = ITEM_WEIGHT_KG_OVERRIDES[name];
   if (override) return override;
 
@@ -72,7 +81,7 @@ function formatWeightKg(name: string, weightLb: number | null): string {
 // flat 0,3 factor - verified against several ranged weapons' "distância x/y"
 // entries in translations/pt-BR/_raw-extracts/PHB.txt). `range` is a
 // "normal/long" string like "80/320".
-function convertRangeToMeters(range: string): string {
+export function convertRangeToMeters(range: string): string {
   return range
     .split('/')
     .map((part) => {
@@ -115,6 +124,7 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict): Curated
   const name = localizedName(row.id, row.name, translations);
 
   if (category === 'weapon') {
+    const propCodes = parseJson<string[]>(row.properties) ?? [];
     return {
       id: row.id,
       category,
@@ -122,6 +132,7 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict): Curated
       properties: buildWeaponProperties(row),
       weight: formatWeightKg(row.name, row.weight_lb),
       damageDice: formatDamageDice(row.damage),
+      handedness: getWeaponHandedness(propCodes),
     };
   }
 
@@ -136,6 +147,7 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict): Curated
       properties: ARMOR_TYPE_LABELS[row.type ?? ''] ?? row.type ?? undefined,
       weight: formatWeightKg(row.name, row.weight_lb),
       armorClassBonus: String(armorClassBonus),
+      armorSlotKind: getArmorSlotKind(row.type),
     };
   }
 
@@ -154,7 +166,16 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict): Curated
 // in the bundled db. General adventuring gear (potions, torches, rope,
 // clothing, etc.) lives in the untranslated `items` table, so it's left out
 // entirely rather than shown in English.
-const CURATED_ITEM_NAMES = ['Light Crossbow', 'Shortsword', 'Breastplate', 'Shield', 'Crossbow Bolt'];
+const CURATED_ITEM_NAMES = [
+  'Light Crossbow',
+  'Shortsword',
+  'Longsword',
+  'Greatsword',
+  'Breastplate',
+  'Chain Mail',
+  'Shield',
+  'Crossbow Bolt',
+];
 
 export async function getCuratedInventoryBaseItems(db: SQLiteDatabase): Promise<CuratedBaseItem[]> {
   const placeholders = CURATED_ITEM_NAMES.map(() => '?').join(', ');

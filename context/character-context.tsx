@@ -1,8 +1,10 @@
 import { createContext, useMemo, useReducer, type ReactNode } from 'react';
 
 import { ABILITIES, SKILLS } from '@/constants/character';
+import type { WeaponHandedness } from '@/constants/item-codes';
 import type {
   AbilityKey,
+  ArmorSlot,
   Biography,
   CharacterClass,
   CharacterSheet,
@@ -11,6 +13,7 @@ import type {
   HitDice,
   HitPoints,
   SkillKey,
+  WeaponSlot,
 } from '@/types/character';
 
 function createClassId() {
@@ -77,11 +80,20 @@ type Action =
   | { type: 'SET_DEATH_SAVES'; field: keyof DeathSaves; value: number }
   | { type: 'SET_CURRENCY_FIELD'; field: keyof Currency; value: string }
   | { type: 'SET_ITEM_QUANTITY'; id: string; value: string }
-  | { type: 'TOGGLE_ITEM_EQUIPPED'; id: string }
+  | { type: 'SET_WEAPON_SLOT'; id: string; slot: WeaponSlot | 'none' }
+  | { type: 'SET_ARMOR_SLOT'; id: string; slot: ArmorSlot | 'none' }
   | { type: 'SET_FEATURE_USES'; id: string; value: string }
   | { type: 'TOGGLE_SPELL_PREPARED'; id: string }
   | { type: 'SET_SPELL_SLOT_USED'; level: string; value: number }
   | { type: 'SET_BIOGRAPHY_FIELD'; field: keyof Biography; value: string };
+
+// Two weapon slots conflict (only one weapon can occupy them at once) when
+// they're the same slot, or either one is 'twoHanded' - a two-handed grip
+// occupies both the main and off hand.
+function weaponSlotsConflict(existingSlot: WeaponSlot | undefined, newSlot: WeaponSlot): boolean {
+  if (!existingSlot) return false;
+  return existingSlot === newSlot || existingSlot === 'twoHanded' || newSlot === 'twoHanded';
+}
 
 function characterReducer(state: CharacterSheet, action: Action): CharacterSheet {
   switch (action.type) {
@@ -175,22 +187,51 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
         inventoryItems: {
           ...state.inventoryItems,
           [action.id]: {
-            equipped: state.inventoryItems[action.id]?.equipped ?? false,
+            ...(state.inventoryItems[action.id] ?? { quantity: '1' }),
             quantity: action.value,
           },
         },
       };
-    case 'TOGGLE_ITEM_EQUIPPED':
-      return {
-        ...state,
-        inventoryItems: {
-          ...state.inventoryItems,
-          [action.id]: {
-            quantity: state.inventoryItems[action.id]?.quantity ?? '1',
-            equipped: !(state.inventoryItems[action.id]?.equipped ?? false),
-          },
-        },
+    case 'SET_WEAPON_SLOT': {
+      const { id, slot } = action;
+      const inventoryItems = { ...state.inventoryItems };
+
+      if (slot !== 'none') {
+        for (const [itemId, itemState] of Object.entries(inventoryItems)) {
+          if (itemId !== id && weaponSlotsConflict(itemState.weaponSlot, slot)) {
+            inventoryItems[itemId] = { ...itemState, weaponSlot: undefined };
+          }
+        }
+      }
+
+      const current = inventoryItems[id];
+      inventoryItems[id] = {
+        ...(current ?? { quantity: '1' }),
+        weaponSlot: slot === 'none' ? undefined : slot,
       };
+
+      return { ...state, inventoryItems };
+    }
+    case 'SET_ARMOR_SLOT': {
+      const { id, slot } = action;
+      const inventoryItems = { ...state.inventoryItems };
+
+      if (slot !== 'none') {
+        for (const [itemId, itemState] of Object.entries(inventoryItems)) {
+          if (itemId !== id && itemState.armorSlot === slot) {
+            inventoryItems[itemId] = { ...itemState, armorSlot: undefined };
+          }
+        }
+      }
+
+      const current = inventoryItems[id];
+      inventoryItems[id] = {
+        ...(current ?? { quantity: '1' }),
+        armorSlot: slot === 'none' ? undefined : slot,
+      };
+
+      return { ...state, inventoryItems };
+    }
     case 'SET_FEATURE_USES':
       return {
         ...state,
@@ -244,7 +285,9 @@ export interface CharacterContextValue {
   setDeathSaves: (field: keyof DeathSaves, value: number) => void;
   setCurrencyField: (field: keyof Currency, value: string) => void;
   setItemQuantity: (id: string, value: string) => void;
-  toggleItemEquipped: (id: string) => void;
+  setWeaponSlot: (id: string, slot: WeaponSlot | 'none') => void;
+  toggleWeaponEquipped: (id: string, handedness: WeaponHandedness) => string | null;
+  toggleArmorEquipped: (id: string, slotKind: ArmorSlot) => string | null;
   setFeatureUses: (id: string, value: string) => void;
   toggleSpellPrepared: (id: string) => void;
   setSpellSlotUsed: (level: string, value: number) => void;
@@ -276,7 +319,58 @@ export function CharacterProvider({ children }: { children: ReactNode }) {
       setDeathSaves: (field, value) => dispatch({ type: 'SET_DEATH_SAVES', field, value }),
       setCurrencyField: (field, value) => dispatch({ type: 'SET_CURRENCY_FIELD', field, value }),
       setItemQuantity: (id, value) => dispatch({ type: 'SET_ITEM_QUANTITY', id, value }),
-      toggleItemEquipped: (id) => dispatch({ type: 'TOGGLE_ITEM_EQUIPPED', id }),
+      setWeaponSlot: (id, slot) => dispatch({ type: 'SET_WEAPON_SLOT', id, slot }),
+      toggleWeaponEquipped: (id, handedness) => {
+        if (character.inventoryItems[id]?.weaponSlot) {
+          dispatch({ type: 'SET_WEAPON_SLOT', id, slot: 'none' });
+          return null;
+        }
+
+        const mainOccupied = Object.entries(character.inventoryItems).some(
+          ([itemId, itemState]) =>
+            itemId !== id && (itemState.weaponSlot === 'main' || itemState.weaponSlot === 'twoHanded')
+        );
+        const offOccupied = Object.entries(character.inventoryItems).some(
+          ([itemId, itemState]) =>
+            itemId !== id && (itemState.weaponSlot === 'off' || itemState.weaponSlot === 'twoHanded')
+        );
+
+        if (handedness === 'twoHanded') {
+          if (mainOccupied || offOccupied) {
+            return 'Desequipe uma arma antes de equipar esta arma de duas mãos.';
+          }
+          dispatch({ type: 'SET_WEAPON_SLOT', id, slot: 'twoHanded' });
+          return null;
+        }
+
+        if (!mainOccupied) {
+          dispatch({ type: 'SET_WEAPON_SLOT', id, slot: 'main' });
+          return null;
+        }
+        if (!offOccupied) {
+          dispatch({ type: 'SET_WEAPON_SLOT', id, slot: 'off' });
+          return null;
+        }
+        return 'Desequipe uma arma antes de equipar esta.';
+      },
+      toggleArmorEquipped: (id, slotKind) => {
+        if (character.inventoryItems[id]?.armorSlot) {
+          dispatch({ type: 'SET_ARMOR_SLOT', id, slot: 'none' });
+          return null;
+        }
+
+        const occupiedByOther = Object.entries(character.inventoryItems).some(
+          ([itemId, itemState]) => itemId !== id && itemState.armorSlot === slotKind
+        );
+        if (occupiedByOther) {
+          return slotKind === 'shield'
+            ? 'Desequipe o escudo atual antes de equipar este.'
+            : 'Desequipe a armadura atual antes de equipar esta.';
+        }
+
+        dispatch({ type: 'SET_ARMOR_SLOT', id, slot: slotKind });
+        return null;
+      },
       setFeatureUses: (id, value) => dispatch({ type: 'SET_FEATURE_USES', id, value }),
       toggleSpellPrepared: (id) => dispatch({ type: 'TOGGLE_SPELL_PREPARED', id }),
       setSpellSlotUsed: (level, value) => dispatch({ type: 'SET_SPELL_SLOT_USED', level, value }),

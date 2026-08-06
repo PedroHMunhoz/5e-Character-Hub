@@ -62,9 +62,13 @@ export interface Currency {
   pc: string;
 }
 
+export type WeaponSlot = 'main' | 'off' | 'twoHanded';
+export type ArmorSlot = 'body' | 'shield';
+
 export interface InventoryItemState {
   quantity: string;
-  equipped: boolean;
+  weaponSlot?: WeaponSlot;
+  armorSlot?: ArmorSlot;
 }
 
 export interface FeatureItemState {

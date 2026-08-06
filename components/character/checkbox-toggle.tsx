@@ -13,7 +13,10 @@ export function CheckboxToggle({ checked, onToggle }: CheckboxToggleProps) {
 
   return (
     <Pressable
-      onPress={onToggle}
+      onPress={(event) => {
+        event.stopPropagation();
+        onToggle();
+      }}
       accessibilityRole="checkbox"
       accessibilityState={{ checked }}
       hitSlop={8}

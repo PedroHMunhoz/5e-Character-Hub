@@ -5,13 +5,15 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 
 interface ItemIconPlaceholderProps {
   badge?: string;
+  size?: number;
+  fill?: boolean;
 }
 
-export function ItemIconPlaceholder({ badge }: ItemIconPlaceholderProps) {
+export function ItemIconPlaceholder({ badge, size = 56, fill }: ItemIconPlaceholderProps) {
   const borderColor = useThemeColor({}, 'gold');
 
   return (
-    <View style={[styles.container, { borderColor }]}>
+    <View style={[styles.container, { borderColor }, fill ? styles.fill : { width: size, height: size }]}>
       {badge ? (
         <View style={[styles.badge, { borderColor }]}>
           <ThemedText style={[styles.badgeText, { color: borderColor }]}>{badge}</ThemedText>
@@ -23,11 +25,12 @@ export function ItemIconPlaceholder({ badge }: ItemIconPlaceholderProps) {
 
 const styles = StyleSheet.create({
   container: {
-    width: 56,
-    height: 56,
     borderWidth: 1,
     borderRadius: 8,
     overflow: 'hidden',
+  },
+  fill: {
+    flex: 1,
   },
   badge: {
     position: 'absolute',

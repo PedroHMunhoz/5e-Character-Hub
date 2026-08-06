@@ -1,0 +1,400 @@
+import { useEffect, useState, type ReactNode } from 'react';
+import { ActivityIndicator, LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
+import { Stack, useLocalSearchParams } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
+
+import { CheckboxToggle } from '@/components/character/checkbox-toggle';
+import { ItemIconPlaceholder } from '@/components/character/item-icon-placeholder';
+import { MessageModal } from '@/components/character/message-modal';
+import { PropertyPill } from '@/components/character/property-pill';
+import { SelectField, type SelectFieldOption } from '@/components/character/select-field';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { WEAPON_PROPERTY_LABELS, type WeaponHandedness } from '@/constants/item-codes';
+import { getItemPropertyDescriptions, type ItemPropertyDetail } from '@/data/queries/item-properties';
+import { getBaseItemDetailById, type ItemDetail } from '@/data/queries/item-detail';
+import { formatSignedModifier } from '@/utils/ability-modifier';
+import { useCharacter } from '@/hooks/use-character';
+import { useThemeColor } from '@/hooks/use-theme-color';
+import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
+import { formatSpacedModifier, getWeaponAbilityModifier } from '@/utils/weapon-combat';
+import type { WeaponSlot } from '@/types/character';
+
+type WeaponSlotValue = WeaponSlot | 'none';
+
+const GRID_GAP = 12;
+const HEADER_GAP = 12;
+const HEADER_ICON_RATIO = 0.3;
+
+function getSlotOptions(handedness: WeaponHandedness): SelectFieldOption<WeaponSlotValue>[] {
+  const none: SelectFieldOption<WeaponSlotValue> = { value: 'none', label: 'Não Equipado' };
+  const main: SelectFieldOption<WeaponSlotValue> = { value: 'main', label: 'Mão Principal' };
+  const off: SelectFieldOption<WeaponSlotValue> = { value: 'off', label: 'Mão Secundária' };
+  const twoHanded: SelectFieldOption<WeaponSlotValue> = { value: 'twoHanded', label: 'Duas Mãos' };
+
+  if (handedness === 'twoHanded') return [none, twoHanded];
+  if (handedness === 'versatile') return [none, main, off, twoHanded];
+  return [none, main, off];
+}
+
+// Two cells of exactly equal, measured width - not `flex`/`%`, both of which
+// proved unreliable at splitting a row evenly on this app's native Yoga
+// runtime across several rounds of testing on a real device.
+function GridRow({ left, right }: { left: ReactNode; right: ReactNode }) {
+  const [width, setWidth] = useState(0);
+  const cellWidth = width > 0 ? (width - GRID_GAP) / 2 : undefined;
+
+  function handleLayout(event: LayoutChangeEvent) {
+    setWidth(event.nativeEvent.layout.width);
+  }
+
+  return (
+    <View style={styles.gridRow} onLayout={handleLayout}>
+      <View style={cellWidth != null ? { width: cellWidth } : styles.gridCellFallback}>{left}</View>
+      <View style={{ width: GRID_GAP }} />
+      <View style={cellWidth != null ? { width: cellWidth } : styles.gridCellFallback}>{right}</View>
+    </View>
+  );
+}
+
+// Same measured-width approach as GridRow, but split at a fixed ratio
+// (photo/fields) instead of 50/50, so the photo is always the same relative
+// size regardless of how long the Categoria text happens to be.
+function HeaderRow({ icon, fields }: { icon: ReactNode; fields: ReactNode }) {
+  const [width, setWidth] = useState(0);
+  const iconWidth = width > 0 ? Math.round((width - HEADER_GAP) * HEADER_ICON_RATIO) : undefined;
+  const fieldsWidth = width > 0 && iconWidth != null ? width - HEADER_GAP - iconWidth : undefined;
+
+  function handleLayout(event: LayoutChangeEvent) {
+    setWidth(event.nativeEvent.layout.width);
+  }
+
+  return (
+    <View style={styles.headerRow} onLayout={handleLayout}>
+      <View style={iconWidth != null ? { width: iconWidth } : styles.gridCellFallback}>{icon}</View>
+      <View style={{ width: HEADER_GAP }} />
+      <View style={fieldsWidth != null ? { width: fieldsWidth } : styles.headerFieldsFallback}>{fields}</View>
+    </View>
+  );
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  const goldColor = useThemeColor({}, 'gold');
+  return (
+    <View style={[styles.field, { borderColor: goldColor }]}>
+      <ThemedText style={styles.fieldLabel}>{label}</ThemedText>
+      <ThemedText style={styles.fieldValue}>{value}</ThemedText>
+    </View>
+  );
+}
+
+export default function ItemDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const db = useSQLiteContext();
+  const { character, setItemQuantity, toggleArmorEquipped, setWeaponSlot } = useCharacter();
+  const goldColor = useThemeColor({}, 'gold');
+
+  const [item, setItem] = useState<ItemDetail | null>(null);
+  const [propertyDetails, setPropertyDetails] = useState<Map<string, ItemPropertyDetail>>(new Map());
+  const [loading, setLoading] = useState(true);
+  const [selectedPropertyCode, setSelectedPropertyCode] = useState<string | null>(null);
+  const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const numericId = Number(id);
+    let cancelled = false;
+
+    async function load() {
+      const detail = await getBaseItemDetailById(db, numericId);
+      if (cancelled) return;
+      setItem(detail);
+
+      if (detail?.category === 'weapon' && detail.propertyCodes.length > 0) {
+        const descriptions = await getItemPropertyDescriptions(db, detail.propertyCodes);
+        if (!cancelled) setPropertyDetails(descriptions);
+      }
+
+      if (!cancelled) setLoading(false);
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [db, id]);
+
+  if (loading || !item) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={goldColor} />
+      </View>
+    );
+  }
+
+  const itemId = String(item.id);
+  const inventoryState = character.inventoryItems[itemId];
+  const selectedProperty = selectedPropertyCode ? propertyDetails.get(selectedPropertyCode) : undefined;
+
+  return (
+    <>
+      <Stack.Screen options={{ title: item.name }} />
+      <ThemedView style={styles.container}>
+        <HeaderRow
+          icon={<ItemIconPlaceholder fill />}
+          fields={
+            <View style={styles.headerFields}>
+              <Field label="Peso" value={`${item.weight} kg`} />
+              <Field label="Categoria" value={item.categoryLabel} />
+            </View>
+          }
+        />
+
+        {item.category === 'weapon' ? (
+          <WeaponSection
+            item={item}
+            slot={inventoryState?.weaponSlot ?? 'none'}
+            onSlotChange={(slot) => setWeaponSlot(itemId, slot)}
+            strScore={character.abilities.str.score}
+            dexScore={character.abilities.dex.score}
+            proficiencyBonus={getProficiencyBonus(getCharacterLevel(character.classes)) ?? 0}
+            onPropertyPress={setSelectedPropertyCode}
+          />
+        ) : null}
+
+        {item.category === 'armor' ? (
+          <>
+            <GridRow
+              left={<Field label="CA" value={formatSignedModifier(item.armorClassBonus)} />}
+              right={
+                <View style={[styles.field, styles.equippedField, { borderColor: goldColor }]}>
+                  <ThemedText style={styles.fieldLabel}>Equipado</ThemedText>
+                  <CheckboxToggle
+                    checked={inventoryState?.armorSlot != null}
+                    onToggle={() => {
+                      const message = toggleArmorEquipped(itemId, item.armorSlotKind);
+                      if (message) setBlockedMessage(message);
+                    }}
+                  />
+                </View>
+              }
+            />
+
+            {item.strengthRequirement || item.stealthDisadvantage ? (
+              <View style={styles.propertiesSection}>
+                <ThemedText style={styles.propertiesLabel}>Observações</ThemedText>
+                {item.strengthRequirement ? (
+                  <ThemedText style={styles.bulletItem}>{`•  Requer Força mínima de ${item.strengthRequirement}`}</ThemedText>
+                ) : null}
+                {item.stealthDisadvantage ? (
+                  <ThemedText style={styles.bulletItem}>{'•  Desvantagem em Furtividade'}</ThemedText>
+                ) : null}
+              </View>
+            ) : null}
+          </>
+        ) : null}
+
+        {item.category === 'consumable' ? (
+          <ConsumableSection
+            quantity={inventoryState?.quantity ?? item.defaultQuantity}
+            onQuantityChange={(value) => setItemQuantity(itemId, value)}
+          />
+        ) : null}
+      </ThemedView>
+
+      <MessageModal
+        visible={selectedPropertyCode != null}
+        title={selectedProperty?.name}
+        message={selectedProperty?.description}
+        onClose={() => setSelectedPropertyCode(null)}
+      />
+
+      <MessageModal
+        visible={blockedMessage != null}
+        title="Atenção"
+        message={blockedMessage ?? undefined}
+        onClose={() => setBlockedMessage(null)}
+      />
+    </>
+  );
+}
+
+interface WeaponSectionProps {
+  item: Extract<ItemDetail, { category: 'weapon' }>;
+  slot: WeaponSlotValue;
+  onSlotChange: (slot: WeaponSlotValue) => void;
+  strScore: string;
+  dexScore: string;
+  proficiencyBonus: number;
+  onPropertyPress: (code: string) => void;
+}
+
+function WeaponSection({
+  item,
+  slot,
+  onSlotChange,
+  strScore,
+  dexScore,
+  proficiencyBonus,
+  onPropertyPress,
+}: WeaponSectionProps) {
+  const abilityMod = getWeaponAbilityModifier(item.attackAbility, strScore, dexScore);
+  const attackBonus = abilityMod + proficiencyBonus;
+  const isTwoHanded = slot === 'twoHanded';
+  const damageDice = isTwoHanded && item.damageDiceVersatile ? item.damageDiceVersatile : item.damageDice;
+  const damageTypeLabel = item.damageTypeLabel ?? '—';
+
+  return (
+    <>
+      <GridRow
+        left={
+          <SelectField
+            label="Equipado Em"
+            value={slot}
+            options={getSlotOptions(item.handedness)}
+            onChange={onSlotChange}
+          />
+        }
+        right={<Field label="Acerto" value={`1d20 ${formatSpacedModifier(attackBonus)}`} />}
+      />
+
+      <GridRow
+        left={<Field label="Dano" value={`${damageDice} ${formatSpacedModifier(abilityMod)}`} />}
+        right={<Field label="Tipo de Dano" value={damageTypeLabel} />}
+      />
+
+      {item.propertyCodes.length > 0 ? (
+        <View style={styles.propertiesSection}>
+          <ThemedText style={styles.propertiesLabel}>Propriedades</ThemedText>
+          <View style={styles.propertiesRow}>
+            {item.propertyCodes.map((code) => (
+              <PropertyPill
+                key={code}
+                label={WEAPON_PROPERTY_LABELS[code] ?? code}
+                onPress={() => onPropertyPress(code)}
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
+    </>
+  );
+}
+
+interface ConsumableSectionProps {
+  quantity: string;
+  onQuantityChange: (value: string) => void;
+}
+
+function ConsumableSection({ quantity, onQuantityChange }: ConsumableSectionProps) {
+  const goldColor = useThemeColor({}, 'gold');
+  const current = parseInt(quantity, 10) || 0;
+
+  function adjust(delta: number) {
+    onQuantityChange(String(Math.max(0, current + delta)));
+  }
+
+  return (
+    <View style={[styles.field, styles.quantityField, { borderColor: goldColor }]}>
+      <ThemedText style={styles.fieldLabel}>Quantidade</ThemedText>
+      <View style={styles.quantityStepper}>
+        <Pressable onPress={() => adjust(-1)} style={[styles.stepperButton, { borderColor: goldColor }]}>
+          <ThemedText style={[styles.stepperButtonText, { color: goldColor }]}>−</ThemedText>
+        </Pressable>
+        <ThemedText style={styles.fieldValue}>{current}</ThemedText>
+        <Pressable onPress={() => adjust(1)} style={[styles.stepperButton, { borderColor: goldColor }]}>
+          <ThemedText style={[styles.stepperButtonText, { color: goldColor }]}>+</ThemedText>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  container: {
+    flex: 1,
+    width: '100%',
+    padding: 16,
+    gap: 16,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    width: '100%',
+  },
+  headerFields: {
+    gap: 8,
+  },
+  headerFieldsFallback: {
+    flex: 3,
+  },
+  gridRow: {
+    flexDirection: 'row',
+    width: '100%',
+  },
+  gridCellFallback: {
+    flex: 1,
+  },
+  field: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 4,
+  },
+  equippedField: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  quantityField: {
+    width: '50%',
+    gap: 8,
+  },
+  quantityStepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  stepperButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  fieldLabel: {
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  fieldValue: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  propertiesSection: {
+    gap: 8,
+  },
+  propertiesLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  bulletItem: {
+    fontSize: 14,
+    opacity: 0.85,
+  },
+  propertiesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+});

@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { CollapsibleSection } from '@/components/character/collapsible-section';
 import { CurrencyInput } from '@/components/character/currency-input';
 import { EquipmentItemCard } from '@/components/character/equipment-item-card';
+import { MessageModal } from '@/components/character/message-modal';
 import { StackableItemCard } from '@/components/character/stackable-item-card';
 import { CURRENCY_FIELDS, INVENTORY_CATEGORY_SECTIONS } from '@/constants/inventory';
 import { getCuratedInventoryBaseItems, type CuratedBaseItem } from '@/data/queries/base-items';
@@ -13,9 +15,11 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 
 export function CharacterInventory() {
   const db = useSQLiteContext();
-  const { character, setCurrencyField, toggleItemEquipped } = useCharacter();
+  const router = useRouter();
+  const { character, setCurrencyField, toggleArmorEquipped, toggleWeaponEquipped } = useCharacter();
   const [items, setItems] = useState<CuratedBaseItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
   const goldColor = useThemeColor({}, 'gold');
 
   useEffect(() => {
@@ -43,53 +47,80 @@ export function CharacterInventory() {
   }
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
-      <View style={styles.currencyRow}>
-        {CURRENCY_FIELDS.map((field) => (
-          <CurrencyInput
-            key={field.key}
-            label={field.label}
-            value={character.currency[field.key]}
-            onChangeText={(value) => setCurrencyField(field.key, value)}
-          />
-        ))}
-      </View>
-
-      {sections.map((section) => (
-        <CollapsibleSection key={section.key} title={section.label}>
-          <View style={styles.cardList}>
-            {section.items.map((item) => {
-              const itemId = String(item.id);
-
-              if (section.category === 'weapon' || section.category === 'armor') {
-                return (
-                  <EquipmentItemCard
-                    key={itemId}
-                    name={item.name}
-                    properties={item.properties}
-                    weight={item.weight}
-                    statValue={section.category === 'weapon' ? item.damageDice : item.armorClassBonus}
-                    statIcon={section.category === 'weapon' ? 'sword' : 'shield'}
-                    equipped={character.inventoryItems[itemId]?.equipped ?? false}
-                    onToggleEquipped={() => toggleItemEquipped(itemId)}
-                  />
-                );
-              }
-
-              return (
-                <StackableItemCard
-                  key={itemId}
-                  name={item.name}
-                  properties={item.properties}
-                  weight={item.weight}
-                  quantity={character.inventoryItems[itemId]?.quantity ?? item.defaultQuantity ?? '1'}
-                />
-              );
-            })}
+    <>
+      <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
+        <CollapsibleSection title="Moedas">
+          <View style={styles.currencyRow}>
+            {CURRENCY_FIELDS.map((field) => (
+              <CurrencyInput
+                key={field.key}
+                label={field.label}
+                value={character.currency[field.key]}
+                onChangeText={(value) => setCurrencyField(field.key, value)}
+              />
+            ))}
           </View>
         </CollapsibleSection>
-      ))}
-    </ScrollView>
+
+        {sections.map((section) => (
+          <CollapsibleSection key={section.key} title={section.label}>
+            <View style={styles.cardList}>
+              {section.items.map((item) => {
+                const itemId = String(item.id);
+
+                if (section.category === 'weapon' || section.category === 'armor') {
+                  const isWeapon = section.category === 'weapon';
+                  return (
+                    <Pressable
+                      key={itemId}
+                      onPress={() => router.push({ pathname: '/item/[id]', params: { id: itemId } })}>
+                      <EquipmentItemCard
+                        name={item.name}
+                        properties={item.properties}
+                        weight={item.weight}
+                        statValue={isWeapon ? item.damageDice : item.armorClassBonus}
+                        statIcon={isWeapon ? 'sword' : 'shield'}
+                        equipped={
+                          isWeapon
+                            ? character.inventoryItems[itemId]?.weaponSlot != null
+                            : character.inventoryItems[itemId]?.armorSlot != null
+                        }
+                        onToggleEquipped={() => {
+                          const message = isWeapon
+                            ? toggleWeaponEquipped(itemId, item.handedness ?? 'oneHanded')
+                            : toggleArmorEquipped(itemId, item.armorSlotKind ?? 'body');
+                          if (message) setBlockedMessage(message);
+                        }}
+                      />
+                    </Pressable>
+                  );
+                }
+
+                return (
+                  <Pressable
+                    key={itemId}
+                    onPress={() => router.push({ pathname: '/item/[id]', params: { id: itemId } })}>
+                    <StackableItemCard
+                      name={item.name}
+                      properties={item.properties}
+                      weight={item.weight}
+                      quantity={character.inventoryItems[itemId]?.quantity ?? item.defaultQuantity ?? '1'}
+                    />
+                  </Pressable>
+                );
+              })}
+            </View>
+          </CollapsibleSection>
+        ))}
+      </ScrollView>
+
+      <MessageModal
+        visible={blockedMessage != null}
+        title="Atenção"
+        message={blockedMessage ?? undefined}
+        onClose={() => setBlockedMessage(null)}
+      />
+    </>
   );
 }
 
