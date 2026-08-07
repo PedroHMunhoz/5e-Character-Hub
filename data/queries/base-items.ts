@@ -58,20 +58,33 @@ interface ArmorDetails {
 export function categorize(type: string | null): CuratedItemCategory {
   if (type === 'R' || type === 'M') return 'weapon';
   if (type === 'MA' || type === 'HA' || type === 'LA' || type === 'S') return 'armor';
+  if (type === 'AT' || type === 'INS' || type === 'SCF') return 'general';
   return 'consumable';
 }
 
-// lb -> kg, formatted with a pt-BR comma decimal. Falls back to a plain
-// conversion only when there's no verified book weight in
-// ITEM_WEIGHT_KG_OVERRIDES - Galápagos's official PHB rounds to cleaner metric
-// figures rather than converting precisely, so the override always wins for
-// items we've checked against the printed book.
+// Short display label for 'general' items (tools, instruments, spellcasting
+// foci) - these aren't stackable consumables, so they don't get a
+// "Munição"-style properties tag. Classification verified against
+// translations/pt-BR/CLASSIFICACAO-ITENS-GERAIS.md (PHB p.152 equipment table).
+export const GENERAL_ITEM_TYPE_LABELS: Record<string, string> = {
+  AT: 'Ferramenta',
+  INS: 'Instrumento Musical',
+  SCF: 'Foco de Conjuração',
+};
+
+// lb -> kg, formatted with a pt-BR comma decimal. Galápagos's official PHB
+// doesn't convert precisely - the whole equipment table (weapons, armor,
+// tools, instruments, foci) rounds to a flat "1 kg ≈ 2 lb" rule instead,
+// verified against ~90 base_items in translations/pt-BR/_raw-extracts/PHB.txt.
+// ITEM_WEIGHT_KG_OVERRIDES only holds the handful of items that print a
+// different value than that rule (either extra decimal precision, like the
+// 20-packs of ammo, or a genuinely divergent book value - see DUVIDAS.md).
 export function formatWeightKg(name: string, weightLb: number | null): string {
   const override = ITEM_WEIGHT_KG_OVERRIDES[name];
   if (override) return override;
 
   if (weightLb == null) return '0';
-  const kg = weightLb * 0.4536;
+  const kg = weightLb * 0.5;
   let rounded = Math.round(kg * 10) / 10;
   if (rounded === 0 && kg > 0) rounded = Math.round(kg * 100) / 100;
   return String(rounded).replace('.', ',');
@@ -151,6 +164,16 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict): Curated
     };
   }
 
+  if (category === 'general') {
+    return {
+      id: row.id,
+      category,
+      name,
+      properties: GENERAL_ITEM_TYPE_LABELS[row.type ?? ''] ?? row.type ?? undefined,
+      weight: formatWeightKg(row.name, row.weight_lb),
+    };
+  }
+
   return {
     id: row.id,
     category,
@@ -175,6 +198,19 @@ const CURATED_ITEM_NAMES = [
   'Chain Mail',
   'Shield',
   'Crossbow Bolt',
+  // DUVIDAS.md cases where the printed book weight was rejected in favor of
+  // the English dataset's weight - added here just to eyeball in the app.
+  'Pike',
+  'Heavy Crossbow',
+  'Viol',
+  // Spellcasting/druidic foci (SCF) - added to verify the 'general'
+  // categorization from CLASSIFICACAO-ITENS-GERAIS.md.
+  'Crystal',
+  'Orb',
+  'Rod',
+  'Staff',
+  'Wand',
+  'Wooden Staff',
 ];
 
 export async function getCuratedInventoryBaseItems(db: SQLiteDatabase): Promise<CuratedBaseItem[]> {

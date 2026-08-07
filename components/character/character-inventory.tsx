@@ -106,6 +106,7 @@ export function CharacterInventory() {
                   );
                 }
 
+                const isConsumable = section.category === 'consumable';
                 return (
                   <Pressable
                     key={itemId}
@@ -114,7 +115,11 @@ export function CharacterInventory() {
                       name={item.name}
                       properties={item.properties}
                       weight={item.weight}
-                      quantity={character.inventoryItems[itemId]?.quantity ?? item.defaultQuantity ?? '1'}
+                      quantity={
+                        isConsumable
+                          ? (character.inventoryItems[itemId]?.quantity ?? item.defaultQuantity ?? '1')
+                          : undefined
+                      }
                     />
                   </Pressable>
                 );

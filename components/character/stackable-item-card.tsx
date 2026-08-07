@@ -10,7 +10,7 @@ interface StackableItemCardProps {
   name: string;
   properties?: string;
   weight: string;
-  quantity: string;
+  quantity?: string;
 }
 
 export function StackableItemCard({ name, properties, weight, quantity }: StackableItemCardProps) {

@@ -9,7 +9,7 @@ import {
   type WeaponHandedness,
 } from '@/constants/item-codes';
 import { parseJson } from '../rows';
-import { categorize, convertRangeToMeters, formatWeightKg } from './base-items';
+import { categorize, convertRangeToMeters, formatWeightKg, GENERAL_ITEM_TYPE_LABELS } from './base-items';
 import { getTranslations, localizedName } from './localize';
 
 interface BaseItemDetailRow {
@@ -76,7 +76,15 @@ export interface ConsumableItemDetail {
   defaultQuantity: string;
 }
 
-export type ItemDetail = WeaponItemDetail | ArmorItemDetail | ConsumableItemDetail;
+export interface GeneralItemDetail {
+  category: 'general';
+  id: number;
+  name: string;
+  weight: string;
+  categoryLabel: string;
+}
+
+export type ItemDetail = WeaponItemDetail | ArmorItemDetail | ConsumableItemDetail | GeneralItemDetail;
 
 function mapWeaponDetail(row: BaseItemDetailRow, name: string): WeaponItemDetail {
   const damage = parseJson<DamageInfo>(row.damage) ?? {};
@@ -140,6 +148,16 @@ function mapConsumableDetail(row: BaseItemDetailRow, name: string): ConsumableIt
   };
 }
 
+function mapGeneralDetail(row: BaseItemDetailRow, name: string): GeneralItemDetail {
+  return {
+    category: 'general',
+    id: row.id,
+    name,
+    weight: formatWeightKg(row.name, row.weight_lb),
+    categoryLabel: GENERAL_ITEM_TYPE_LABELS[row.type ?? ''] ?? row.type ?? '',
+  };
+}
+
 export async function getBaseItemDetailById(db: SQLiteDatabase, id: number): Promise<ItemDetail | null> {
   const row = await db.getFirstAsync<BaseItemDetailRow>(
     'SELECT id, name, type, weight_lb, damage, properties, details FROM base_items WHERE id = ?',
@@ -153,5 +171,6 @@ export async function getBaseItemDetailById(db: SQLiteDatabase, id: number): Pro
 
   if (category === 'weapon') return mapWeaponDetail(row, name);
   if (category === 'armor') return mapArmorDetail(row, name);
+  if (category === 'general') return mapGeneralDetail(row, name);
   return mapConsumableDetail(row, name);
 }
