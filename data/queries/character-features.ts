@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { FEATURE_USAGE_OVERRIDES } from '@/constants/feature-usage-overrides';
+import { getFeatureUsage, type RecoveryType } from '@/constants/feature-usage-overrides';
 import { toEntries } from '../rows';
 import { getTranslations, localizedEntries, localizedName } from './localize';
 
@@ -12,25 +12,20 @@ export interface CuratedFeature {
   name: string;
   usageType: 'ativa' | 'passiva';
   maxUses?: string;
-  recovery?: string;
+  recovery?: RecoveryType[];
 }
 
 function withUsage(id: string, section: FeatureSectionKey, englishName: string, name: string): CuratedFeature {
-  const override = FEATURE_USAGE_OVERRIDES[englishName];
-  return {
-    id,
-    section,
-    name,
-    usageType: override?.usageType ?? 'passiva',
-    maxUses: override?.maxUses,
-    recovery: override?.recovery,
-  };
+  return { id, section, name, ...getFeatureUsage(englishName) };
 }
 
 // The demo character is a level-2 Rock Gnome Evocation Wizard with the Sage
 // background. These ids were picked by hand and confirmed to have pt-BR
 // translations in the bundled db (see the plan for how each was found).
-const CLASS_FEATURE_IDS = [362, 363, 364]; // Arcane Recovery, Spellcasting, Arcane Tradition
+// Second Wind (id 120, Fighter) doesn't belong to this character's class -
+// it's included solely to exercise the "recovers on short or long rest" copy
+// in the detail screen, since none of the wizard's own features do.
+const CLASS_FEATURE_IDS = [362, 363, 364, 120]; // Arcane Recovery, Spellcasting, Arcane Tradition, Second Wind
 const SUBCLASS_FEATURE_IDS = [874, 875, 876, 877]; // School of Evocation, Evocation Savant, Sculpt Spells, Potent Cantrip
 const RACIAL_TRAIT_IDS = [820, 821, 250]; // Artificer's Lore, Tinker, Gnome Cunning
 const SAGE_BACKGROUND_ID = 58;
@@ -82,7 +77,7 @@ export async function getCuratedCharacterFeatures(db: SQLiteDatabase): Promise<C
 
   if (backgroundRow) {
     const entries = localizedEntries(backgroundRow.id, toEntries(backgroundRow.entries), backgroundTranslations);
-    const featureName = extractBackgroundFeatureName(entries) ?? localizedName(backgroundRow.id, backgroundRow.name, backgroundTranslations);
+    const featureName = extractBackgroundFeature(entries)?.name ?? localizedName(backgroundRow.id, backgroundRow.name, backgroundTranslations);
     features.push(withUsage(`background-${backgroundRow.id}`, 'antecedente', 'Background Feature', featureName));
   }
 
@@ -91,11 +86,17 @@ export async function getCuratedCharacterFeatures(db: SQLiteDatabase): Promise<C
 
 // Background entries interleave section headers with prose; the granted
 // feature's name shows up as its own entry, e.g. "Característica: Pesquisador:"
-// (or "Feature: Researcher:" when untranslated).
-function extractBackgroundFeatureName(entries: string[]): string | null {
-  for (const entry of entries) {
-    const match = entry.match(/^(?:Característica|Feature):\s*(.+):$/);
-    if (match) return match[1];
+// (or "Feature: Researcher:" when untranslated), followed by the paragraphs
+// describing it, up to the next header-like entry (one ending in ":").
+export function extractBackgroundFeature(entries: string[]): { name: string; body: string[] } | null {
+  const headerIndex = entries.findIndex((entry) => /^(?:Característica|Feature):\s*(.+):$/.test(entry));
+  if (headerIndex === -1) return null;
+
+  const match = entries[headerIndex].match(/^(?:Característica|Feature):\s*(.+):$/)!;
+  const body: string[] = [];
+  for (let i = headerIndex + 1; i < entries.length && !entries[i].endsWith(':'); i++) {
+    body.push(entries[i]);
   }
-  return null;
+
+  return { name: match[1], body };
 }

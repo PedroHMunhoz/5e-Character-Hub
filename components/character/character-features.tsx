@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { CollapsibleSection } from '@/components/character/collapsible-section';
@@ -17,6 +18,7 @@ const FEATURE_SECTION_LABELS: { key: FeatureSectionKey | 'outras'; label: string
 
 export function CharacterFeatures() {
   const db = useSQLiteContext();
+  const router = useRouter();
   const { character } = useCharacter();
   const [features, setFeatures] = useState<CuratedFeature[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,14 +54,17 @@ export function CharacterFeatures() {
         <CollapsibleSection key={section.key} title={section.label}>
           <View style={styles.cardList}>
             {section.items.map((item) => (
-              <FeatureItemCard
+              <Pressable
                 key={item.id}
-                name={item.name}
-                usageType={item.usageType}
-                maxUses={item.maxUses}
-                usesCurrent={character.features[item.id]?.usesCurrent ?? item.maxUses ?? '0'}
-                recovery={item.recovery}
-              />
+                onPress={() => router.push({ pathname: '/feature/[id]', params: { id: item.id } })}>
+                <FeatureItemCard
+                  name={item.name}
+                  usageType={item.usageType}
+                  maxUses={item.maxUses}
+                  usesCurrent={character.features[item.id]?.usesCurrent ?? item.maxUses ?? '0'}
+                  recovery={item.recovery}
+                />
+              </Pressable>
             ))}
           </View>
         </CollapsibleSection>

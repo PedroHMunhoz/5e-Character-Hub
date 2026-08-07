@@ -84,7 +84,9 @@ function Field({ label, value }: { label: string; value: string }) {
   return (
     <View style={[styles.field, { borderColor: goldColor }]}>
       <ThemedText style={styles.fieldLabel}>{label}</ThemedText>
-      <ThemedText style={styles.fieldValue}>{value}</ThemedText>
+      <ThemedText style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
+        {value}
+      </ThemedText>
     </View>
   );
 }
@@ -188,8 +190,8 @@ export default function ItemDetailScreen() {
             />
 
             {item.strengthRequirement || item.stealthDisadvantage ? (
-              <View style={styles.propertiesSection}>
-                <ThemedText style={styles.propertiesLabel}>Observações</ThemedText>
+              <View style={[styles.field, styles.observationsField, { borderColor: goldColor }]}>
+                <ThemedText style={styles.fieldLabel}>Observações</ThemedText>
                 {item.strengthRequirement ? (
                   <ThemedText style={styles.bulletItem}>{`•  Requer Força mínima de ${item.strengthRequirement}`}</ThemedText>
                 ) : null}
@@ -256,6 +258,7 @@ function WeaponSection({
   proficiencyBonus,
   onPropertyPress,
 }: WeaponSectionProps) {
+  const goldColor = useThemeColor({}, 'gold');
   const abilityMod = getWeaponAbilityModifier(item.attackAbility, strScore, dexScore);
   const attackBonus = abilityMod + proficiencyBonus;
   const isTwoHanded = slot === 'twoHanded';
@@ -282,8 +285,8 @@ function WeaponSection({
       />
 
       {item.propertyCodes.length > 0 ? (
-        <View style={styles.propertiesSection}>
-          <ThemedText style={styles.propertiesLabel}>Propriedades</ThemedText>
+        <View style={[styles.field, styles.propertiesField, { borderColor: goldColor }]}>
+          <ThemedText style={styles.fieldLabel}>Propriedades</ThemedText>
           <View style={styles.propertiesRow}>
             {item.propertyCodes.map((code) => (
               <PropertyPill
@@ -374,6 +377,12 @@ const styles = StyleSheet.create({
     width: '50%',
     gap: 8,
   },
+  observationsField: {
+    gap: 6,
+  },
+  propertiesField: {
+    gap: 8,
+  },
   quantityStepper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -398,13 +407,6 @@ const styles = StyleSheet.create({
   },
   fieldValue: {
     fontSize: 16,
-    fontWeight: '700',
-  },
-  propertiesSection: {
-    gap: 8,
-  },
-  propertiesLabel: {
-    fontSize: 14,
     fontWeight: '700',
   },
   bulletItem: {

@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { ItemIconPlaceholder } from '@/components/character/item-icon-placeholder';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import type { RecoveryType } from '@/constants/feature-usage-overrides';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
 interface FeatureItemCardProps {
@@ -10,7 +11,7 @@ interface FeatureItemCardProps {
   usageType: 'ativa' | 'passiva';
   maxUses?: string;
   usesCurrent?: string;
-  recovery?: string;
+  recovery?: RecoveryType[];
 }
 
 export function FeatureItemCard({ name, usageType, maxUses, usesCurrent, recovery }: FeatureItemCardProps) {
@@ -28,7 +29,7 @@ export function FeatureItemCard({ name, usageType, maxUses, usesCurrent, recover
       </View>
       <View style={styles.statRow}>
         <ThemedText style={styles.recoveryLabel} numberOfLines={1}>
-          {`Recarga: ${isPassive ? '-' : recovery}`}
+          {`Recarga: ${isPassive ? '-' : (recovery?.join('/') ?? '-')}`}
         </ThemedText>
       </View>
     </ThemedView>
