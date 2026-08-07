@@ -11,9 +11,10 @@ export const CURRENCY_FIELDS: { key: keyof Currency; label: string }[] = [
 
 // Section labels/order for the live base_items query in
 // data/queries/base-items.ts. "Itens em Geral" stays as a section header even
-// though it has no items yet: that category lives in the untranslated
-// `items` table (see docs/data-schema.md), so there's no pt-BR content to
-// show for it until that table gets translated too.
+// though it has no items yet: that category lives in the `items` table,
+// which is translated (translations/pt-BR/PHB/items.json) but not queried
+// by the Inventory screen yet - no getCuratedInventoryItems()-equivalent,
+// no categorize() split, no UI wiring.
 export const INVENTORY_CATEGORY_SECTIONS: { key: string; label: string; category: CuratedItemCategory }[] = [
   { key: 'armas', label: 'Armas', category: 'weapon' },
   { key: 'armaduras', label: 'Armaduras', category: 'armor' },

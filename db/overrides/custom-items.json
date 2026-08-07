@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Sinete",
+    "source": "PHB",
+    "type": "SCF",
+    "rarity": "none",
+    "value": 500,
+    "weight": null,
+    "entries": [
+      "Um símbolo sagrado é a representação de uma divindade ou um panteão. Pode ser um amuleto com o símbolo de uma divindade, um símbolo talhado cuidadosamente ou encrustado como um emblema em um escudo ou até mesmo uma caixa pequena que guarda um fragmento de uma relíquia sagrada. O apêndice B lista os símbolos comumente associados a muitas divindades no multiverso. Um clérigo ou paladino pode usar um símbolo sagrado como um foco de conjuração, como descrito no capítulo 10. Para usar o símbolo dessa forma, o conjurador precisa segurá-lo em uma mão, usá-lo visivelmente ou hasteá-lo em seu escudo."
+    ],
+    "_note": "Exclusivo da tabela 'EQUIPAMENTO' impressa na edição pt-BR (Galápagos) da PHB, p.151 - sem item correspondente no dataset em inglês (5e-2014-data/items.json só modela 3 variantes de Símbolo Sagrado: Amulet/Emblem/Reliquary). Ver translations/pt-BR/DUVIDAS.md, seção 'PHB — Itens Gerais'. O campo `name` já está em português (não há nome em inglês para traduzir), por isso não tem entrada correspondente em translations/pt-BR/PHB/items.json."
+  },
+  {
+    "name": "Sino",
+    "source": "PHB",
+    "type": "SCF",
+    "rarity": "none",
+    "value": 100,
+    "weight": null,
+    "entries": [
+      "Um símbolo sagrado é a representação de uma divindade ou um panteão. Pode ser um amuleto com o símbolo de uma divindade, um símbolo talhado cuidadosamente ou encrustado como um emblema em um escudo ou até mesmo uma caixa pequena que guarda um fragmento de uma relíquia sagrada. O apêndice B lista os símbolos comumente associados a muitas divindades no multiverso. Um clérigo ou paladino pode usar um símbolo sagrado como um foco de conjuração, como descrito no capítulo 10. Para usar o símbolo dessa forma, o conjurador precisa segurá-lo em uma mão, usá-lo visivelmente ou hasteá-lo em seu escudo."
+    ],
+    "_note": "Exclusivo da tabela 'EQUIPAMENTO' impressa na edição pt-BR (Galápagos) da PHB, p.151 - sem item correspondente no dataset em inglês (5e-2014-data/items.json só modela 3 variantes de Símbolo Sagrado: Amulet/Emblem/Reliquary). Ver translations/pt-BR/DUVIDAS.md, seção 'PHB — Itens Gerais'. O campo `name` já está em português (não há nome em inglês para traduzir), por isso não tem entrada correspondente em translations/pt-BR/PHB/items.json."
+  }
+]

@@ -447,6 +447,37 @@ runSection('items', () => {
     bump('items');
     addToFts('item', info.lastInsertRowid, i.name, flat);
   }
+
+  // Items printed in a localized sourcebook's table with no equivalent row in
+  // the English 5etools dataset (ex: pt-BR PHB's "Sinete"/"Sino" holy symbol
+  // variants - see translations/pt-BR/DUVIDAS.md, "PHB — Itens Gerais"). Their
+  // `name` is already the localized text (there's no English name to translate
+  // from), so these skip the translations overlay entirely.
+  const customItemsPath = path.join(repoRoot, 'db', 'overrides', 'custom-items.json');
+  if (fs.existsSync(customItemsPath)) {
+    const customItems = JSON.parse(fs.readFileSync(customItemsPath, 'utf8'));
+    for (const i of customItems) {
+      ensureSource(i.source);
+      const info = insertItem.run(
+        i.name,
+        i.source,
+        0,
+        0,
+        i.type ?? null,
+        i.rarity ?? null,
+        0,
+        null,
+        i.value ?? null,
+        i.weight ?? null,
+        null,
+        null,
+        json(i.entries ?? []),
+        null
+      );
+      bump('items');
+      addToFts('item', info.lastInsertRowid, i.name, i.entries ?? []);
+    }
+  }
 });
 
 runSection('magic_variants', () => {

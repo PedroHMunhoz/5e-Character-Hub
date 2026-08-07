@@ -13,10 +13,11 @@ import { parseJson } from '../rows';
 import { getTranslations, localizedName, type TranslationDict } from './localize';
 
 // 'general' has no live query behind it yet - the `items` table (potions,
-// torches, rope, clothing, etc.) isn't translated in the bundled db yet (see
-// docs/data-schema.md). It stays in the category union just so the
-// Inventory screen can keep rendering an (empty) "Itens em Geral" section
-// instead of dropping it.
+// torches, rope, clothing, etc.) IS translated in the bundled db now
+// (translations/pt-BR/PHB/items.json), but nothing queries it yet: no
+// getTranslations('item') call, no categorize()-equivalent split, no UI
+// wiring. It stays in the category union just so the Inventory screen can
+// keep rendering an (empty) "Itens em Geral" section instead of dropping it.
 export type CuratedItemCategory = 'weapon' | 'armor' | 'consumable' | 'general';
 
 export interface CuratedBaseItem {
