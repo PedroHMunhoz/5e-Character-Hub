@@ -7,6 +7,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 interface TranslationFields {
   name?: string;
   entries?: string;
+  materialText?: string;
 }
 
 export type TranslationDict = Map<number, TranslationFields>;
@@ -25,7 +26,7 @@ export async function getTranslations(
   const dict: TranslationDict = new Map();
   for (const row of rows) {
     const fields = dict.get(row.entity_id) ?? {};
-    if (row.field === 'name' || row.field === 'entries') {
+    if (row.field === 'name' || row.field === 'entries' || row.field === 'materialText') {
       fields[row.field] = row.value;
     }
     dict.set(row.entity_id, fields);
@@ -41,4 +42,8 @@ export function localizedEntries(id: number, fallback: string[], dict: Translati
   const raw = dict.get(id)?.entries;
   if (!raw) return fallback;
   return JSON.parse(raw) as string[];
+}
+
+export function localizedMaterialText(id: number, dict: TranslationDict): string | undefined {
+  return dict.get(id)?.materialText;
 }

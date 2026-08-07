@@ -22,6 +22,7 @@ export interface Spell {
   entries: Entries;
   details: Record<string, unknown> | null;
   classes?: string[];
+  materialText?: string;
 }
 
 export interface CharacterClassDefinition {

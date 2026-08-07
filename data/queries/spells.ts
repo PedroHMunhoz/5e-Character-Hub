@@ -2,7 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { Spell } from '@/types/reference';
 import { parseJson, toEntries } from '../rows';
-import { getTranslations, localizedEntries, localizedName, type TranslationDict } from './localize';
+import { getTranslations, localizedEntries, localizedMaterialText, localizedName, type TranslationDict } from './localize';
 
 interface SpellRow {
   id: number;
@@ -39,6 +39,7 @@ function mapSpellRow(row: SpellRow, translations: TranslationDict): Spell {
     concentration: !!row.concentration,
     entries: localizedEntries(row.id, toEntries(row.entries), translations),
     details: parseJson(row.details),
+    materialText: localizedMaterialText(row.id, translations),
   };
 }
 
@@ -108,6 +109,12 @@ const CURATED_SPELLBOOK_NAMES = [
   'Identify',
   'Thunderwave',
   'Sleep',
+  // Not part of the level-2 Evocation Wizard's "known" spells, but kept here
+  // to give the spell detail screen coverage of range shapes/components not
+  // otherwise represented above: Gust of Wind (line-shaped range,
+  // concentration) and Sending (unlimited range).
+  'Gust of Wind',
+  'Sending',
 ];
 
 export async function getCuratedSpellbook(db: SQLiteDatabase): Promise<Spell[]> {

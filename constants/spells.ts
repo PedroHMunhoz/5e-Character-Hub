@@ -54,3 +54,47 @@ export const SPELL_LOADING_MESSAGES: string[] = [
 export const MOCK_MAX_PREPARED_SPELLS = 7;
 export const MOCK_SPELL_SAVE_DC = 15;
 export const MOCK_SPELL_ATTACK_BONUS = '+2';
+
+// 5etools castingTime.unit -> pt-BR label. Verified against "Tempo de
+// Conjuração: 1 ação" / "1 minuto" / "10 minutos" / "1 hora" in
+// translations/pt-BR/_raw-extracts/PHB.txt.
+export const SPELL_CASTING_TIME_UNIT_LABELS: Record<string, { singular: string; plural: string }> = {
+  action: { singular: 'Ação', plural: 'Ações' },
+  bonus: { singular: 'Ação Bônus', plural: 'Ações Bônus' },
+  reaction: { singular: 'Reação', plural: 'Reações' },
+  round: { singular: 'Rodada', plural: 'Rodadas' },
+  minute: { singular: 'Minuto', plural: 'Minutos' },
+  hour: { singular: 'Hora', plural: 'Horas' },
+  day: { singular: 'Dia', plural: 'Dias' },
+};
+
+// 5etools range.type (area shape) -> pt-BR label used when a spell's range
+// originates from the caster, e.g. "Pessoal (cone de 18 metros)" / "Pessoal
+// (9 metros de raio)" / "Pessoal (linha de 18 metros)" - verified against
+// translations/pt-BR/_raw-extracts/PHB.txt. `hemisphere` is the one shape
+// that takes both a leading word AND the trailing "de raio": "Pessoal
+// (hemisfério de 3 metros de raio)".
+export const SPELL_RANGE_SHAPE_LABELS: Record<string, { prefix?: string; suffix?: string }> = {
+  cone: { prefix: 'cone de' },
+  line: { prefix: 'linha de' },
+  cube: { prefix: 'cubo de' },
+  radius: { suffix: 'de raio' },
+  sphere: { suffix: 'de raio' },
+  hemisphere: { prefix: 'hemisfério de', suffix: 'de raio' },
+};
+
+// 5etools duration.type/unit -> pt-BR label. Verified against "Duração:
+// Instantânea" / "Especial" / "8 horas" / "Concentração, até 1 minuto" in
+// translations/pt-BR/_raw-extracts/PHB.txt.
+export const SPELL_DURATION_TYPE_LABELS: Record<string, string> = {
+  instant: 'Instantânea',
+  permanent: 'Permanente',
+  special: 'Especial',
+};
+
+export const SPELL_DURATION_UNIT_LABELS: Record<string, { singular: string; plural: string }> = {
+  round: { singular: 'Rodada', plural: 'Rodadas' },
+  minute: { singular: 'Minuto', plural: 'Minutos' },
+  hour: { singular: 'Hora', plural: 'Horas' },
+  day: { singular: 'Dia', plural: 'Dias' },
+};

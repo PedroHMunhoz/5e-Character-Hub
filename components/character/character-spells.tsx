@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { CollapsibleSection } from '@/components/character/collapsible-section';
@@ -22,6 +23,7 @@ import type { Spell } from '@/types/reference';
 
 export function CharacterSpells() {
   const db = useSQLiteContext();
+  const router = useRouter();
   const { character, toggleSpellPrepared, setSpellSlotUsed } = useCharacter();
   const [search, setSearch] = useState('');
   const [spells, setSpells] = useState<Spell[]>([]);
@@ -134,14 +136,17 @@ export function CharacterSpells() {
             }>
             <View style={styles.cardList}>
               {items.map((spell) => (
-                <SpellRow
+                <Pressable
                   key={spell.id}
-                  name={spell.name}
-                  school={SPELL_SCHOOL_LABELS[spell.school] ?? spell.school}
-                  ritual={spell.ritual}
-                  prepared={section.level >= 1 ? (character.spells[String(spell.id)]?.prepared ?? false) : undefined}
-                  onTogglePrepared={section.level >= 1 ? () => toggleSpellPrepared(String(spell.id)) : undefined}
-                />
+                  onPress={() => router.push({ pathname: '/spell/[id]', params: { id: String(spell.id) } })}>
+                  <SpellRow
+                    name={spell.name}
+                    school={SPELL_SCHOOL_LABELS[spell.school] ?? spell.school}
+                    ritual={spell.ritual}
+                    prepared={section.level >= 1 ? (character.spells[String(spell.id)]?.prepared ?? false) : undefined}
+                    onTogglePrepared={section.level >= 1 ? () => toggleSpellPrepared(String(spell.id)) : undefined}
+                  />
+                </Pressable>
               ))}
             </View>
           </CollapsibleSection>
