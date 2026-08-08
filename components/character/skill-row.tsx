@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-import { ProficiencyDot } from '@/components/character/proficiency-dot';
+import { CheckboxToggle } from '@/components/character/checkbox-toggle';
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
@@ -16,7 +16,7 @@ export function SkillRow({ label, proficient, onToggleProficiency, modifier }: S
 
   return (
     <View style={styles.row}>
-      <ProficiencyDot checked={proficient} onToggle={onToggleProficiency} />
+      <CheckboxToggle checked={proficient} onToggle={onToggleProficiency} />
       <ThemedText style={styles.label} numberOfLines={1}>
         {label}
       </ThemedText>

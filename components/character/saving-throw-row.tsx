@@ -1,6 +1,6 @@
 import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
-import { ProficiencyDot } from '@/components/character/proficiency-dot';
+import { CheckboxToggle } from '@/components/character/checkbox-toggle';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -19,7 +19,7 @@ export function SavingThrowRow({ label, proficient, onToggleProficiency, modifie
 
   return (
     <ThemedView style={[styles.row, { borderColor }, style]}>
-      <ProficiencyDot checked={proficient} onToggle={onToggleProficiency} />
+      <CheckboxToggle checked={proficient} onToggle={onToggleProficiency} />
       <ThemedText style={styles.label} numberOfLines={1}>
         {label}
       </ThemedText>

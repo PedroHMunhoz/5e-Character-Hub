@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-import { ProficiencyDot } from '@/components/character/proficiency-dot';
+import { CheckboxToggle } from '@/components/character/checkbox-toggle';
 import { ThemedText } from '@/components/themed-text';
 
 interface InspirationToggleProps {
@@ -12,7 +12,7 @@ export function InspirationToggle({ value, onValueChange }: InspirationTogglePro
   return (
     <View style={styles.row}>
       <ThemedText style={styles.label}>Inspiração</ThemedText>
-      <ProficiencyDot checked={value} onToggle={() => onValueChange(!value)} />
+      <CheckboxToggle checked={value} onToggle={() => onValueChange(!value)} />
     </View>
   );
 }

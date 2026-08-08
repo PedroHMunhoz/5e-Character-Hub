@@ -14,7 +14,7 @@ export function formatSignedModifier(value: number | null): string {
   if (value === null) {
     return '';
   }
-  return value >= 0 ? `+${value}` : `${value}`;
+  return value > 0 ? `+${value}` : `${value}`;
 }
 
 export function getDerivedModifier(score: string, proficient: boolean, proficiencyBonus: number | null): number | null {
