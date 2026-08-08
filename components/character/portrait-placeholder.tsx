@@ -3,7 +3,17 @@ import { Image } from 'expo-image';
 
 import { useThemeColor } from '@/hooks/use-theme-color';
 
-const PLACEHOLDER_URI = 'https://placecage.lucidinternets.com/700/600';
+const MIN_DIMENSION = 200;
+const MAX_DIMENSION = 500;
+
+// Randomized once per app launch (module scope, not per render/mount) so the
+// portrait stays the same while navigating around but changes on the next
+// app open.
+function randomDimension(): number {
+  return Math.floor(Math.random() * (MAX_DIMENSION - MIN_DIMENSION + 1)) + MIN_DIMENSION;
+}
+
+const PLACEHOLDER_URI = `https://placecage.lucidinternets.com/${randomDimension()}/${randomDimension()}`;
 
 interface PortraitPlaceholderProps {
   style?: StyleProp<ViewStyle>;
