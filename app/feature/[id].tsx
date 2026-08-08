@@ -99,7 +99,8 @@ export default function FeatureDetailScreen() {
 
   const isActive = feature.usageType === 'ativa';
   const usesCurrent = character.features[feature.id]?.usesCurrent ?? feature.maxUses ?? '0';
-  const categoryValue = feature.level != null ? `${feature.categoryLabel} (Nível ${feature.level})` : feature.categoryLabel;
+  const categoryValue =
+    feature.level != null ? `${feature.categoryLabel} (Nível ${feature.level})` : feature.categoryLabel;
 
   return (
     <>

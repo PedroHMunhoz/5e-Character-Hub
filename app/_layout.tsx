@@ -26,7 +26,8 @@ export default function RootLayout() {
     // previous install keeps using that stale file forever.
     <SQLiteProvider
       databaseName="dnd5e.db"
-      assetSource={{ assetId: require('@/assets/data/dnd5e.db'), forceOverwrite: true }}>
+      assetSource={{ assetId: require('@/assets/data/dnd5e.db'), forceOverwrite: true }}
+    >
       <CharacterProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <Stack>

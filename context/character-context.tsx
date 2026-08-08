@@ -17,9 +17,7 @@ import type {
 } from '@/types/character';
 
 export type WeaponEquipOutcome =
-  | { kind: 'applied' }
-  | { kind: 'blocked'; message: string }
-  | { kind: 'confirmShieldUnequip'; slot: WeaponSlot };
+  { kind: 'applied' } | { kind: 'blocked'; message: string } | { kind: 'confirmShieldUnequip'; slot: WeaponSlot };
 
 function createClassId() {
   return `class-${Math.random().toString(36).slice(2, 10)}`;
@@ -36,9 +34,7 @@ const initialCharacter: CharacterSheet = {
   savingThrows: Object.fromEntries(
     ABILITIES.map((ability) => [ability.key, { proficient: false }])
   ) as CharacterSheet['savingThrows'],
-  skills: Object.fromEntries(
-    SKILLS.map((skill) => [skill.key, { proficient: false }])
-  ) as CharacterSheet['skills'],
+  skills: Object.fromEntries(SKILLS.map((skill) => [skill.key, { proficient: false }])) as CharacterSheet['skills'],
   speed: '9',
   hitPoints: { max: '100', current: '87', temporary: '100' },
   hitDice: { current: '3', max: '6' },

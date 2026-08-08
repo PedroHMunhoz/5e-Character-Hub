@@ -9,9 +9,10 @@ export const ABILITIES: { key: AbilityKey; label: string; abbr: string }[] = [
   { key: 'cha', label: 'Carisma', abbr: 'Car' },
 ];
 
-export const ABILITIES_BY_KEY = Object.fromEntries(
-  ABILITIES.map((ability) => [ability.key, ability])
-) as Record<AbilityKey, (typeof ABILITIES)[number]>;
+export const ABILITIES_BY_KEY = Object.fromEntries(ABILITIES.map((ability) => [ability.key, ability])) as Record<
+  AbilityKey,
+  (typeof ABILITIES)[number]
+>;
 
 export const SKILLS: { key: SkillKey; label: string; ability: AbilityKey }[] = [
   { key: 'acrobacia', label: 'Acrobacia', ability: 'dex' },

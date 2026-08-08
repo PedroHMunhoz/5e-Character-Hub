@@ -42,7 +42,8 @@ export function VitalBar({ label, current, max, gradientColors, extra }: VitalBa
                 y1={0}
                 x2={trackWidth}
                 y2={TRACK_HEIGHT}
-                gradientUnits="userSpaceOnUse">
+                gradientUnits="userSpaceOnUse"
+              >
                 <Stop offset="0" stopColor={gradientColors[0]} />
                 <Stop offset="1" stopColor={gradientColors[1]} />
               </LinearGradient>

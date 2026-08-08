@@ -17,7 +17,8 @@ export function ProficiencyDot({ checked, onToggle }: ProficiencyDotProps) {
       accessibilityRole="checkbox"
       accessibilityState={{ checked }}
       hitSlop={8}
-      style={[styles.dot, { borderColor }]}>
+      style={[styles.dot, { borderColor }]}
+    >
       {checked ? <View style={[styles.fill, { backgroundColor: fillColor }]} /> : null}
     </Pressable>
   );

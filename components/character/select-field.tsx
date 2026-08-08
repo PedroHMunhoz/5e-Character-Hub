@@ -44,13 +44,12 @@ export function SelectField<T extends string>({ label, value, options, onChange 
                   onPress={() => {
                     onChange(option.value);
                     setOpen(false);
-                  }}>
+                  }}
+                >
                   <ThemedText style={option.value === value ? styles.optionSelected : undefined}>
                     {option.label}
                   </ThemedText>
-                  {option.value === value ? (
-                    <MaterialCommunityIcons name="check" size={16} color={goldColor} />
-                  ) : null}
+                  {option.value === value ? <MaterialCommunityIcons name="check" size={16} color={goldColor} /> : null}
                 </Pressable>
               ))}
             </ThemedView>

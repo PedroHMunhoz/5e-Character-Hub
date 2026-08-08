@@ -11,13 +11,7 @@ interface BiographyTextareaProps {
   style?: StyleProp<ViewStyle>;
 }
 
-export function BiographyTextarea({
-  label,
-  value,
-  onChangeText,
-  minHeight = 100,
-  style,
-}: BiographyTextareaProps) {
+export function BiographyTextarea({ label, value, onChangeText, minHeight = 100, style }: BiographyTextareaProps) {
   const textColor = useThemeColor({}, 'text');
   const borderColor = useThemeColor({}, 'gold');
 

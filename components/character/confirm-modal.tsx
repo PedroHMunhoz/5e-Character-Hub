@@ -41,7 +41,8 @@ export function ConfirmModal({
               </Pressable>
               <Pressable
                 onPress={onConfirm}
-                style={[styles.button, styles.confirmButton, { backgroundColor: goldColor }]}>
+                style={[styles.button, styles.confirmButton, { backgroundColor: goldColor }]}
+              >
                 <ThemedText style={{ color: backgroundColor }}>{confirmLabel}</ThemedText>
               </Pressable>
             </ThemedView>

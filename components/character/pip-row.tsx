@@ -33,7 +33,8 @@ export function PipRow({ count, filled, onSetFilled, color, icon }: PipRowProps)
             accessibilityRole="checkbox"
             accessibilityState={{ checked: isFilled }}
             hitSlop={6}
-            style={[styles.pip, { borderColor: isFilled ? fillColor : borderColor }]}>
+            style={[styles.pip, { borderColor: isFilled ? fillColor : borderColor }]}
+          >
             {isFilled ? (
               icon ? (
                 <MaterialCommunityIcons name={icon} size={14} color={fillColor} />

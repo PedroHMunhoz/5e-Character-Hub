@@ -29,9 +29,7 @@ const MAPPING = {
 } as IconMapping;
 
 // Icons without a good MaterialIcons equivalent — rendered via MaterialCommunityIcons instead.
-const COMMUNITY_OVERRIDES: Partial<
-  Record<IconSymbolName, ComponentProps<typeof MaterialCommunityIcons>['name']>
-> = {
+const COMMUNITY_OVERRIDES: Partial<Record<IconSymbolName, ComponentProps<typeof MaterialCommunityIcons>['name']>> = {
   'square.and.pencil': 'feather',
 };
 

@@ -29,7 +29,8 @@ export function CollapsibleSection({
     <View style={styles.section}>
       <Pressable
         style={columns ? styles.headerWithColumns : styles.header}
-        onPress={() => setExpanded((value) => !value)}>
+        onPress={() => setExpanded((value) => !value)}
+      >
         <ThemedText type="subtitle">{title}</ThemedText>
         {right ?? null}
         {columns ? (

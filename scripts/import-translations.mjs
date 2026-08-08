@@ -96,7 +96,9 @@ function resolveRaceChain(parts) {
 }
 
 const classFeatureIdStmt = db.prepare('SELECT id FROM class_features WHERE class_id = ? AND name = ? AND level = ?');
-const subclassFeatureIdStmt = db.prepare('SELECT id FROM subclass_features WHERE subclass_id = ? AND name = ? AND level = ?');
+const subclassFeatureIdStmt = db.prepare(
+  'SELECT id FROM subclass_features WHERE subclass_id = ? AND name = ? AND level = ?'
+);
 const racialTraitIdStmt = db.prepare('SELECT id FROM racial_traits WHERE race_id = ? AND name = ?');
 const deityByNameSourceStmt = db.prepare('SELECT id FROM deities WHERE name = ? AND source = ?');
 const deityByPantheonStmt = db.prepare('SELECT id FROM deities WHERE name = ? AND source = ? AND pantheon = ?');
@@ -174,7 +176,9 @@ for (const book of bookDirs) {
     for (const [key, fields] of Object.entries(data)) {
       const resolved = resolver(key.split('|'));
       if (!resolved) {
-        console.warn(`[translate] Could not resolve ${category} key "${key}" (${book.name}) - source data may have changed.`);
+        console.warn(
+          `[translate] Could not resolve ${category} key "${key}" (${book.name}) - source data may have changed.`
+        );
         unresolved++;
         continue;
       }

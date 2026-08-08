@@ -35,7 +35,8 @@ export function SpellSlotPips({ max, used, onChange }: SpellSlotPipsProps) {
             accessibilityRole="checkbox"
             accessibilityState={{ checked: isAvailable }}
             hitSlop={6}
-            style={[styles.box, { borderColor: goldColor }]}>
+            style={[styles.box, { borderColor: goldColor }]}
+          >
             {isAvailable ? <MaterialCommunityIcons name="check" size={14} color={goldColor} /> : null}
           </Pressable>
         );

@@ -243,7 +243,8 @@ runSection('races', () => {
 
   function insertRaceRow(r, parentId) {
     ensureSource(r.source);
-    const speed = typeof r.speed === 'number' ? r.speed : r.speed && typeof r.speed === 'object' ? r.speed.walk ?? null : null;
+    const speed =
+      typeof r.speed === 'number' ? r.speed : r.speed && typeof r.speed === 'object' ? (r.speed.walk ?? null) : null;
     const info = insertRace.run(
       parentId ?? null,
       r.name,
@@ -377,9 +378,24 @@ function extraFields(i, modeled) {
 }
 
 const BASE_ITEM_MODELED = new Set([
-  'name', 'source', 'page', 'srd', 'basicRules', 'type', 'value', 'weight',
-  'dmg1', 'dmg2', 'dmgType', 'property', 'entries', 'otherSources',
-  'reprintedAs', 'hasFluff', 'hasFluffImages', 'additionalSources',
+  'name',
+  'source',
+  'page',
+  'srd',
+  'basicRules',
+  'type',
+  'value',
+  'weight',
+  'dmg1',
+  'dmg2',
+  'dmgType',
+  'property',
+  'entries',
+  'otherSources',
+  'reprintedAs',
+  'hasFluff',
+  'hasFluffImages',
+  'additionalSources',
 ]);
 
 runSection('base_items', () => {
@@ -411,9 +427,26 @@ runSection('base_items', () => {
 });
 
 const ITEM_MODELED = new Set([
-  'name', 'source', 'page', 'srd', 'basicRules', 'type', 'rarity', 'value',
-  'weight', 'dmg1', 'dmg2', 'dmgType', 'property', 'entries', 'reqAttune',
-  'wondrous', 'otherSources', 'reprintedAs', 'hasFluff', 'hasFluffImages',
+  'name',
+  'source',
+  'page',
+  'srd',
+  'basicRules',
+  'type',
+  'rarity',
+  'value',
+  'weight',
+  'dmg1',
+  'dmg2',
+  'dmgType',
+  'property',
+  'entries',
+  'reqAttune',
+  'wondrous',
+  'otherSources',
+  'reprintedAs',
+  'hasFluff',
+  'hasFluffImages',
   'additionalSources',
 ]);
 
@@ -492,7 +525,14 @@ runSection('magic_variants', () => {
     if (!isIncluded(src) || m._copy) continue;
     ensureSource(src.source);
     const flat = flattenEntries(src.entries);
-    const info = insertMagicVariant.run(m.name, src.source, bit(src.srd), src.rarity ?? null, json(m.requires ?? null), json(flat));
+    const info = insertMagicVariant.run(
+      m.name,
+      src.source,
+      bit(src.srd),
+      src.rarity ?? null,
+      json(m.requires ?? null),
+      json(flat)
+    );
     bump('magic_variants');
     addToFts('magic_variant', info.lastInsertRowid, m.name, flat);
   }
@@ -505,9 +545,24 @@ runSection('magic_variants', () => {
 const spellMap = new Map(); // `${nameLower}|${sourceUpper}` -> id
 
 const SPELL_MODELED = new Set([
-  'name', 'source', 'page', 'srd', 'basicRules', 'level', 'school', 'time',
-  'range', 'components', 'duration', 'entries', 'entriesHigherLevel',
-  'classes', 'meta', 'otherSources', 'hasFluff', 'hasFluffImages',
+  'name',
+  'source',
+  'page',
+  'srd',
+  'basicRules',
+  'level',
+  'school',
+  'time',
+  'range',
+  'components',
+  'duration',
+  'entries',
+  'entriesHigherLevel',
+  'classes',
+  'meta',
+  'otherSources',
+  'hasFluff',
+  'hasFluffImages',
 ]);
 
 runSection('spells', () => {
@@ -623,7 +678,14 @@ runSection('skills', () => {
     if (!isIncluded(s)) continue;
     ensureSource(s.source);
     const flat = flattenEntries(s.entries);
-    const info = insertSkill.run(s.name, s.source, bit(s.srd), bit(s.basicRules), s.ability ?? null, flat.length ? json(flat) : null);
+    const info = insertSkill.run(
+      s.name,
+      s.source,
+      bit(s.srd),
+      bit(s.basicRules),
+      s.ability ?? null,
+      flat.length ? json(flat) : null
+    );
     bump('skills');
     addToFts('skill', info.lastInsertRowid, s.name, flat);
   }
@@ -650,9 +712,7 @@ runSection('actions', () => {
 const WEAPON_PROPERTY_CODES = new Set(['2H', 'A', 'F', 'H', 'L', 'LD', 'R', 'S', 'T', 'V']);
 
 runSection('item_properties', () => {
-  const insertItemProperty = db.prepare(
-    'INSERT INTO item_properties (code, name, source, entries) VALUES (?,?,?,?)'
-  );
+  const insertItemProperty = db.prepare('INSERT INTO item_properties (code, name, source, entries) VALUES (?,?,?,?)');
   const data = readJson('items-base.json');
   for (const p of data.itemProperty || []) {
     if (!WEAPON_PROPERTY_CODES.has(p.abbreviation)) continue;
@@ -671,13 +731,21 @@ runSection('item_properties', () => {
 // ---------------------------------------------------------------------------
 
 runSection('vehicles', () => {
-  const insertVehicle = db.prepare('INSERT INTO vehicles (name, source, srd, vehicle_type, entries) VALUES (?,?,?,?,?)');
+  const insertVehicle = db.prepare(
+    'INSERT INTO vehicles (name, source, srd, vehicle_type, entries) VALUES (?,?,?,?,?)'
+  );
   const data = readJson('vehicles.json');
   for (const v of data.vehicle || []) {
     if (!isIncluded(v) || v._copy) continue;
     ensureSource(v.source);
     const flat = flattenEntries(v.entries);
-    const info = insertVehicle.run(v.name, v.source, bit(v.srd), v.vehicleType ?? null, flat.length ? json(flat) : null);
+    const info = insertVehicle.run(
+      v.name,
+      v.source,
+      bit(v.srd),
+      v.vehicleType ?? null,
+      flat.length ? json(flat) : null
+    );
     bump('vehicles');
     addToFts('vehicle', info.lastInsertRowid, v.name, flat);
   }

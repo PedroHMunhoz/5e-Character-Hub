@@ -20,7 +20,8 @@ export function CheckboxToggle({ checked, onToggle }: CheckboxToggleProps) {
       accessibilityRole="checkbox"
       accessibilityState={{ checked }}
       hitSlop={8}
-      style={[styles.box, { borderColor: goldColor }]}>
+      style={[styles.box, { borderColor: goldColor }]}
+    >
       {checked ? <MaterialCommunityIcons name="check" size={14} color={goldColor} /> : null}
     </Pressable>
   );

@@ -56,7 +56,11 @@ async function getClassOrSubclassFeature(
   };
 }
 
-async function getRacialTrait(db: SQLiteDatabase, numericId: number, compositeId: string): Promise<FeatureDetail | null> {
+async function getRacialTrait(
+  db: SQLiteDatabase,
+  numericId: number,
+  compositeId: string
+): Promise<FeatureDetail | null> {
   const row = await db.getFirstAsync<{ id: number; name: string; entries: string }>(
     'SELECT id, name, entries FROM racial_traits WHERE id = ?',
     numericId
@@ -77,7 +81,11 @@ async function getRacialTrait(db: SQLiteDatabase, numericId: number, compositeId
   };
 }
 
-async function getBackgroundFeature(db: SQLiteDatabase, numericId: number, compositeId: string): Promise<FeatureDetail | null> {
+async function getBackgroundFeature(
+  db: SQLiteDatabase,
+  numericId: number,
+  compositeId: string
+): Promise<FeatureDetail | null> {
   const row = await db.getFirstAsync<{ id: number; name: string; entries: string }>(
     'SELECT id, name, entries FROM backgrounds WHERE id = ?',
     numericId

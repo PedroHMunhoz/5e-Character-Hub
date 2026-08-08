@@ -133,12 +133,14 @@ export function CharacterSpells() {
                   onChange={(value) => setSpellSlotUsed(String(section.level), value)}
                 />
               ) : undefined
-            }>
+            }
+          >
             <View style={styles.cardList}>
               {items.map((spell) => (
                 <Pressable
                   key={spell.id}
-                  onPress={() => router.push({ pathname: '/spell/[id]', params: { id: String(spell.id) } })}>
+                  onPress={() => router.push({ pathname: '/spell/[id]', params: { id: String(spell.id) } })}
+                >
                   <SpellRow
                     name={spell.name}
                     school={SPELL_SCHOOL_LABELS[spell.school] ?? spell.school}

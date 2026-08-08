@@ -18,8 +18,7 @@ import type { WeaponSlot } from '@/types/character';
 export function CharacterInventory() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { character, setCurrencyField, toggleArmorEquipped, toggleWeaponEquipped, setWeaponSlot } =
-    useCharacter();
+  const { character, setCurrencyField, toggleArmorEquipped, toggleWeaponEquipped, setWeaponSlot } = useCharacter();
   const [items, setItems] = useState<CuratedBaseItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
@@ -77,7 +76,8 @@ export function CharacterInventory() {
                   return (
                     <Pressable
                       key={itemId}
-                      onPress={() => router.push({ pathname: '/item/[id]', params: { id: itemId } })}>
+                      onPress={() => router.push({ pathname: '/item/[id]', params: { id: itemId } })}
+                    >
                       <EquipmentItemCard
                         name={item.name}
                         properties={item.properties}
@@ -110,7 +110,8 @@ export function CharacterInventory() {
                 return (
                   <Pressable
                     key={itemId}
-                    onPress={() => router.push({ pathname: '/item/[id]', params: { id: itemId } })}>
+                    onPress={() => router.push({ pathname: '/item/[id]', params: { id: itemId } })}
+                  >
                     <StackableItemCard
                       name={item.name}
                       properties={item.properties}

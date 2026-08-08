@@ -26,7 +26,8 @@ function pageAt(idx) {
 
 if (a === '--find') {
   const positions = [...text.matchAll(new RegExp(b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))].map((m) => m.index);
-  for (const p of positions) console.log(`page ${pageAt(p)}: ...${text.slice(Math.max(0, p - 60), p + 100).replace(/\n/g, ' | ')}...`);
+  for (const p of positions)
+    console.log(`page ${pageAt(p)}: ...${text.slice(Math.max(0, p - 60), p + 100).replace(/\n/g, ' | ')}...`);
   process.exit(0);
 }
 

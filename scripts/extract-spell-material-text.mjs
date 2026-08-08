@@ -144,5 +144,9 @@ db.close();
 fs.writeFileSync(spellsJsonPath, `${JSON.stringify(translations, null, 2)}\n`, 'utf8');
 
 console.log(`[extract-spell-material-text] Updated ${updated} spell(s) with materialText.`);
-if (unresolved) console.log(`[extract-spell-material-text] ${unresolved} spell(s) could not be resolved - see warnings above.`);
-if (skippedNoTranslation) console.log(`[extract-spell-material-text] ${skippedNoTranslation} spell(s) have no pt-BR name yet - see warnings above.`);
+if (unresolved)
+  console.log(`[extract-spell-material-text] ${unresolved} spell(s) could not be resolved - see warnings above.`);
+if (skippedNoTranslation)
+  console.log(
+    `[extract-spell-material-text] ${skippedNoTranslation} spell(s) have no pt-BR name yet - see warnings above.`
+  );

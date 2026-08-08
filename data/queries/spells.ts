@@ -2,7 +2,13 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { Spell } from '@/types/reference';
 import { parseJson, toEntries } from '../rows';
-import { getTranslations, localizedEntries, localizedMaterialText, localizedName, type TranslationDict } from './localize';
+import {
+  getTranslations,
+  localizedEntries,
+  localizedMaterialText,
+  localizedName,
+  type TranslationDict,
+} from './localize';
 
 interface SpellRow {
   id: number;

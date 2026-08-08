@@ -92,11 +92,7 @@ function mapWeaponDetail(row: BaseItemDetailRow, name: string): WeaponItemDetail
   const propertyCodes = parseJson<string[]>(row.properties) ?? [];
   const isRanged = row.type === 'R';
 
-  const attackAbility: 'str' | 'dex' | 'finesse' = propertyCodes.includes('F')
-    ? 'finesse'
-    : isRanged
-      ? 'dex'
-      : 'str';
+  const attackAbility: 'str' | 'dex' | 'finesse' = propertyCodes.includes('F') ? 'finesse' : isRanged ? 'dex' : 'str';
 
   const weaponCategoryLabel = details.weaponCategory
     ? (WEAPON_CATEGORY_LABELS[details.weaponCategory] ?? details.weaponCategory)
@@ -107,7 +103,9 @@ function mapWeaponDetail(row: BaseItemDetailRow, name: string): WeaponItemDetail
     id: row.id,
     name,
     weight: formatWeightKg(row.name, row.weight_lb),
-    categoryLabel: `Arma ${weaponCategoryLabel} ${isRanged ? 'À Distância' : 'Corpo a Corpo'}`.replace(/\s+/g, ' ').trim(),
+    categoryLabel: `Arma ${weaponCategoryLabel} ${isRanged ? 'À Distância' : 'Corpo a Corpo'}`
+      .replace(/\s+/g, ' ')
+      .trim(),
     attackAbility,
     handedness: getWeaponHandedness(propertyCodes),
     damageDice: damage.dmg1 ?? '',

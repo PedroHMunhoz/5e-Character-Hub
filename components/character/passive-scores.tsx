@@ -1,9 +1,9 @@
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View } from 'react-native';
 
-import { ThemedText } from "@/components/themed-text";
-import { useCharacter } from "@/hooks/use-character";
-import { useThemeColor } from "@/hooks/use-theme-color";
-import { formatPassiveScore, getPassiveScore } from "@/utils/ability-modifier";
+import { ThemedText } from '@/components/themed-text';
+import { useCharacter } from '@/hooks/use-character';
+import { useThemeColor } from '@/hooks/use-theme-color';
+import { formatPassiveScore, getPassiveScore } from '@/utils/ability-modifier';
 
 interface PassiveScoresProps {
   proficiencyBonus: number | null;
@@ -11,27 +11,27 @@ interface PassiveScoresProps {
 
 export function PassiveScores({ proficiencyBonus }: PassiveScoresProps) {
   const { character } = useCharacter();
-  const goldColor = useThemeColor({}, "gold");
+  const goldColor = useThemeColor({}, 'gold');
 
   const passiveArcana = getPassiveScore(
     character.abilities.int.score,
     character.skills.arcanismo.proficient,
-    proficiencyBonus,
+    proficiencyBonus
   );
   const passivePerception = getPassiveScore(
     character.abilities.wis.score,
     character.skills.percepcao.proficient,
-    proficiencyBonus,
+    proficiencyBonus
   );
   const passiveInsight = getPassiveScore(
     character.abilities.wis.score,
     character.skills.intuicao.proficient,
-    proficiencyBonus,
+    proficiencyBonus
   );
   const passiveInvestigation = getPassiveScore(
     character.abilities.int.score,
     character.skills.investigacao.proficient,
-    proficiencyBonus,
+    proficiencyBonus
   );
 
   return (
@@ -84,18 +84,18 @@ export function PassiveScores({ proficiencyBonus }: PassiveScoresProps) {
 const styles = StyleSheet.create({
   container: { gap: 8 },
   title: { fontSize: 16 },
-  grid: { flexDirection: "row", gap: 16 },
+  grid: { flexDirection: 'row', gap: 16 },
   column: { flex: 1, minWidth: 0, gap: 10 },
   passiveRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 8,
   },
   passiveLabel: { fontSize: 15, flexShrink: 1, minWidth: 0 },
   passiveValue: {
     fontSize: 15,
-    fontWeight: "700",
-    fontVariant: ["tabular-nums"],
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
 });

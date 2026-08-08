@@ -77,7 +77,9 @@ export async function getCuratedCharacterFeatures(db: SQLiteDatabase): Promise<C
 
   if (backgroundRow) {
     const entries = localizedEntries(backgroundRow.id, toEntries(backgroundRow.entries), backgroundTranslations);
-    const featureName = extractBackgroundFeature(entries)?.name ?? localizedName(backgroundRow.id, backgroundRow.name, backgroundTranslations);
+    const featureName =
+      extractBackgroundFeature(entries)?.name ??
+      localizedName(backgroundRow.id, backgroundRow.name, backgroundTranslations);
     features.push(withUsage(`background-${backgroundRow.id}`, 'antecedente', 'Background Feature', featureName));
   }
 

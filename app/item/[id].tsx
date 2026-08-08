@@ -193,7 +193,9 @@ export default function ItemDetailScreen() {
               <View style={[styles.field, styles.observationsField, { borderColor: goldColor }]}>
                 <ThemedText style={styles.fieldLabel}>Observações</ThemedText>
                 {item.strengthRequirement ? (
-                  <ThemedText style={styles.bulletItem}>{`•  Requer Força mínima de ${item.strengthRequirement}`}</ThemedText>
+                  <ThemedText
+                    style={styles.bulletItem}
+                  >{`•  Requer Força mínima de ${item.strengthRequirement}`}</ThemedText>
                 ) : null}
                 {item.stealthDisadvantage ? (
                   <ThemedText style={styles.bulletItem}>{'•  Desvantagem em Furtividade'}</ThemedText>

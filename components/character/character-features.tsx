@@ -5,7 +5,11 @@ import { useSQLiteContext } from 'expo-sqlite';
 
 import { CollapsibleSection } from '@/components/character/collapsible-section';
 import { FeatureItemCard } from '@/components/character/feature-item-card';
-import { getCuratedCharacterFeatures, type CuratedFeature, type FeatureSectionKey } from '@/data/queries/character-features';
+import {
+  getCuratedCharacterFeatures,
+  type CuratedFeature,
+  type FeatureSectionKey,
+} from '@/data/queries/character-features';
 import { useCharacter } from '@/hooks/use-character';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
@@ -56,7 +60,8 @@ export function CharacterFeatures() {
             {section.items.map((item) => (
               <Pressable
                 key={item.id}
-                onPress={() => router.push({ pathname: '/feature/[id]', params: { id: item.id } })}>
+                onPress={() => router.push({ pathname: '/feature/[id]', params: { id: item.id } })}
+              >
                 <FeatureItemCard
                   name={item.name}
                   usageType={item.usageType}

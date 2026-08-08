@@ -18,11 +18,7 @@ export function BiographyTextField({ label, value, onChangeText }: BiographyText
       <ThemedText style={[styles.label, { color: borderColor }]} numberOfLines={1}>
         {label}
       </ThemedText>
-      <TextInput
-        style={[styles.input, { color: textColor }]}
-        value={value}
-        onChangeText={onChangeText}
-      />
+      <TextInput style={[styles.input, { color: textColor }]} value={value} onChangeText={onChangeText} />
     </View>
   );
 }
