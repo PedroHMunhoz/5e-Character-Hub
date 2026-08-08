@@ -1,4 +1,4 @@
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -7,20 +7,22 @@ interface StatFieldProps {
   label: string;
   value: string;
   style?: StyleProp<ViewStyle>;
+  onPress?: () => void;
 }
 
 const FIELD_HEIGHT = 36;
 
-export function StatField({ label, value, style }: StatFieldProps) {
+export function StatField({ label, value, style, onPress }: StatFieldProps) {
   const goldColor = useThemeColor({}, 'gold');
+  const Container = onPress ? Pressable : View;
 
   return (
-    <View style={[styles.container, { borderColor: goldColor }, style]}>
+    <Container style={[styles.container, { borderColor: goldColor }, style]} onPress={onPress}>
       <ThemedText style={styles.label}>{label}</ThemedText>
       <ThemedText style={[styles.value, { color: goldColor }]} numberOfLines={1}>
         {value}
       </ThemedText>
-    </View>
+    </Container>
   );
 }
 

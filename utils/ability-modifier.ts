@@ -17,11 +17,7 @@ export function formatSignedModifier(value: number | null): string {
   return value >= 0 ? `+${value}` : `${value}`;
 }
 
-export function getDerivedModifier(
-  score: string,
-  proficient: boolean,
-  proficiencyBonus: number | null
-): number | null {
+export function getDerivedModifier(score: string, proficient: boolean, proficiencyBonus: number | null): number | null {
   const abilityModifier = getAbilityModifier(score);
   if (abilityModifier === null) {
     return null;
@@ -37,14 +33,10 @@ export function getDerivedModifier(
 
 export function getPassiveScore(score: string, proficient: boolean, proficiencyBonus: number | null): number {
   const abilityModifier = getAbilityModifier(score) ?? 0;
-  const bonus = proficient ? proficiencyBonus ?? 0 : 0;
+  const bonus = proficient ? (proficiencyBonus ?? 0) : 0;
   return 10 + abilityModifier + bonus;
 }
 
 export function formatPassiveScore(value: number): string {
   return `${value}`;
-}
-
-export function getArmorClass(dexScore: string): number {
-  return 10 + (getAbilityModifier(dexScore) ?? 0);
 }

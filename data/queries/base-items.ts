@@ -30,6 +30,7 @@ export interface CuratedBaseItem {
   handedness?: WeaponHandedness;
   armorClassBonus?: string;
   armorSlotKind?: 'body' | 'shield';
+  armorWeightClass?: 'light' | 'medium' | 'heavy';
   defaultQuantity?: string;
 }
 
@@ -55,6 +56,15 @@ interface WeaponDetails {
 interface ArmorDetails {
   ac?: number;
 }
+
+// Armor weight class drives how much of the DEX modifier applies to AC (see
+// utils/armor-class.ts) - shield ('S') isn't a body-armor weight class, so
+// it's intentionally absent here.
+const ARMOR_WEIGHT_CLASSES: Record<string, 'light' | 'medium' | 'heavy'> = {
+  LA: 'light',
+  MA: 'medium',
+  HA: 'heavy',
+};
 
 export function categorize(type: string | null): CuratedItemCategory {
   if (type === 'R' || type === 'M') return 'weapon';
@@ -121,7 +131,8 @@ function buildWeaponProperties(row: BaseItemRow): string {
 
   if (propCodes.includes('2H')) parts.push('Duas Mãos');
   if (details.weaponCategory) parts.push(WEAPON_CATEGORY_LABELS[details.weaponCategory] ?? details.weaponCategory);
-  if (propCodes.includes('A')) parts.push(details.range ? `Munição (${convertRangeToMeters(details.range)})` : 'Munição');
+  if (propCodes.includes('A'))
+    parts.push(details.range ? `Munição (${convertRangeToMeters(details.range)})` : 'Munição');
 
   for (const code of propCodes) {
     if (code === '2H' || code === 'A') continue;
@@ -162,6 +173,7 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict): Curated
       weight: formatWeightKg(row.name, row.weight_lb),
       armorClassBonus: String(armorClassBonus),
       armorSlotKind: getArmorSlotKind(row.type),
+      armorWeightClass: ARMOR_WEIGHT_CLASSES[row.type ?? ''],
     };
   }
 

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ClassLevels } from '@/components/character/class-levels';
@@ -7,12 +8,15 @@ import { InspirationToggle } from '@/components/character/inspiration-toggle';
 import { PassiveScores } from '@/components/character/passive-scores';
 import { PipRow } from '@/components/character/pip-row';
 import { PortraitPlaceholder } from '@/components/character/portrait-placeholder';
+import { StatBreakdownModal } from '@/components/character/stat-breakdown-modal';
 import { StatField } from '@/components/character/stat-field';
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { useCharacter } from '@/hooks/use-character';
+import { useEquippedArmor } from '@/hooks/use-equipped-armor';
 import { VitalBar } from '@/components/character/vital-bar';
-import { formatSignedModifier, getAbilityModifier, getArmorClass } from '@/utils/ability-modifier';
+import { formatSignedModifier, getAbilityModifier } from '@/utils/ability-modifier';
+import { getArmorClassBreakdown } from '@/utils/armor-class';
 import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
 import { formatSpeed } from '@/utils/speed';
 
@@ -31,11 +35,25 @@ export function CharacterSheet() {
   } = useCharacter();
 
   const goldColor = useThemeColor({}, 'gold');
+  const [openStat, setOpenStat] = useState<'ac' | 'initiative' | null>(null);
 
   const characterLevel = getCharacterLevel(character.classes);
   const proficiencyBonus = getProficiencyBonus(characterLevel);
   const dexModifier = getAbilityModifier(character.abilities.dex.score);
-  const armorClass = getArmorClass(character.abilities.dex.score);
+  const equippedArmor = useEquippedArmor();
+  const armorClassBreakdown = getArmorClassBreakdown(character.abilities.dex.score, equippedArmor);
+
+  const acRows = [
+    { label: 'CA Base', value: String(armorClassBreakdown.base) },
+    {
+      label: 'Modificador de Destreza',
+      value: formatSignedModifier(armorClassBreakdown.effectiveDexModifier),
+      note: armorClassBreakdown.dexCapNote,
+    },
+    ...armorClassBreakdown.items.map((item) => ({ label: item.name, value: formatSignedModifier(item.bonus) })),
+  ];
+
+  const initiativeRows = [{ label: 'Modificador de Destreza', value: formatSignedModifier(dexModifier ?? 0) }];
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
@@ -68,8 +86,12 @@ export function CharacterSheet() {
               max={character.hitPoints.max}
               gradientColors={['#5c1414', '#8b1e1e']}
             />
-            <StatField label="CA" value={String(armorClass)} />
-            <StatField label="Iniciativa" value={formatSignedModifier(dexModifier ?? 0)} />
+            <StatField label="CA" value={String(armorClassBreakdown.total)} onPress={() => setOpenStat('ac')} />
+            <StatField
+              label="Iniciativa"
+              value={formatSignedModifier(dexModifier ?? 0)}
+              onPress={() => setOpenStat('initiative')}
+            />
             <StatField label="Deslocamento" value={formatSpeed(character.speed)} />
           </View>
           <View style={styles.portraitWrapper}>
@@ -111,6 +133,24 @@ export function CharacterSheet() {
           onFailuresChange={(value) => setDeathSaves('failures', value)}
         />
       </View>
+
+      <StatBreakdownModal
+        visible={openStat === 'ac'}
+        title="Classe de Armadura"
+        rows={acRows}
+        totalLabel="Total"
+        totalValue={String(armorClassBreakdown.total)}
+        onClose={() => setOpenStat(null)}
+      />
+
+      <StatBreakdownModal
+        visible={openStat === 'initiative'}
+        title="Iniciativa"
+        rows={initiativeRows}
+        totalLabel="Total"
+        totalValue={formatSignedModifier(dexModifier ?? 0)}
+        onClose={() => setOpenStat(null)}
+      />
     </ScrollView>
   );
 }
