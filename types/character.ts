@@ -96,6 +96,13 @@ export interface Biography {
   notes: string;
 }
 
+export interface CharacterSummary {
+  id: string;
+  name: string;
+  race: string;
+  classes: CharacterClass[];
+}
+
 export interface CharacterSheet {
   name: string;
   race: string;

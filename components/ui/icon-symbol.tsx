@@ -26,6 +26,7 @@ const MAPPING = {
   'square.and.pencil': 'edit',
   'shield.fill': 'shield',
   'chart.bar.fill': 'bar-chart',
+  plus: 'add',
 } as IconMapping;
 
 // Icons without a good MaterialIcons equivalent — rendered via MaterialCommunityIcons instead.
