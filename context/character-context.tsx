@@ -1,6 +1,12 @@
-import { createContext, useMemo, useReducer, type ReactNode } from 'react';
+import { createContext, useEffect, useMemo, useReducer, useState, type ReactNode } from 'react';
+import { ActivityIndicator, StyleSheet } from 'react-native';
 
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
 import { ABILITIES, SKILLS } from '@/constants/character';
+import { useCharacterDb } from '@/context/character-db-context';
+import { getCharacterById, saveCharacter } from '@/data/queries/player-characters';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import type { WeaponHandedness } from '@/constants/item-codes';
 import type {
   AbilityKey,
@@ -23,18 +29,25 @@ function createClassId() {
   return `class-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+// Placeholder reducer state before the real character (loaded by id from
+// characters.db - see CharacterProvider below) arrives. Never rendered to
+// the player: CharacterProvider withholds `children` until the LOAD action
+// has fired, so this only exists to give useReducer a valid initial value.
 const initialCharacter: CharacterSheet = {
+  id: 'demo',
   name: '',
   race: '',
   classes: [{ id: createClassId(), name: '', level: '' }],
   inspiration: false,
   abilities: Object.fromEntries(
-    ABILITIES.map((ability) => [ability.key, { score: '' }])
+    ABILITIES.map((ability) => [ability.key, { base: '', racialBonus: 0 }])
   ) as CharacterSheet['abilities'],
   savingThrows: Object.fromEntries(
     ABILITIES.map((ability) => [ability.key, { proficient: false }])
   ) as CharacterSheet['savingThrows'],
-  skills: Object.fromEntries(SKILLS.map((skill) => [skill.key, { proficient: false }])) as CharacterSheet['skills'],
+  skills: Object.fromEntries(
+    SKILLS.map((skill) => [skill.key, { proficient: false, expertise: false }])
+  ) as CharacterSheet['skills'],
   speed: '9',
   hitPoints: { max: '100', current: '87', temporary: '100' },
   hitDice: { current: '3', max: '6' },
@@ -42,6 +55,7 @@ const initialCharacter: CharacterSheet = {
   deathSaves: { successes: 0, failures: 0 },
   currency: { pl: '', po: '', pp: '', pe: '', pc: '' },
   inventoryItems: {},
+  tools: {},
   features: {},
   spells: {},
   spellSlotsUsed: {},
@@ -64,6 +78,7 @@ const initialCharacter: CharacterSheet = {
 };
 
 type Action =
+  | { type: 'LOAD'; character: CharacterSheet }
   | { type: 'SET_NAME'; value: string }
   | { type: 'SET_RACE'; value: string }
   | { type: 'ADD_CLASS' }
@@ -73,7 +88,8 @@ type Action =
   | { type: 'TOGGLE_INSPIRATION' }
   | { type: 'SET_ABILITY_SCORE'; key: AbilityKey; value: string }
   | { type: 'TOGGLE_SAVING_THROW'; key: AbilityKey }
-  | { type: 'TOGGLE_SKILL'; key: SkillKey }
+  | { type: 'SET_SKILL_PROFICIENCY'; key: SkillKey; proficient: boolean; expertise: boolean }
+  | { type: 'TOGGLE_TOOL_PROFICIENCY'; id: string }
   | { type: 'SET_SPEED'; value: string }
   | { type: 'SET_HP_FIELD'; field: keyof HitPoints; value: string }
   | { type: 'SET_HIT_DICE_FIELD'; field: keyof HitDice; value: string }
@@ -121,6 +137,8 @@ function findEquippedShieldId(
 
 function characterReducer(state: CharacterSheet, action: Action): CharacterSheet {
   switch (action.type) {
+    case 'LOAD':
+      return action.character;
     case 'SET_NAME':
       return { ...state, name: action.value };
     case 'SET_RACE':
@@ -156,7 +174,7 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
         ...state,
         abilities: {
           ...state.abilities,
-          [action.key]: { ...state.abilities[action.key], score: action.value },
+          [action.key]: { ...state.abilities[action.key], base: action.value },
         },
       };
     case 'TOGGLE_SAVING_THROW':
@@ -170,15 +188,20 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
           },
         },
       };
-    case 'TOGGLE_SKILL':
+    case 'SET_SKILL_PROFICIENCY':
       return {
         ...state,
         skills: {
           ...state.skills,
-          [action.key]: {
-            ...state.skills[action.key],
-            proficient: !state.skills[action.key].proficient,
-          },
+          [action.key]: { proficient: action.proficient, expertise: action.expertise },
+        },
+      };
+    case 'TOGGLE_TOOL_PROFICIENCY':
+      return {
+        ...state,
+        tools: {
+          ...state.tools,
+          [action.id]: { proficient: !(state.tools[action.id]?.proficient ?? false) },
         },
       };
     case 'SET_SPEED':
@@ -301,7 +324,8 @@ export interface CharacterContextValue {
   toggleInspiration: () => void;
   setAbilityScore: (key: AbilityKey, value: string) => void;
   toggleSavingThrowProficiency: (key: AbilityKey) => void;
-  toggleSkillProficiency: (key: SkillKey) => void;
+  setSkillProficiency: (key: SkillKey, proficient: boolean, expertise: boolean) => void;
+  toggleToolProficiency: (id: string) => void;
   setSpeed: (value: string) => void;
   setHitPointsField: (field: keyof HitPoints, value: string) => void;
   setHitDiceField: (field: keyof HitDice, value: string) => void;
@@ -321,8 +345,53 @@ export interface CharacterContextValue {
 
 export const CharacterContext = createContext<CharacterContextValue | undefined>(undefined);
 
-export function CharacterProvider({ children }: { children: ReactNode }) {
+export function CharacterProvider({ characterId, children }: { characterId: string; children: ReactNode }) {
+  const charactersDb = useCharacterDb();
   const [character, dispatch] = useReducer(characterReducer, initialCharacter);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const goldColor = useThemeColor({}, 'gold');
+
+  useEffect(() => {
+    let cancelled = false;
+    setHasLoaded(false);
+    setLoadError(null);
+    getCharacterById(charactersDb, characterId)
+      .then((loaded) => {
+        if (cancelled) return;
+        if (!loaded) {
+          // Surfaced below rather than left silent - previously this just
+          // left the screen blank forever with no indication anything had
+          // gone wrong.
+          setLoadError(`Personagem "${characterId}" não encontrado.`);
+          return;
+        }
+        dispatch({ type: 'LOAD', character: loaded });
+        setHasLoaded(true);
+      })
+      .catch((err: Error) => {
+        console.error('[CharacterProvider] failed to load character', err);
+        if (!cancelled) setLoadError(err.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [charactersDb, characterId]);
+
+  // Debounced autosave: the reducer already treats every field as live-
+  // edited (no draft/commit distinction anywhere in the sheet), so writing
+  // shortly after the player stops interacting - rather than on every
+  // keystroke, or requiring an explicit "Salvar" button - matches that
+  // existing behavior. Gated on hasLoaded so the placeholder
+  // initialCharacter can never overwrite the just-loaded row before LOAD
+  // lands.
+  useEffect(() => {
+    if (!hasLoaded) return;
+    const handle = setTimeout(() => {
+      saveCharacter(charactersDb, character);
+    }, 600);
+    return () => clearTimeout(handle);
+  }, [character, hasLoaded, charactersDb]);
 
   const value = useMemo<CharacterContextValue>(
     () => ({
@@ -336,7 +405,9 @@ export function CharacterProvider({ children }: { children: ReactNode }) {
       toggleInspiration: () => dispatch({ type: 'TOGGLE_INSPIRATION' }),
       setAbilityScore: (key, value) => dispatch({ type: 'SET_ABILITY_SCORE', key, value }),
       toggleSavingThrowProficiency: (key) => dispatch({ type: 'TOGGLE_SAVING_THROW', key }),
-      toggleSkillProficiency: (key) => dispatch({ type: 'TOGGLE_SKILL', key }),
+      setSkillProficiency: (key, proficient, expertise) =>
+        dispatch({ type: 'SET_SKILL_PROFICIENCY', key, proficient, expertise }),
+      toggleToolProficiency: (id) => dispatch({ type: 'TOGGLE_TOOL_PROFICIENCY', id }),
       setSpeed: (value) => dispatch({ type: 'SET_SPEED', value }),
       setHitPointsField: (field, value) => dispatch({ type: 'SET_HP_FIELD', field, value }),
       setHitDiceField: (field, value) => dispatch({ type: 'SET_HIT_DICE_FIELD', field, value }),
@@ -429,5 +500,48 @@ export function CharacterProvider({ children }: { children: ReactNode }) {
     [character]
   );
 
+  if (loadError) {
+    return (
+      <ThemedView style={styles.center}>
+        <ThemedText style={styles.errorTitle}>Não foi possível carregar o personagem.</ThemedText>
+        <ThemedText style={styles.errorMessage}>{loadError}</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (!hasLoaded) {
+    return (
+      <ThemedView style={styles.center}>
+        <ActivityIndicator size="large" color={goldColor} />
+        <ThemedText style={styles.loadingText}>Carregando seu personagem, aguarde...</ThemedText>
+      </ThemedView>
+    );
+  }
+
   return <CharacterContext.Provider value={value}>{children}</CharacterContext.Provider>;
 }
+
+const styles = StyleSheet.create({
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    padding: 24,
+  },
+  errorTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  errorMessage: {
+    fontSize: 13,
+    opacity: 0.7,
+    textAlign: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    opacity: 0.7,
+    textAlign: 'center',
+  },
+});

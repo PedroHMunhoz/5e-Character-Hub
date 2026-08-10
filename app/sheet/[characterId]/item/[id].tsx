@@ -14,7 +14,7 @@ import { ThemedView } from '@/components/themed-view';
 import { WEAPON_PROPERTY_LABELS, type WeaponHandedness } from '@/constants/item-codes';
 import { getItemPropertyDescriptions, type ItemPropertyDetail } from '@/data/queries/item-properties';
 import { getBaseItemDetailById, type ItemDetail } from '@/data/queries/item-detail';
-import { formatSignedModifier } from '@/utils/ability-modifier';
+import { formatAbilityTotal, formatSignedModifier } from '@/utils/ability-modifier';
 import { useCharacter } from '@/hooks/use-character';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
@@ -164,8 +164,8 @@ export default function ItemDetailScreen() {
               }
               setWeaponSlot(itemId, slot);
             }}
-            strScore={character.abilities.str.score}
-            dexScore={character.abilities.dex.score}
+            strScore={formatAbilityTotal(character.abilities.str)}
+            dexScore={formatAbilityTotal(character.abilities.dex)}
             proficiencyBonus={getProficiencyBonus(getCharacterLevel(character.classes)) ?? 0}
             onPropertyPress={setSelectedPropertyCode}
           />

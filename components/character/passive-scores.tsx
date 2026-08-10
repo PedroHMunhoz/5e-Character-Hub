@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { useCharacter } from '@/hooks/use-character';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { formatPassiveScore, getPassiveScore } from '@/utils/ability-modifier';
+import { formatAbilityTotal, formatPassiveScore, getPassiveScore, getProficiencyMultiplier } from '@/utils/ability-modifier';
 
 interface PassiveScoresProps {
   proficiencyBonus: number | null;
@@ -14,23 +14,23 @@ export function PassiveScores({ proficiencyBonus }: PassiveScoresProps) {
   const goldColor = useThemeColor({}, 'gold');
 
   const passiveArcana = getPassiveScore(
-    character.abilities.int.score,
-    character.skills.arcanismo.proficient,
+    formatAbilityTotal(character.abilities.int),
+    getProficiencyMultiplier(character.skills.arcanismo.proficient, character.skills.arcanismo.expertise),
     proficiencyBonus
   );
   const passivePerception = getPassiveScore(
-    character.abilities.wis.score,
-    character.skills.percepcao.proficient,
+    formatAbilityTotal(character.abilities.wis),
+    getProficiencyMultiplier(character.skills.percepcao.proficient, character.skills.percepcao.expertise),
     proficiencyBonus
   );
   const passiveInsight = getPassiveScore(
-    character.abilities.wis.score,
-    character.skills.intuicao.proficient,
+    formatAbilityTotal(character.abilities.wis),
+    getProficiencyMultiplier(character.skills.intuicao.proficient, character.skills.intuicao.expertise),
     proficiencyBonus
   );
   const passiveInvestigation = getPassiveScore(
-    character.abilities.int.score,
-    character.skills.investigacao.proficient,
+    formatAbilityTotal(character.abilities.int),
+    getProficiencyMultiplier(character.skills.investigacao.proficient, character.skills.investigacao.expertise),
     proficiencyBonus
   );
 

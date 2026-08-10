@@ -8,6 +8,7 @@ interface TranslationFields {
   name?: string;
   entries?: string;
   materialText?: string;
+  subclass_title?: string;
 }
 
 export type TranslationDict = Map<number, TranslationFields>;
@@ -26,7 +27,7 @@ export async function getTranslations(
   const dict: TranslationDict = new Map();
   for (const row of rows) {
     const fields = dict.get(row.entity_id) ?? {};
-    if (row.field === 'name' || row.field === 'entries' || row.field === 'materialText') {
+    if (row.field === 'name' || row.field === 'entries' || row.field === 'materialText' || row.field === 'subclass_title') {
       fields[row.field] = row.value;
     }
     dict.set(row.entity_id, fields);
@@ -46,4 +47,8 @@ export function localizedEntries(id: number, fallback: string[], dict: Translati
 
 export function localizedMaterialText(id: number, dict: TranslationDict): string | undefined {
   return dict.get(id)?.materialText;
+}
+
+export function localizedSubclassTitle(id: number, fallback: string, dict: TranslationDict): string {
+  return dict.get(id)?.subclass_title ?? fallback;
 }

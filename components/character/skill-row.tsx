@@ -1,22 +1,28 @@
 import { StyleSheet, View } from 'react-native';
 
-import { CheckboxToggle } from '@/components/character/checkbox-toggle';
+import { SkillProficiencyToggle } from '@/components/character/skill-proficiency-toggle';
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
 interface SkillRowProps {
   label: string;
   proficient: boolean;
-  onToggleProficiency: () => void;
+  expertise: boolean;
+  onChangeProficiency: (next: { proficient: boolean; expertise: boolean }) => void;
   modifier: string;
 }
 
-export function SkillRow({ label, proficient, onToggleProficiency, modifier }: SkillRowProps) {
+export function SkillRow({ label, proficient, expertise, onChangeProficiency, modifier }: SkillRowProps) {
   const goldColor = useThemeColor({}, 'gold');
 
   return (
     <View style={styles.row}>
-      <CheckboxToggle checked={proficient} onToggle={onToggleProficiency} />
+      <SkillProficiencyToggle
+        proficient={proficient}
+        expertise={expertise}
+        expertiseAllowed
+        onChange={onChangeProficiency}
+      />
       <ThemedText style={styles.label} numberOfLines={1}>
         {label}
       </ThemedText>

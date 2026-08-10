@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { formatDraconicAncestryFeatureName } from '@/constants/draconic-ancestry';
 import { getFeatureUsage, type RecoveryType } from '@/constants/feature-usage-overrides';
 import { toEntries } from '../rows';
 import { getTranslations, localizedEntries, localizedName } from './localize';
@@ -19,40 +20,51 @@ function withUsage(id: string, section: FeatureSectionKey, englishName: string, 
   return { id, section, name, ...getFeatureUsage(englishName) };
 }
 
-// The demo character is a level-2 Rock Gnome Evocation Wizard with the Sage
-// background. These ids were picked by hand and confirmed to have pt-BR
-// translations in the bundled db (see the plan for how each was found).
-// Second Wind (id 120, Fighter) doesn't belong to this character's class -
-// it's included solely to exercise the "recovers on short or long rest" copy
-// in the detail screen, since none of the wizard's own features do.
-const CLASS_FEATURE_IDS = [362, 363, 364, 120]; // Arcane Recovery, Spellcasting, Arcane Tradition, Second Wind
-const SUBCLASS_FEATURE_IDS = [874, 875, 876, 877]; // School of Evocation, Evocation Savant, Sculpt Spells, Potent Cantrip
-const RACIAL_TRAIT_IDS = [820, 821, 250]; // Artificer's Lore, Tinker, Gnome Cunning
-const SAGE_BACKGROUND_ID = 58;
+export interface CharacterFeatureQuery {
+  raceId: number;
+  subraceId: number | null;
+  classId: number;
+  subclassId: number | null;
+  backgroundId: number;
+  level: number;
+  // Dragonborn-only, set by the creation wizard - see
+  // constants/draconic-ancestry.ts for why this isn't just another racial
+  // trait row.
+  draconicAncestry?: string | null;
+}
 
-export async function getCuratedCharacterFeatures(db: SQLiteDatabase): Promise<CuratedFeature[]> {
-  const classPlaceholders = CLASS_FEATURE_IDS.map(() => '?').join(', ');
-  const subclassPlaceholders = SUBCLASS_FEATURE_IDS.map(() => '?').join(', ');
-  const racialPlaceholders = RACIAL_TRAIT_IDS.map(() => '?').join(', ');
-
+// Replaces the earlier hardcoded-id version (built for the app's original
+// level-2 Rock Gnome Evocation Wizard demo character) now that every
+// character carries real raceId/classId/subclassId/backgroundId from the
+// creation wizard - queries the actual grants for THIS character instead of
+// a fixed id list.
+export async function getCharacterFeatures(db: SQLiteDatabase, query: CharacterFeatureQuery): Promise<CuratedFeature[]> {
   // Sequential, not Promise.all: overlapping queries on the same
   // SQLiteDatabase connection can crash on native (see data/queries/spells.ts).
   const classRows = await db.getAllAsync<{ id: number; name: string }>(
-    `SELECT id, name FROM class_features WHERE id IN (${classPlaceholders})`,
-    ...CLASS_FEATURE_IDS
+    "SELECT id, name FROM class_features WHERE class_id = ? AND level <= ? AND source = 'PHB'",
+    query.classId,
+    query.level
   );
-  const subclassRows = await db.getAllAsync<{ id: number; name: string }>(
-    `SELECT id, name FROM subclass_features WHERE id IN (${subclassPlaceholders})`,
-    ...SUBCLASS_FEATURE_IDS
-  );
+  const subclassRows =
+    query.subclassId != null
+      ? await db.getAllAsync<{ id: number; name: string }>(
+          "SELECT id, name FROM subclass_features WHERE subclass_id = ? AND level <= ? AND source = 'PHB'",
+          query.subclassId,
+          query.level
+        )
+      : [];
+  const raceIds = query.subraceId != null ? [query.raceId, query.subraceId] : [query.raceId];
+  const racePlaceholders = raceIds.map(() => '?').join(', ');
   const racialRows = await db.getAllAsync<{ id: number; name: string }>(
-    `SELECT id, name FROM racial_traits WHERE id IN (${racialPlaceholders})`,
-    ...RACIAL_TRAIT_IDS
+    `SELECT id, name FROM racial_traits WHERE race_id IN (${racePlaceholders}) ORDER BY sort_order`,
+    ...raceIds
   );
   const backgroundRow = await db.getFirstAsync<{ id: number; name: string; entries: string }>(
     'SELECT id, name, entries FROM backgrounds WHERE id = ?',
-    SAGE_BACKGROUND_ID
+    query.backgroundId
   );
+
   const classTranslations = await getTranslations(db, 'class_feature');
   const subclassTranslations = await getTranslations(db, 'subclass_feature');
   const racialTranslations = await getTranslations(db, 'racial_trait');
@@ -73,6 +85,11 @@ export async function getCuratedCharacterFeatures(db: SQLiteDatabase): Promise<C
   for (const row of racialRows) {
     const name = localizedName(row.id, row.name, racialTranslations);
     features.push(withUsage(`racial_trait-${row.id}`, 'racial', row.name, name));
+  }
+
+  if (query.draconicAncestry) {
+    const name = formatDraconicAncestryFeatureName(query.draconicAncestry);
+    if (name) features.push(withUsage('draconic-ancestry', 'racial', 'Draconic Ancestry (choice)', name));
   }
 
   if (backgroundRow) {

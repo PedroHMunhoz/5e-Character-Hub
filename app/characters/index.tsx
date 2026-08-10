@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 
 import { CharacterList } from '@/components/character/character-list';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -7,9 +7,10 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 
 function HeaderAddButton() {
   const goldColor = useThemeColor({}, 'gold');
+  const router = useRouter();
 
   return (
-    <Pressable onPress={() => {}} hitSlop={8} style={styles.headerButton}>
+    <Pressable onPress={() => router.push('/wizard')} hitSlop={8} style={styles.headerButton}>
       <IconSymbol name="plus" size={24} color={goldColor} />
     </Pressable>
   );

@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SQLiteProvider } from 'expo-sqlite';
 import 'react-native-reanimated';
 
-import { CharacterProvider } from '@/context/character-context';
+import { CharacterDbProvider } from '@/context/character-db-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export const unstable_settings = {
@@ -28,14 +28,21 @@ export default function RootLayout() {
       databaseName="dnd5e.db"
       assetSource={{ assetId: require('@/assets/data/dnd5e.db'), forceOverwrite: true }}
     >
-      <CharacterProvider>
+      {/* Own, hand-rolled context (not a nested SQLiteProvider - see
+          context/character-db-context.tsx for why): player characters live
+          in a separate, non-bundled database so they aren't wiped by the
+          forceOverwrite above. CharacterProvider itself is mounted per
+          character, inside app/sheet/[characterId]/_layout.tsx (it needs a
+          characterId), not globally here. */}
+      <CharacterDbProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <Stack>
-            <Stack.Screen name="sheet" options={{ headerShown: false }} />
+            <Stack.Screen name="sheet/[characterId]" options={{ headerShown: false }} />
+            <Stack.Screen name="wizard" options={{ presentation: 'modal', headerShown: false }} />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>
-      </CharacterProvider>
+      </CharacterDbProvider>
     </SQLiteProvider>
   );
 }

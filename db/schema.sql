@@ -73,6 +73,7 @@ CREATE TABLE races (
   size TEXT NOT NULL, -- JSON array, e.g. ["M"]
   speed INTEGER,
   ability_bonuses TEXT, -- JSON
+  skill_proficiencies TEXT, -- JSON, same {name: true}/{any: count} shape as backgrounds.skill_proficiencies / classes.starting_proficiencies.skills - only Elf ({"perception":true}), Half-Elf ({"any":2}) and Half-Orc ({"intimidation":true}) have this in the PHB
   darkvision INTEGER,
   resistances TEXT, -- JSON array
   languages TEXT, -- JSON
@@ -100,6 +101,7 @@ CREATE TABLE backgrounds (
   srd INTEGER NOT NULL DEFAULT 0,
   basic_rules INTEGER NOT NULL DEFAULT 0,
   skill_proficiencies TEXT, -- JSON
+  tool_proficiencies TEXT, -- JSON, same {name: true}/{anyX: count} shape as classes.starting_proficiencies.toolProficiencies
   language_proficiencies TEXT, -- JSON
   starting_equipment TEXT, -- JSON
   entries TEXT NOT NULL, -- JSON array

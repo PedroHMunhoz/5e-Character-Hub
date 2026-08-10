@@ -19,6 +19,7 @@ export const RECOVERY_LABELS: Record<RecoveryType, string> = {
 export const FEATURE_USAGE_OVERRIDES: Record<string, FeatureUsageOverride> = {
   'Arcane Recovery': { usageType: 'ativa', maxUses: '1', recovery: ['DL'] },
   'Second Wind': { usageType: 'ativa', maxUses: '1', recovery: ['DC', 'DL'] },
+  'Breath Weapon': { usageType: 'ativa', maxUses: '1', recovery: ['DC', 'DL'] },
 };
 
 export function getFeatureUsage(englishName: string): FeatureUsageOverride {

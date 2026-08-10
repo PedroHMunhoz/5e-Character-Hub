@@ -1,80 +1,31 @@
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { useThemeColor } from '@/hooks/use-theme-color';
 import type { CharacterClass } from '@/types/character';
 
 interface ClassLevelsProps {
   name: string;
-  onNameChange: (value: string) => void;
   race: string;
-  onRaceChange: (value: string) => void;
   classes: CharacterClass[];
-  onClassNameChange: (id: string, value: string) => void;
-  onClassLevelChange: (id: string, value: string) => void;
-  onAddClass: () => void;
-  onRemoveClass: (id: string) => void;
 }
 
-export function ClassLevels({
-  name,
-  onNameChange,
-  race,
-  onRaceChange,
-  classes,
-  onClassNameChange,
-  onClassLevelChange,
-  onAddClass,
-  onRemoveClass,
-}: ClassLevelsProps) {
-  const textColor = useThemeColor({}, 'text');
-  const borderColor = useThemeColor({}, 'icon');
-  const tintColor = useThemeColor({}, 'tint');
-
+// Read-only display - name/race/class/level are set during character
+// creation (the wizard) or, in the future, a dedicated edit flow (see
+// docs/wizard-todo.md's note on editing race/class/background after
+// creation). CharacterContext still exposes setName/setRace/setClassName/
+// setClassLevel/addClass/removeClass for that future flow; this summary
+// screen just no longer calls them.
+export function ClassLevels({ name, race, classes }: ClassLevelsProps) {
   return (
     <View style={styles.container}>
-      <TextInput
-        style={[styles.nameInput, { color: textColor }]}
-        value={name}
-        onChangeText={onNameChange}
-        placeholder="Nome do Personagem"
-        placeholderTextColor={borderColor}
-      />
-      <TextInput
-        style={[styles.raceInput, { color: textColor }]}
-        value={race}
-        onChangeText={onRaceChange}
-        placeholder="Raça"
-        placeholderTextColor={borderColor}
-      />
+      <ThemedText style={styles.name}>{name}</ThemedText>
+      <ThemedText style={styles.race}>{race}</ThemedText>
       <View style={styles.classList}>
         {classes.map((characterClass) => (
-          <View key={characterClass.id} style={styles.classRow}>
-            <TextInput
-              style={[styles.classNameInput, { color: textColor, borderColor }]}
-              value={characterClass.name}
-              onChangeText={(value) => onClassNameChange(characterClass.id, value)}
-              placeholder="Classe"
-              placeholderTextColor={borderColor}
-            />
-            <TextInput
-              style={[styles.classLevelInput, { color: textColor, borderColor }]}
-              value={characterClass.level}
-              onChangeText={(value) => onClassLevelChange(characterClass.id, value)}
-              placeholder="Nível"
-              placeholderTextColor={borderColor}
-              keyboardType="number-pad"
-            />
-            {classes.length > 1 ? (
-              <Pressable onPress={() => onRemoveClass(characterClass.id)} hitSlop={8}>
-                <ThemedText style={[styles.removeButton, { color: tintColor }]}>×</ThemedText>
-              </Pressable>
-            ) : null}
-          </View>
+          <ThemedText key={characterClass.id} style={styles.classRow}>
+            {characterClass.name} {characterClass.level}
+          </ThemedText>
         ))}
-        <Pressable onPress={onAddClass} hitSlop={8}>
-          <ThemedText style={[styles.addButton, { color: tintColor }]}>+ Classe</ThemedText>
-        </Pressable>
       </View>
     </View>
   );
@@ -84,48 +35,19 @@ const styles = StyleSheet.create({
   container: {
     gap: 4,
   },
-  nameInput: {
+  name: {
     fontSize: 20,
     fontWeight: '700',
-    padding: 0,
   },
-  raceInput: {
+  race: {
     fontSize: 14,
     opacity: 0.8,
-    padding: 0,
   },
   classList: {
     marginTop: 4,
-    gap: 4,
+    gap: 2,
   },
   classRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  classNameInput: {
-    flex: 1,
     fontSize: 13,
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  classLevelInput: {
-    width: 48,
-    fontSize: 13,
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    textAlign: 'center',
-  },
-  removeButton: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  addButton: {
-    fontSize: 13,
-    fontWeight: '600',
   },
 });

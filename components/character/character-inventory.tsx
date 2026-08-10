@@ -10,27 +10,73 @@ import { EquipmentItemCard } from '@/components/character/equipment-item-card';
 import { MessageModal } from '@/components/character/message-modal';
 import { StackableItemCard } from '@/components/character/stackable-item-card';
 import { CURRENCY_FIELDS, INVENTORY_CATEGORY_SECTIONS } from '@/constants/inventory';
-import { getCuratedInventoryBaseItems, type CuratedBaseItem } from '@/data/queries/base-items';
+import { formatWeightKg, getBaseItemsByIds, type CuratedBaseItem } from '@/data/queries/base-items';
+import { parseItemKey } from '@/data/queries/equipment-lookup';
+import { getItemsByIds } from '@/data/queries/items';
 import { useCharacter } from '@/hooks/use-character';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import type { WeaponSlot } from '@/types/character';
+
+// A display item carries its inventoryItems key (namespaced for `items`-
+// table rows - see data/queries/equipment-lookup.ts's itemKey) alongside
+// the fields the existing cards render. `items`-table rows (packs, kits,
+// general gear granted by the creation wizard) have no weapon/armor stats
+// and, unlike base_items, no detail screen to navigate to yet
+// (app/sheet/[characterId]/item/[id].tsx only resolves base_items ids) -
+// see docs/wizard-todo.md.
+interface DisplayItem extends CuratedBaseItem {
+  key: string;
+  navigable: boolean;
+}
 
 export function CharacterInventory() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { character, setCurrencyField, toggleArmorEquipped, toggleWeaponEquipped, setWeaponSlot } = useCharacter();
-  const [items, setItems] = useState<CuratedBaseItem[]>([]);
+  const [items, setItems] = useState<DisplayItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
   const [shieldConfirm, setShieldConfirm] = useState<{ id: string; slot: WeaponSlot } | null>(null);
   const goldColor = useThemeColor({}, 'gold');
 
+  const inventoryKeys = useMemo(() => Object.keys(character.inventoryItems), [character.inventoryItems]);
+
   useEffect(() => {
-    getCuratedInventoryBaseItems(db).then((data) => {
-      setItems(data);
+    let cancelled = false;
+    async function load() {
+      const baseItemIds: number[] = [];
+      const itemIds: number[] = [];
+      for (const key of inventoryKeys) {
+        const parsed = parseItemKey(key);
+        (parsed.source === 'base_items' ? baseItemIds : itemIds).push(parsed.id);
+      }
+
+      // Sequential, not Promise.all: overlapping queries on the same
+      // SQLiteDatabase connection can crash on native (see data/queries/spells.ts).
+      const baseItems = await getBaseItemsByIds(db, baseItemIds);
+      if (cancelled) return;
+      const generalItems = await getItemsByIds(db, itemIds);
+      if (cancelled) return;
+
+      const display: DisplayItem[] = [
+        ...baseItems.map((item) => ({ ...item, key: String(item.id), navigable: true })),
+        ...generalItems.map((item) => ({
+          key: `item:${item.id}`,
+          navigable: false,
+          id: item.id,
+          category: 'general' as const,
+          name: item.name,
+          weight: formatWeightKg(item.name, item.weightLb),
+        })),
+      ];
+      setItems(display);
       setLoading(false);
-    });
-  }, [db]);
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [db, inventoryKeys]);
 
   const sections = useMemo(
     () =>
@@ -76,7 +122,9 @@ export function CharacterInventory() {
                   return (
                     <Pressable
                       key={itemId}
-                      onPress={() => router.push({ pathname: '/item/[id]', params: { id: itemId } })}
+                      onPress={() =>
+                        router.push({ pathname: '/sheet/[characterId]/item/[id]', params: { characterId: character.id, id: itemId } })
+                      }
                     >
                       <EquipmentItemCard
                         name={item.name}
@@ -107,21 +155,31 @@ export function CharacterInventory() {
                 }
 
                 const isConsumable = section.category === 'consumable';
+                const card = (
+                  <StackableItemCard
+                    name={item.name}
+                    properties={item.properties}
+                    weight={item.weight}
+                    quantity={
+                      isConsumable
+                        ? (character.inventoryItems[item.key]?.quantity ?? item.defaultQuantity ?? '1')
+                        : undefined
+                    }
+                  />
+                );
+
+                if (!item.navigable) {
+                  return <View key={item.key}>{card}</View>;
+                }
+
                 return (
                   <Pressable
-                    key={itemId}
-                    onPress={() => router.push({ pathname: '/item/[id]', params: { id: itemId } })}
+                    key={item.key}
+                    onPress={() =>
+                      router.push({ pathname: '/sheet/[characterId]/item/[id]', params: { characterId: character.id, id: item.key } })
+                    }
                   >
-                    <StackableItemCard
-                      name={item.name}
-                      properties={item.properties}
-                      weight={item.weight}
-                      quantity={
-                        isConsumable
-                          ? (character.inventoryItems[itemId]?.quantity ?? item.defaultQuantity ?? '1')
-                          : undefined
-                      }
-                    />
+                    {card}
                   </Pressable>
                 );
               })}

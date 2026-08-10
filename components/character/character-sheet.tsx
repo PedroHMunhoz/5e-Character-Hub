@@ -15,33 +15,23 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { useCharacter } from '@/hooks/use-character';
 import { useEquippedArmor } from '@/hooks/use-equipped-armor';
 import { VitalBar } from '@/components/character/vital-bar';
-import { formatSignedModifier, getAbilityModifier } from '@/utils/ability-modifier';
+import { formatAbilityTotal, formatSignedModifier, getAbilityModifier } from '@/utils/ability-modifier';
 import { getArmorClassBreakdown } from '@/utils/armor-class';
 import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
 import { formatSpeed } from '@/utils/speed';
 
 export function CharacterSheet() {
-  const {
-    character,
-    setName,
-    setRace,
-    addClass,
-    removeClass,
-    setClassName,
-    setClassLevel,
-    toggleInspiration,
-    setExhaustion,
-    setDeathSaves,
-  } = useCharacter();
+  const { character, toggleInspiration, setExhaustion, setDeathSaves } = useCharacter();
 
   const goldColor = useThemeColor({}, 'gold');
   const [openStat, setOpenStat] = useState<'ac' | 'initiative' | null>(null);
 
   const characterLevel = getCharacterLevel(character.classes);
   const proficiencyBonus = getProficiencyBonus(characterLevel);
-  const dexModifier = getAbilityModifier(character.abilities.dex.score);
+  const dexTotal = formatAbilityTotal(character.abilities.dex);
+  const dexModifier = getAbilityModifier(dexTotal);
   const equippedArmor = useEquippedArmor();
-  const armorClassBreakdown = getArmorClassBreakdown(character.abilities.dex.score, equippedArmor);
+  const armorClassBreakdown = getArmorClassBreakdown(dexTotal, equippedArmor);
 
   const acRows = [
     { label: 'CA Base', value: String(armorClassBreakdown.base) },
@@ -59,17 +49,7 @@ export function CharacterSheet() {
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <ClassLevels
-            name={character.name}
-            onNameChange={setName}
-            race={character.race}
-            onRaceChange={setRace}
-            classes={character.classes}
-            onClassNameChange={setClassName}
-            onClassLevelChange={setClassLevel}
-            onAddClass={addClass}
-            onRemoveClass={removeClass}
-          />
+          <ClassLevels name={character.name} race={character.race} classes={character.classes} />
         </View>
         <View style={styles.headerRight}>
           <InspirationToggle value={character.inspiration} onValueChange={toggleInspiration} />

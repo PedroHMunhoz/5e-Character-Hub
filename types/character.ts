@@ -21,7 +21,11 @@ export type SkillKey =
   | 'sobrevivencia';
 
 export interface AbilityScore {
-  score: string;
+  // Kept apart from any racial bonus so the wizard-assigned bonus survives
+  // independently of further edits to the base score, and so a future
+  // "base + bônus racial" breakdown UI can be built without re-deriving it.
+  base: string;
+  racialBonus: number;
 }
 
 export interface SavingThrow {
@@ -29,6 +33,13 @@ export interface SavingThrow {
 }
 
 export interface Skill {
+  proficient: boolean;
+  // Doubles the proficiency bonus for this skill (e.g. Rogue's "Expertise"
+  // class feature at level 1). Only meaningful when `proficient` is true.
+  expertise: boolean;
+}
+
+export interface ToolState {
   proficient: boolean;
 }
 
@@ -45,6 +56,12 @@ export interface HitDice {
 
 export interface CharacterClass {
   id: string;
+  // Reference into the classes/subclasses tables (db/schema.sql) - set by
+  // the creation wizard. `name` stays the denormalized display string
+  // (already how every existing sheet component reads it) so this addition
+  // doesn't ripple into unrelated display code.
+  classId?: number;
+  subclassId?: number | null;
   name: string;
   level: string;
 }
@@ -104,8 +121,17 @@ export interface CharacterSummary {
 }
 
 export interface CharacterSheet {
+  id: string;
   name: string;
+  // Reference into the races table - set by the creation wizard. `race`
+  // stays the denormalized display string (race name, or subrace name when
+  // one was chosen - already how ClassLevels/character-sheet.tsx read it).
+  raceId?: number;
+  subraceId?: number | null;
   race: string;
+  // Dragonborn-only - see constants/draconic-ancestry.ts.
+  draconicAncestry?: string | null;
+  backgroundId?: number;
   classes: CharacterClass[];
   inspiration: boolean;
   abilities: Record<AbilityKey, AbilityScore>;
@@ -118,6 +144,7 @@ export interface CharacterSheet {
   deathSaves: DeathSaves;
   currency: Currency;
   inventoryItems: Record<string, InventoryItemState>;
+  tools: Record<string, ToolState>;
   features: Record<string, FeatureItemState>;
   spells: Record<string, SpellItemState>;
   spellSlotsUsed: Record<string, number>;

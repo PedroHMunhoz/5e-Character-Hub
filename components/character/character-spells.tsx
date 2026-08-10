@@ -16,7 +16,7 @@ import {
   SPELL_SCHOOL_LABELS,
   SPELL_SLOT_MAX,
 } from '@/constants/spells';
-import { getCuratedSpellbook } from '@/data/queries/spells';
+import { getSpellsByIds } from '@/data/queries/spells';
 import { useCharacter } from '@/hooks/use-character';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import type { Spell } from '@/types/reference';
@@ -34,12 +34,14 @@ export function CharacterSpells() {
   const goldColor = useThemeColor({}, 'gold');
   const textColor = useThemeColor({}, 'text');
 
+  const spellIds = useMemo(() => Object.keys(character.spells).map(Number), [character.spells]);
+
   useEffect(() => {
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const start = Date.now();
 
-    getCuratedSpellbook(db).then((data) => {
+    getSpellsByIds(db, spellIds).then((data) => {
       if (cancelled) return;
       // Empty spellbook: nothing to read, so skip the artificial delay. When
       // there are spells, keep the indicator up for at least 3s (long enough
@@ -59,7 +61,7 @@ export function CharacterSpells() {
       cancelled = true;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [db]);
+  }, [db, spellIds]);
 
   const sections = useMemo(
     () =>
@@ -139,7 +141,12 @@ export function CharacterSpells() {
               {items.map((spell) => (
                 <Pressable
                   key={spell.id}
-                  onPress={() => router.push({ pathname: '/spell/[id]', params: { id: String(spell.id) } })}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/sheet/[characterId]/spell/[id]',
+                      params: { characterId: character.id, id: String(spell.id) },
+                    })
+                  }
                 >
                   <SpellRow
                     name={spell.name}

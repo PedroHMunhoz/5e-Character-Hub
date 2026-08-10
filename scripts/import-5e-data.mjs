@@ -234,14 +234,16 @@ const raceMap = new Map(); // `${name}|${source}` -> id
 
 runSection('races', () => {
   const insertRace = db.prepare(
-    `INSERT INTO races (parent_race_id, name, source, srd, basic_rules, size, speed, ability_bonuses, darkvision, resistances, languages)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO races (parent_race_id, name, source, srd, basic_rules, size, speed, ability_bonuses, skill_proficiencies, darkvision, resistances, languages)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`
   );
   const insertRacialTrait = db.prepare(
     'INSERT INTO racial_traits (race_id, name, entries, sort_order) VALUES (?,?,?,?)'
   );
+  const updateRaceAbilityBonuses = db.prepare('UPDATE races SET ability_bonuses = ? WHERE id = ?');
+  const updateRaceSkillProficiencies = db.prepare('UPDATE races SET skill_proficiencies = ? WHERE id = ?');
 
-  function insertRaceRow(r, parentId) {
+  function insertRaceRow(r, parentId, { registerInMap = parentId == null } = {}) {
     ensureSource(r.source);
     const speed =
       typeof r.speed === 'number' ? r.speed : r.speed && typeof r.speed === 'object' ? (r.speed.walk ?? null) : null;
@@ -254,12 +256,20 @@ runSection('races', () => {
       json(r.size ?? []),
       speed,
       json(r.ability ?? null),
+      json(r.skillProficiencies ?? null),
       r.darkvision ?? null,
       json(r.resist ?? null),
       json(r.languageProficiencies ?? null)
     );
     const id = info.lastInsertRowid;
-    raceMap.set(`${r.name}|${r.source}`, id);
+    // Only base races register themselves for subrace lookup. Subraces used
+    // to register too, which meant a subrace sharing its parent's raw name
+    // (see the Human handling below) could shadow the real parent in
+    // raceMap for whatever got processed next under that same name -
+    // confirmed live: PHB Human's "Variant" subrace ended up parented under
+    // the standard-Human subrace instead of the base Human race because of
+    // this.
+    if (registerInMap) raceMap.set(`${r.name}|${r.source}`, id);
     bump('races');
 
     const traitEntries = Array.isArray(r.entries) ? r.entries : [];
@@ -282,9 +292,37 @@ runSection('races', () => {
   }
   for (const s of raceData.subrace || []) {
     if (!isIncluded(s) || s._copy) continue;
+    // Some "subrace" entries are 5etools plumbing, not real subraces: no
+    // `name` (falls back to the parent race's own name below) and no
+    // `ability` data either. Confirmed live against 5e-2014-data/races.json:
+    // PHB Dragonborn's only "subrace" entry is actually an unexpanded
+    // `_versions`/`_implementations` template that generates the 10
+    // Draconic Ancestry variants (handled separately in the wizard - see
+    // constants/draconic-ancestry.ts, not worth expanding this generic
+    // 5etools templating mechanism for the one race that needs it), and
+    // Half-Elf/Half-Orc/Tiefling each have a completely empty PHB stub
+    // subrace. None of the four carry any usable data, so they're dropped
+    // instead of imported as junk rows with no name and no bonuses.
+    if (!s.name && !s.ability) continue;
+
     const parentId = raceMap.get(`${s.raceName}|${s.raceSource}`);
     if (parentId == null) continue;
-    insertRaceRow({ ...s, name: s.name || s.raceName }, parentId);
+
+    const resolvedName = s.name || s.raceName;
+    if (resolvedName === s.raceName && s.ability) {
+      // A "subrace" with no distinct name of its own but real ability data
+      // - the only PHB case is Human (5etools models "+1 to all six
+      // abilities" this way instead of putting it directly on the race
+      // entry). Fold the bonus into the parent race itself rather than
+      // inserting a same-named "subrace" nobody would think to open, so
+      // Human ends up structured just like every other no-subrace PHB race
+      // (Dragonborn, Half-Elf, Half-Orc, Tiefling).
+      updateRaceAbilityBonuses.run(json(s.ability), parentId);
+      if (s.skillProficiencies) updateRaceSkillProficiencies.run(json(s.skillProficiencies), parentId);
+      continue;
+    }
+
+    insertRaceRow({ ...s, name: resolvedName }, parentId, { registerInMap: false });
   }
 });
 
@@ -294,8 +332,8 @@ runSection('races', () => {
 
 runSection('backgrounds', () => {
   const insertBackground = db.prepare(
-    `INSERT INTO backgrounds (name, source, srd, basic_rules, skill_proficiencies, language_proficiencies, starting_equipment, entries)
-     VALUES (?,?,?,?,?,?,?,?)`
+    `INSERT INTO backgrounds (name, source, srd, basic_rules, skill_proficiencies, tool_proficiencies, language_proficiencies, starting_equipment, entries)
+     VALUES (?,?,?,?,?,?,?,?,?)`
   );
   const data = readJson('backgrounds.json');
   for (const b of data.background || []) {
@@ -308,6 +346,7 @@ runSection('backgrounds', () => {
       bit(b.srd),
       bit(b.basicRules),
       json(b.skillProficiencies ?? null),
+      json(b.toolProficiencies ?? null),
       json(b.languageProficiencies ?? null),
       json(b.startingEquipment ?? null),
       json(flat)

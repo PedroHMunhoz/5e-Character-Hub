@@ -55,8 +55,9 @@ function mapSpellRow(row: SpellRow, translations: TranslationDict): Spell {
 // Promise.all'd, or native builds intermittently throw "Cannot use shared
 // object that was already released".
 
+// PHB-only for now - see the same note on data/queries/races.ts's getAllRaces.
 export async function getAllSpells(db: SQLiteDatabase): Promise<Spell[]> {
-  const rows = await db.getAllAsync<SpellRow>('SELECT * FROM spells ORDER BY level, name');
+  const rows = await db.getAllAsync<SpellRow>("SELECT * FROM spells WHERE source = 'PHB' ORDER BY level, name");
   const translations = await getTranslations(db, 'spell');
   return rows.map((row) => mapSpellRow(row, translations));
 }
@@ -65,7 +66,7 @@ export async function getSpellsForClass(db: SQLiteDatabase, className: string): 
   const rows = await db.getAllAsync<SpellRow>(
     `SELECT s.* FROM spells s
      JOIN spell_classes sc ON sc.spell_id = s.id
-     WHERE sc.class_name = ?
+     WHERE sc.class_name = ? AND s.source = 'PHB'
      ORDER BY s.level, s.name`,
     className
   );
@@ -77,6 +78,20 @@ export async function getSpellById(db: SQLiteDatabase, id: number): Promise<Spel
   const row = await db.getFirstAsync<SpellRow>('SELECT * FROM spells WHERE id = ?', id);
   const translations = await getTranslations(db, 'spell');
   return row ? mapSpellRow(row, translations) : null;
+}
+
+// Loads exactly a character's known/prepared spells by id - replaces the
+// hardcoded getCuratedSpellbook() once a character carries its own spell
+// list (set by the creation wizard's spell-picking step).
+export async function getSpellsByIds(db: SQLiteDatabase, ids: number[]): Promise<Spell[]> {
+  if (ids.length === 0) return [];
+  const placeholders = ids.map(() => '?').join(', ');
+  const rows = await db.getAllAsync<SpellRow>(
+    `SELECT * FROM spells WHERE id IN (${placeholders}) ORDER BY level, name`,
+    ...ids
+  );
+  const translations = await getTranslations(db, 'spell');
+  return rows.map((row) => mapSpellRow(row, translations));
 }
 
 // Sanitizes to alphanumerics/spaces only, then does a prefix match per term -
@@ -95,39 +110,6 @@ export async function searchSpells(db: SQLiteDatabase, query: string): Promise<S
      WHERE content_fts MATCH ?
      ORDER BY s.name`,
     match
-  );
-  const translations = await getTranslations(db, 'spell');
-  return rows.map((row) => mapSpellRow(row, translations));
-}
-
-// Curated spellbook for the app's level-2 Evocation Wizard demo character:
-// the 3 cantrips known at level 1-3, plus the 8 1st-level spells in their
-// spellbook (6 learned at level 1 + 2 more learned on reaching level 2).
-const CURATED_SPELLBOOK_NAMES = [
-  'Fire Bolt',
-  'Mage Hand',
-  'Prestidigitation',
-  'Magic Missile',
-  'Burning Hands',
-  'Shield',
-  'Mage Armor',
-  'Detect Magic',
-  'Identify',
-  'Thunderwave',
-  'Sleep',
-  // Not part of the level-2 Evocation Wizard's "known" spells, but kept here
-  // to give the spell detail screen coverage of range shapes/components not
-  // otherwise represented above: Gust of Wind (line-shaped range,
-  // concentration) and Sending (unlimited range).
-  'Gust of Wind',
-  'Sending',
-];
-
-export async function getCuratedSpellbook(db: SQLiteDatabase): Promise<Spell[]> {
-  const placeholders = CURATED_SPELLBOOK_NAMES.map(() => '?').join(', ');
-  const rows = await db.getAllAsync<SpellRow>(
-    `SELECT * FROM spells WHERE source = 'PHB' AND name IN (${placeholders}) ORDER BY level, name`,
-    ...CURATED_SPELLBOOK_NAMES
   );
   const translations = await getTranslations(db, 'spell');
   return rows.map((row) => mapSpellRow(row, translations));

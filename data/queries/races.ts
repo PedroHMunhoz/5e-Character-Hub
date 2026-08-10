@@ -1,7 +1,8 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import type { Race, RacialTrait } from '@/types/reference';
+import type { Race, RaceAbilityBonus, RacialTrait } from '@/types/reference';
 import { parseJson, toEntries } from '../rows';
+import { getTranslations, localizedEntries, localizedName, type TranslationDict } from './localize';
 
 interface RaceRow {
   id: number;
@@ -13,6 +14,8 @@ interface RaceRow {
   size: string;
   speed: number | null;
   darkvision: number | null;
+  ability_bonuses: string | null;
+  skill_proficiencies: string | null;
 }
 
 interface RacialTraitRow {
@@ -22,28 +25,44 @@ interface RacialTraitRow {
   entries: string;
 }
 
-function mapRaceRow(row: RaceRow): Race {
+function mapRaceRow(row: RaceRow, translations: TranslationDict): Race {
   return {
     id: row.id,
     parentRaceId: row.parent_race_id,
-    name: row.name,
+    name: localizedName(row.id, row.name, translations),
+    englishName: row.name,
     source: row.source,
     srd: !!row.srd,
     basicRules: !!row.basic_rules,
     size: parseJson(row.size) ?? [],
     speed: row.speed,
     darkvision: row.darkvision,
+    abilityBonuses: parseJson<RaceAbilityBonus[]>(row.ability_bonuses),
+    skillProficiencies: parseJson(row.skill_proficiencies),
   };
 }
 
+// PHB-only for now: races/subraces from other sourcebooks exist in the
+// reference db but aren't translated yet, and mixing them in overwhelmed
+// the wizard's race picker with ~220 entries with no clear PHB grouping.
+// See docs/wizard-todo.md for the note to add other sources once translated.
+//
+// Also excludes "Variant" (Variant Human) - it's a real PHB subrace, but its
+// +1/+1 ability choice + bonus skill + feat needs a feat-picker the wizard
+// doesn't have yet. See docs/wizard-todo.md for the note to drop this filter
+// once feats are implemented.
 export async function getAllRaces(db: SQLiteDatabase): Promise<Race[]> {
-  const rows = await db.getAllAsync<RaceRow>('SELECT * FROM races ORDER BY name');
-  return rows.map(mapRaceRow);
+  const rows = await db.getAllAsync<RaceRow>(
+    "SELECT * FROM races WHERE source = 'PHB' AND name != 'Variant' ORDER BY name"
+  );
+  const translations = await getTranslations(db, 'race');
+  return rows.map((row) => mapRaceRow(row, translations));
 }
 
 export async function getRaceById(db: SQLiteDatabase, id: number): Promise<Race | null> {
   const row = await db.getFirstAsync<RaceRow>('SELECT * FROM races WHERE id = ?', id);
-  return row ? mapRaceRow(row) : null;
+  const translations = await getTranslations(db, 'race');
+  return row ? mapRaceRow(row, translations) : null;
 }
 
 export async function getRacialTraits(db: SQLiteDatabase, raceId: number): Promise<RacialTrait[]> {
@@ -51,10 +70,11 @@ export async function getRacialTraits(db: SQLiteDatabase, raceId: number): Promi
     'SELECT * FROM racial_traits WHERE race_id = ? ORDER BY sort_order',
     raceId
   );
+  const translations = await getTranslations(db, 'racial_trait');
   return rows.map((row) => ({
     id: row.id,
     raceId: row.race_id,
-    name: row.name,
-    entries: toEntries(row.entries),
+    name: localizedName(row.id, row.name, translations),
+    entries: localizedEntries(row.id, toEntries(row.entries), translations),
   }));
 }

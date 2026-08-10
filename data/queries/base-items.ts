@@ -197,44 +197,16 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict): Curated
   };
 }
 
-// Curated inventory for the app's level-2 Evocation Wizard demo character:
-// the base_items (weapons/armor/ammo) that already have a pt-BR translation
-// in the bundled db. General adventuring gear (potions, torches, rope,
-// clothing, etc.) lives in the untranslated `items` table, so it's left out
-// entirely rather than shown in English.
-const CURATED_ITEM_NAMES = [
-  'Light Crossbow',
-  'Shortsword',
-  'Longsword',
-  'Greatsword',
-  'Breastplate',
-  'Chain Mail',
-  'Shield',
-  'Crossbow Bolt',
-  // DUVIDAS.md cases where the printed book weight was rejected in favor of
-  // the English dataset's weight - added here just to eyeball in the app.
-  'Pike',
-  'Heavy Crossbow',
-  'Viol',
-  // Spellcasting/druidic foci (SCF) - added to verify the 'general'
-  // categorization from CLASSIFICACAO-ITENS-GERAIS.md.
-  'Crystal',
-  'Orb',
-  'Rod',
-  'Staff',
-  'Wand',
-  'Wooden Staff',
-];
-
-export async function getCuratedInventoryBaseItems(db: SQLiteDatabase): Promise<CuratedBaseItem[]> {
-  const placeholders = CURATED_ITEM_NAMES.map(() => '?').join(', ');
-  // Sequential, not Promise.all: overlapping queries on the same
-  // SQLiteDatabase connection can crash on native (see data/queries/spells.ts).
+// A real character's base_items-sourced inventory rows (weapons/armor/ammo)
+// by id, reusing the exact same categorization/mapping as the curated demo
+// list above - the wizard's starting-equipment resolver grants these by id,
+// not by a fixed name list.
+export async function getBaseItemsByIds(db: SQLiteDatabase, ids: number[]): Promise<CuratedBaseItem[]> {
+  if (ids.length === 0) return [];
+  const placeholders = ids.map(() => '?').join(', ');
   const rows = await db.getAllAsync<BaseItemRow>(
-    `SELECT id, name, type, weight_lb, damage, properties, details
-       FROM base_items
-       WHERE source = 'PHB' AND name IN (${placeholders})`,
-    ...CURATED_ITEM_NAMES
+    `SELECT id, name, type, weight_lb, damage, properties, details FROM base_items WHERE id IN (${placeholders})`,
+    ...ids
   );
   const translations = await getTranslations(db, 'base_item');
   return rows.map((row) => mapCuratedRow(row, translations));
