@@ -10,6 +10,7 @@ import { useWizardDraft, type EquipmentMode } from '@/context/wizard-context';
 import { getBackgroundById } from '@/data/queries/backgrounds';
 import { getClassById } from '@/data/queries/classes';
 import type { EquipmentLookupItem } from '@/data/queries/equipment-lookup';
+import { getAllToolItems } from '@/data/queries/tools';
 import {
   parseBackgroundEquipment,
   parseClassEquipment,
@@ -17,6 +18,7 @@ import {
   type EquipmentChoiceGroup,
   type ResolvedEquipmentEntry,
 } from '@/data/wizard/equipment-resolver';
+import { buildToolCategoryIndex, categorizeGrantedTools, reconcileEquipmentGroup } from '@/data/wizard/tool-equipment-overlap';
 import { formatGoldFormula, rollGoldFormula } from '@/utils/dice';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
@@ -87,14 +89,49 @@ export default function WizardEquipmentStep() {
       if (cancelled) return;
       const resolvedBackgroundGroups = await resolveEquipmentItemRefs(db, parsedBackgroundGroups);
       if (cancelled) return;
-      setClassGroups(resolvedClassGroups);
-      setBackgroundGroups(resolvedBackgroundGroups);
+
+      // Reconcile against tools already chosen in the Antecedente step
+      // (draft.toolProficiencies) - a categoryChoice here whose category
+      // matches an already-granted tool becomes a fixed entry instead of
+      // asking the player to pick again (see
+      // data/wizard/tool-equipment-overlap.ts).
+      const allTools = await getAllToolItems(db);
+      if (cancelled) return;
+      const grantedByCategory = categorizeGrantedTools(draft.toolProficiencies, allTools);
+      const toolCategoryByKey = buildToolCategoryIndex(allTools);
+
+      const autoSelections: Record<string, string> = {};
+      const reconciledClassGroups = resolvedClassGroups.map((group, i) => {
+        const { group: reconciled, autoSelectOptionKey } = reconcileEquipmentGroup(group, grantedByCategory, toolCategoryByKey);
+        if (autoSelectOptionKey) autoSelections[`class-${i}`] = autoSelectOptionKey;
+        return reconciled;
+      });
+      const reconciledBackgroundGroups = resolvedBackgroundGroups.map((group, i) => {
+        const { group: reconciled, autoSelectOptionKey } = reconcileEquipmentGroup(group, grantedByCategory, toolCategoryByKey);
+        if (autoSelectOptionKey) autoSelections[`background-${i}`] = autoSelectOptionKey;
+        return reconciled;
+      });
+
+      setClassGroups(reconciledClassGroups);
+      setBackgroundGroups(reconciledBackgroundGroups);
+      // Pre-select (but don't lock) the option matching an already-granted
+      // tool - only fills keys the player hasn't already chosen, so it
+      // never overwrites a manual pick.
+      if (Object.keys(autoSelections).length > 0) {
+        setSelectedOptionKeys((prev) => {
+          const next = { ...prev };
+          for (const [key, value] of Object.entries(autoSelections)) {
+            if (next[key] === undefined) next[key] = value;
+          }
+          return next;
+        });
+      }
     }
     load();
     return () => {
       cancelled = true;
     };
-  }, [db, draft.classId, draft.backgroundId]);
+  }, [db, draft.classId, draft.backgroundId, draft.toolProficiencies]);
 
   const backgroundResolved = (backgroundGroups ?? []).every((group, i) =>
     isGroupResolved(group, `background-${i}`, selectedOptionKeys, categoryChoices)

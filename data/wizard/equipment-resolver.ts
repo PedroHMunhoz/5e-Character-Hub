@@ -41,6 +41,12 @@ export type ResolvedEquipmentEntry =
       quantity: number;
       displayName?: string;
       containsValueCp?: number;
+      // Set when this entry was auto-resolved from a `categoryChoice` that
+      // matched a tool category the player already chose during the
+      // Antecedente step (see data/wizard/tool-equipment-overlap.ts) -
+      // lets the UI explain why there's no picker here instead of a
+      // second, apparently-independent choice.
+      impliedByProficiency?: boolean;
     }
   | { kind: 'categoryChoice'; equipmentType: string; label: string; quantity: number }
   | { kind: 'special'; text: string; quantity: number }

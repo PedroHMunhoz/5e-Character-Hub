@@ -23,7 +23,8 @@ interface EquipmentChoiceGroupViewProps {
 function describeEntry(entry: ResolvedEquipmentEntry): string {
   if (entry.kind === 'item') {
     const label = entry.displayName ?? entry.name;
-    return entry.quantity > 1 ? `${entry.quantity}x ${label}` : label;
+    const quantified = entry.quantity > 1 ? `${entry.quantity}x ${label}` : label;
+    return entry.impliedByProficiency ? `${quantified} (já escolhida no passo anterior)` : quantified;
   }
   if (entry.kind === 'special') return entry.text;
   if (entry.kind === 'categoryChoice') return entry.label;
