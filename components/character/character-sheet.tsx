@@ -13,12 +13,13 @@ import { StatField } from '@/components/character/stat-field';
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { useCharacter } from '@/hooks/use-character';
+import { useCharacterClassInfo } from '@/hooks/use-character-class-info';
 import { useEquippedArmor } from '@/hooks/use-equipped-armor';
 import { VitalBar } from '@/components/character/vital-bar';
 import { formatAbilityTotal, formatSignedModifier, getAbilityModifier } from '@/utils/ability-modifier';
-import { getArmorClassBreakdown } from '@/utils/armor-class';
+import { getArmorClassBreakdown, type UnarmoredDefenseRule } from '@/utils/armor-class';
 import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
-import { formatSpeed } from '@/utils/speed';
+import { formatSpeed, getMonkUnarmoredMovementBonusMeters } from '@/utils/speed';
 
 export function CharacterSheet() {
   const { character, toggleInspiration, setExhaustion, setDeathSaves } = useCharacter();
@@ -31,7 +32,39 @@ export function CharacterSheet() {
   const dexTotal = formatAbilityTotal(character.abilities.dex);
   const dexModifier = getAbilityModifier(dexTotal);
   const equippedArmor = useEquippedArmor();
-  const armorClassBreakdown = getArmorClassBreakdown(dexTotal, equippedArmor);
+  const { englishName: classEnglishName, subclassShortName } = useCharacterClassInfo();
+
+  const unarmoredDefenseRule: UnarmoredDefenseRule | undefined =
+    classEnglishName === 'Barbarian'
+      ? {
+          label: 'Defesa sem Armadura',
+          baseAC: 10,
+          secondaryAbilityScore: formatAbilityTotal(character.abilities.con),
+          requiresNoShield: false,
+        }
+      : classEnglishName === 'Monk'
+        ? {
+            label: 'Defesa sem Armadura',
+            baseAC: 10,
+            secondaryAbilityScore: formatAbilityTotal(character.abilities.wis),
+            requiresNoShield: true,
+          }
+        : subclassShortName === 'Draconic'
+          ? { label: 'Resiliência Dracônica', baseAC: 13, requiresNoShield: false }
+          : undefined;
+
+  const armorClassBreakdown = getArmorClassBreakdown(
+    dexTotal,
+    equippedArmor,
+    character.fightingStyle ?? null,
+    unarmoredDefenseRule
+  );
+
+  const unarmoredMovementBonus =
+    classEnglishName === 'Monk' && equippedArmor.length === 0
+      ? getMonkUnarmoredMovementBonusMeters(characterLevel)
+      : 0;
+  const displaySpeed = String(Number(character.speed) + unarmoredMovementBonus);
 
   const acRows = [
     { label: 'CA Base', value: String(armorClassBreakdown.base) },
@@ -72,7 +105,7 @@ export function CharacterSheet() {
               value={formatSignedModifier(dexModifier ?? 0)}
               onPress={() => setOpenStat('initiative')}
             />
-            <StatField label="Deslocamento" value={formatSpeed(character.speed)} />
+            <StatField label="Deslocamento" value={formatSpeed(displaySpeed)} />
           </View>
           <View style={styles.portraitWrapper}>
             <PortraitPlaceholder style={styles.portraitImage} />

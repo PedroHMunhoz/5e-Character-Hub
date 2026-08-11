@@ -4,6 +4,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { ItemIconPlaceholder } from '@/components/character/item-icon-placeholder';
+import { LevelProgressionTable } from '@/components/character/level-progression-table';
 import { ThemedText } from '@/components/themed-text';
 import { formatRecovery } from '@/constants/feature-usage-overrides';
 import { getFeatureDetailById, type FeatureDetail } from '@/data/queries/feature-detail';
@@ -76,7 +77,7 @@ export default function FeatureDetailScreen() {
     let cancelled = false;
 
     async function load() {
-      const detail = await getFeatureDetailById(db, id);
+      const detail = await getFeatureDetailById(db, id, character.fightingStyle);
       if (!cancelled) {
         setFeature(detail);
         setLoading(false);
@@ -87,7 +88,7 @@ export default function FeatureDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [db, id]);
+  }, [db, id, character.fightingStyle]);
 
   if (loading || !feature) {
     return (
@@ -131,6 +132,10 @@ export default function FeatureDetailScreen() {
             </ThemedText>
           ))}
         </View>
+
+        {feature.progressionTables?.map((table, index) => (
+          <LevelProgressionTable key={index} {...table} />
+        ))}
       </ScrollView>
     </>
   );

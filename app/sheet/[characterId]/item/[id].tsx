@@ -16,9 +16,12 @@ import { getItemPropertyDescriptions, type ItemPropertyDetail } from '@/data/que
 import { getBaseItemDetailById, type ItemDetail } from '@/data/queries/item-detail';
 import { formatAbilityTotal, formatSignedModifier } from '@/utils/ability-modifier';
 import { useCharacter } from '@/hooks/use-character';
+import { useCharacterClassInfo } from '@/hooks/use-character-class-info';
+import { useEquippedArmor } from '@/hooks/use-equipped-armor';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
-import { formatSpacedModifier, getWeaponAbilityModifier } from '@/utils/weapon-combat';
+import { isMonkWeapon } from '@/utils/monk-weapons';
+import { formatSpacedModifier, getWeaponAbilityModifier, type WeaponAttackAbility } from '@/utils/weapon-combat';
 import type { WeaponSlot } from '@/types/character';
 
 type WeaponSlotValue = WeaponSlot | 'none';
@@ -95,6 +98,8 @@ export default function ItemDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const db = useSQLiteContext();
   const { character, setItemQuantity, toggleArmorEquipped, setWeaponSlot, hasEquippedShield } = useCharacter();
+  const { englishName: classEnglishName } = useCharacterClassInfo();
+  const equippedArmor = useEquippedArmor();
   const goldColor = useThemeColor({}, 'gold');
 
   const [item, setItem] = useState<ItemDetail | null>(null);
@@ -139,6 +144,17 @@ export default function ItemDetailScreen() {
   const inventoryState = character.inventoryItems[itemId];
   const selectedProperty = selectedPropertyCode ? propertyDetails.get(selectedPropertyCode) : undefined;
 
+  const otherWeaponSlots = Object.entries(character.inventoryItems)
+    .filter(([key, state]) => key !== itemId && state.weaponSlot != null)
+    .map(([, state]) => state.weaponSlot as WeaponSlot);
+  const hasAnyOtherWeapon = otherWeaponSlots.length > 0;
+  const hasMainHandCompanion = otherWeaponSlots.includes('main');
+  const useMonkDex =
+    classEnglishName === 'Monk' &&
+    equippedArmor.length === 0 &&
+    item.category === 'weapon' &&
+    isMonkWeapon(item);
+
   return (
     <>
       <Stack.Screen options={{ title: item.name }} />
@@ -167,6 +183,10 @@ export default function ItemDetailScreen() {
             strScore={formatAbilityTotal(character.abilities.str)}
             dexScore={formatAbilityTotal(character.abilities.dex)}
             proficiencyBonus={getProficiencyBonus(getCharacterLevel(character.classes)) ?? 0}
+            fightingStyle={character.fightingStyle ?? null}
+            hasAnyOtherWeapon={hasAnyOtherWeapon}
+            hasMainHandCompanion={hasMainHandCompanion}
+            useMonkDex={useMonkDex}
             onPropertyPress={setSelectedPropertyCode}
           />
         ) : null}
@@ -248,6 +268,10 @@ interface WeaponSectionProps {
   strScore: string;
   dexScore: string;
   proficiencyBonus: number;
+  fightingStyle: string | null;
+  hasAnyOtherWeapon: boolean;
+  hasMainHandCompanion: boolean;
+  useMonkDex: boolean;
   onPropertyPress: (code: string) => void;
 }
 
@@ -258,12 +282,41 @@ function WeaponSection({
   strScore,
   dexScore,
   proficiencyBonus,
+  fightingStyle,
+  hasAnyOtherWeapon,
+  hasMainHandCompanion,
+  useMonkDex,
   onPropertyPress,
 }: WeaponSectionProps) {
   const goldColor = useThemeColor({}, 'gold');
-  const abilityMod = getWeaponAbilityModifier(item.attackAbility, strScore, dexScore);
-  const attackBonus = abilityMod + proficiencyBonus;
+  // Martial Arts (Monk) lets DEX stand in for STR on unarmed/monk-weapon
+  // attacks even without the Finesse property - 'finesse' already picks
+  // whichever of STR/DEX is higher, matching the rule's "your choice" text.
+  const attackAbility: WeaponAttackAbility = useMonkDex ? 'finesse' : item.attackAbility;
+  const abilityMod = getWeaponAbilityModifier(attackAbility, strScore, dexScore);
   const isTwoHanded = slot === 'twoHanded';
+
+  // Fighting Style's "Archery": +2 to attack rolls with ranged weapons.
+  const archeryBonus = fightingStyle === 'Archery' && item.isRanged ? 2 : 0;
+  const attackBonus = abilityMod + proficiencyBonus + archeryBonus;
+
+  // RAW: the off-hand (bonus action) attack only adds the ability modifier
+  // to damage if it's negative, unless the character has Two-Weapon
+  // Fighting - only relevant when there's actually a companion weapon in
+  // the main hand (otherwise this weapon isn't really "off-hand", it's just
+  // the only one equipped).
+  const isOffHandAttack = slot === 'off' && hasMainHandCompanion;
+  const baseDamageMod = isOffHandAttack
+    ? fightingStyle === 'Two-Weapon Fighting'
+      ? abilityMod
+      : Math.min(abilityMod, 0)
+    : abilityMod;
+  // Fighting Style's "Dueling": +2 damage with a one-handed melee weapon
+  // and no other weapon equipped.
+  const duelingBonus =
+    fightingStyle === 'Dueling' && !item.isRanged && !isTwoHanded && !hasAnyOtherWeapon ? 2 : 0;
+  const damageMod = baseDamageMod + duelingBonus;
+
   const damageDice = isTwoHanded && item.damageDiceVersatile ? item.damageDiceVersatile : item.damageDice;
   const damageTypeLabel = item.damageTypeLabel ?? '—';
 
@@ -282,7 +335,7 @@ function WeaponSection({
       />
 
       <GridRow
-        left={<Field label="Dano" value={`${damageDice} ${formatSpacedModifier(abilityMod)}`} />}
+        left={<Field label="Dano" value={`${damageDice} ${formatSpacedModifier(damageMod)}`} />}
         right={<Field label="Tipo de Dano" value={damageTypeLabel} />}
       />
 

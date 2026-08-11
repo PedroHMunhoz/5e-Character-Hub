@@ -29,3 +29,20 @@ export function formatSpeed(speed: string): string {
   }
   return `${speed}m / ${squares}q`;
 }
+
+// Monk's "Unarmored Movement" (PHB p.78, table "O Monge") - the bonus
+// speed (in feet in the raw table) while not wearing armor or wielding a
+// shield, converted through feetToMeters for consistency with how speed is
+// stored/displayed everywhere else.
+const UNARMORED_MOVEMENT_TIERS: { minLevel: number; bonusFeet: number }[] = [
+  { minLevel: 18, bonusFeet: 30 },
+  { minLevel: 14, bonusFeet: 25 },
+  { minLevel: 10, bonusFeet: 20 },
+  { minLevel: 6, bonusFeet: 15 },
+  { minLevel: 2, bonusFeet: 10 },
+];
+
+export function getMonkUnarmoredMovementBonusMeters(monkLevel: number): number {
+  const tier = UNARMORED_MOVEMENT_TIERS.find((t) => monkLevel >= t.minLevel);
+  return tier ? feetToMeters(tier.bonusFeet) : 0;
+}

@@ -194,3 +194,15 @@ export async function classGrantsExpertiseAtLevel1(db: SQLiteDatabase, classId: 
   );
   return row != null;
 }
+
+// Whether this class grants a Fighting Style pick at level 1 - true only for
+// Fighter in the PHB (Paladin/Ranger get theirs at level 2, out of scope for
+// the level-1-only creation wizard). Same query-by-name/level reasoning as
+// classGrantsExpertiseAtLevel1/classGrantsSubclassAtLevel1 above.
+export async function classGrantsFightingStyleAtLevel1(db: SQLiteDatabase, classId: number): Promise<boolean> {
+  const row = await db.getFirstAsync<{ id: number }>(
+    `SELECT id FROM class_features WHERE class_id = ? AND level = 1 AND name = 'Fighting Style' AND source = 'PHB'`,
+    classId
+  );
+  return row != null;
+}

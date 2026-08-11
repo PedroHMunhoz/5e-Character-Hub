@@ -32,6 +32,11 @@ export interface WizardDraft {
   // Passo 2: Classe
   classId: number | null;
   subclassId: number | null;
+  // Fighter-only at level 1 in the PHB (Paladin/Ranger get theirs at level
+  // 2, out of scope - see classGrantsFightingStyleAtLevel1). Stores the
+  // optional_features row id, resolved to the stable English name at
+  // assembly time (see data/wizard/assemble-character.ts).
+  fightingStyleId: number | null;
 
   // Passo 3: Atributos
   abilityMethod: AbilityMethod | null;
@@ -76,6 +81,7 @@ const initialDraft: WizardDraft = {
   draconicAncestry: null,
   classId: null,
   subclassId: null,
+  fightingStyleId: null,
   abilityMethod: null,
   baseAbilityScores: {},
   backgroundId: null,
@@ -101,6 +107,7 @@ type Action =
   | { type: 'SET_DRACONIC_ANCESTRY'; ancestry: string | null }
   | { type: 'SET_CLASS'; classId: number | null }
   | { type: 'SET_SUBCLASS'; subclassId: number | null }
+  | { type: 'SET_FIGHTING_STYLE'; fightingStyleId: number | null }
   | { type: 'SET_ABILITY_METHOD'; method: AbilityMethod | null }
   | { type: 'SET_BASE_ABILITY_SCORES'; scores: Partial<Record<AbilityKey, number>> }
   | { type: 'SET_BACKGROUND'; backgroundId: number | null }
@@ -135,9 +142,11 @@ function wizardReducer(state: WizardDraft, action: Action): WizardDraft {
     case 'SET_DRACONIC_ANCESTRY':
       return { ...state, draconicAncestry: action.ancestry };
     case 'SET_CLASS':
-      return { ...state, classId: action.classId, subclassId: null };
+      return { ...state, classId: action.classId, subclassId: null, fightingStyleId: null };
     case 'SET_SUBCLASS':
       return { ...state, subclassId: action.subclassId };
+    case 'SET_FIGHTING_STYLE':
+      return { ...state, fightingStyleId: action.fightingStyleId };
     case 'SET_ABILITY_METHOD':
       return { ...state, abilityMethod: action.method, baseAbilityScores: {} };
     case 'SET_BASE_ABILITY_SCORES':
@@ -177,6 +186,7 @@ export interface WizardContextValue {
   setDraconicAncestry: (ancestry: string | null) => void;
   setClass: (classId: number | null) => void;
   setSubclass: (subclassId: number | null) => void;
+  setFightingStyle: (fightingStyleId: number | null) => void;
   setAbilityMethod: (method: AbilityMethod | null) => void;
   setBaseAbilityScores: (scores: Partial<Record<AbilityKey, number>>) => void;
   setBackground: (backgroundId: number | null) => void;
@@ -206,6 +216,7 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       setDraconicAncestry: (ancestry) => dispatch({ type: 'SET_DRACONIC_ANCESTRY', ancestry }),
       setClass: (classId) => dispatch({ type: 'SET_CLASS', classId }),
       setSubclass: (subclassId) => dispatch({ type: 'SET_SUBCLASS', subclassId }),
+      setFightingStyle: (fightingStyleId) => dispatch({ type: 'SET_FIGHTING_STYLE', fightingStyleId }),
       setAbilityMethod: (method) => dispatch({ type: 'SET_ABILITY_METHOD', method }),
       setBaseAbilityScores: (scores) => dispatch({ type: 'SET_BASE_ABILITY_SCORES', scores }),
       setBackground: (backgroundId) => dispatch({ type: 'SET_BACKGROUND', backgroundId }),

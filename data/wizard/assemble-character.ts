@@ -10,6 +10,7 @@ import { getSubraceDisplayName } from '@/constants/subrace-names';
 import { getBackgroundById } from '@/data/queries/backgrounds';
 import { getClassById, getSubclassById } from '@/data/queries/classes';
 import { itemKey } from '@/data/queries/equipment-lookup';
+import { getOptionalFeatureById } from '@/data/queries/optional-features';
 import { getRaceById } from '@/data/queries/races';
 import { combineAbilityBonuses, getResolvedRacialBonus } from '@/data/wizard/race-ability-bonus';
 import { parseBackgroundSkillProficiencies } from '@/data/wizard/skill-proficiency-resolver';
@@ -73,6 +74,8 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   const classDef = await getClassById(db, draft.classId);
   const subclass = draft.subclassId !== null ? await getSubclassById(db, draft.subclassId) : null;
   const background = await getBackgroundById(db, draft.backgroundId);
+  const fightingStyle =
+    draft.fightingStyleId !== null ? await getOptionalFeatureById(db, draft.fightingStyleId) : null;
 
   if (!race || !classDef || !background) {
     throw new Error('assembleCharacter: failed to load race/class/background from the reference database');
@@ -156,10 +159,15 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   const spells = Object.fromEntries(draft.spellIds.map((id) => [String(id), { prepared: true }]));
 
   // Hit points: level-1 max HP is always the hit die's full face value +
-  // CON modifier (PHB p.12), never rolled at level 1.
+  // CON modifier (PHB p.12), never rolled at level 1. Draconic Bloodline
+  // sorcerers get +1 to this (and +1 again per sorcerer level on level-up,
+  // out of scope - the wizard only creates level 1) from Draconic
+  // Resilience - `shortName` is the raw subclass identifier and unique
+  // across the whole PHB, so no need to also check the class.
   const conTotal = Number(abilities.con.base) + abilities.con.racialBonus;
   const conModifier = Math.floor((conTotal - 10) / 2);
-  const maxHp = Math.max(1, (classDef.hitDieFaces ?? 8) + conModifier);
+  const isDraconicSorcerer = subclass?.shortName === 'Draconic';
+  const maxHp = Math.max(1, (classDef.hitDieFaces ?? 8) + conModifier + (isDraconicSorcerer ? 1 : 0));
 
   const raceDisplayName = subrace ? getSubraceDisplayName(subrace.englishName, subrace.name) : race.name;
   const classDisplayName = subclass ? `${classDef.name} (${subclass.name})` : classDef.name;
@@ -179,6 +187,7 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
     subraceId: subrace?.id ?? null,
     race: raceDisplayName,
     draconicAncestry: draft.draconicAncestry,
+    fightingStyle: fightingStyle?.englishName ?? null,
     backgroundId: background.id,
     classes: [characterClass],
     inspiration: false,

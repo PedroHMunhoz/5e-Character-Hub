@@ -183,3 +183,40 @@ em vez de deixar só na memória da conversa, para revisitar depois.
   vier outra raça com esse mesmo mecanismo, vale considerar expandir o
   template genericamente no import em vez de repetir esse padrão hardcoded
   por raça.
+- **Inimigo Predileto/Explorador Nato do Patrulheiro (1º nível) fora do
+  wizard.** O Patrulheiro tem duas escolhas obrigatórias de 1º nível, iguais
+  em espírito ao Estilo de Luta do Guerreiro/Domínio Divino do Clérigo, mas
+  a tradução da classe Patrulheiro está deliberadamente bloqueada
+  (`[[project_pt-br-translation]]`/`translations/pt-BR/DUVIDAS.md` — o texto
+  do PHB traduzido é pré-errata). Implementar essa escolha exigiria traduzir
+  justamente o conteúdo bloqueado, então fica de fora até a tradução do
+  Patrulheiro ser retomada.
+- **Estilo de Luta do Paladino/Patrulheiro no 2º nível.** Ambos ganham a
+  mesma escolha de Estilo de Luta do Guerreiro (implementada em
+  `app/wizard/class.tsx`/`data/queries/optional-features.ts`/
+  `utils/armor-class.ts`), só que no 2º nível em vez do 1º — fora de escopo
+  hoje porque o wizard só cria personagens de nível 1. Quando o app ganhar
+  level-up, reaproveitar o mecanismo inteiro (mesma tabela
+  `optional_features`, mesmo componente de escolha+descrição, mesma
+  aplicação de bônus) em vez de reconstruir algo novo.
+- **Ataque Furtivo do Ladino não aparece somado no Acerto/Dano da arma.** A
+  característica (`app/sheet/[characterId]/feature/[id].tsx`) já traz a
+  progressão completa por nível no texto, mas a tela de detalhe de arma
+  (`app/sheet/[characterId]/item/[id].tsx`) não soma esse dano extra em
+  lugar nenhum — o jogador precisa calcular de cabeça. Daria pra mostrar
+  o dano extra (ou uma nota separada) no campo "Dano" quando o personagem
+  for Ladino, usando o nível dele pra calcular o número de d6
+  (`Math.ceil(nível / 2)`), condicionado à arma ser de acuidade ou à
+  distância. Não implementado ainda porque é condicionado por vantagem no
+  ataque (não um bônus estático como os Estilos de Luta/Defesa sem
+  Armadura), então precisa de decisão de design sobre como representar isso
+  numa ficha sem simulador de rolagem de dados.
+- **Levantamento de bônus passivos de classe (CA/PV/acerto/dano) restrito
+  ao PHB, nível 1-2.** `utils/armor-class.ts`'s `UnarmoredDefenseRule` cobre
+  Defesa sem Armadura (Bárbaro/Monge) e Resiliência Dracônica (Feiticeiro),
+  e `utils/monk-weapons.ts`/`isMonkWeapon` cobre Artes Marciais do Monge —
+  nenhuma outra característica de classe/subclasse do PHB em nível 1-2 tem
+  esse tipo de bônus numérico sempre-ativo (levantamento completo feito ao
+  implementar essas mudanças). Se o app ganhar outros sourcebooks
+  (Xanathar's, Tasha's) ou level-up, vale refazer esse levantamento para as
+  classes/features/níveis que entrarem.

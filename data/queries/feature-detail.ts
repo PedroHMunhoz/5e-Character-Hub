@@ -1,9 +1,11 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { getFeatureUsage, type RecoveryType } from '@/constants/feature-usage-overrides';
+import { LEVEL_PROGRESSION_TABLES, type LevelProgressionTableData } from '@/constants/level-progression-tables';
 import { toEntries } from '../rows';
 import { extractBackgroundFeature, type FeatureSectionKey } from './character-features';
 import { getTranslations, localizedEntries, localizedName } from './localize';
+import { getOptionalFeatureByEnglishName } from './optional-features';
 
 export interface FeatureDetail {
   id: string;
@@ -15,6 +17,7 @@ export interface FeatureDetail {
   maxUses?: string;
   recovery?: RecoveryType[];
   entries: string[];
+  progressionTables?: LevelProgressionTableData[];
 }
 
 type FeatureKind = 'class_feature' | 'subclass_feature' | 'racial_trait' | 'background';
@@ -32,7 +35,8 @@ async function getClassOrSubclassFeature(
   db: SQLiteDatabase,
   kind: 'class_feature' | 'subclass_feature',
   numericId: number,
-  compositeId: string
+  compositeId: string,
+  fightingStyle?: string | null
 ): Promise<FeatureDetail | null> {
   const table = kind === 'class_feature' ? 'class_features' : 'subclass_features';
   const row = await db.getFirstAsync<{ id: number; name: string; level: number; entries: string }>(
@@ -43,7 +47,16 @@ async function getClassOrSubclassFeature(
 
   const translations = await getTranslations(db, kind);
   const name = localizedName(row.id, row.name, translations);
-  const entries = stripLeadingTitleEntry(name, localizedEntries(row.id, toEntries(row.entries), translations));
+  let entries = stripLeadingTitleEntry(name, localizedEntries(row.id, toEntries(row.entries), translations));
+
+  // The book's own "Fighting Style" text is just "choose one of the options
+  // below" - it never says which one the character actually has. Append the
+  // chosen style's own rule text (from optional_features) so the player
+  // sees the concrete mechanic here instead of just the generic framing.
+  if (kind === 'class_feature' && row.name === 'Fighting Style' && fightingStyle) {
+    const chosen = await getOptionalFeatureByEnglishName(db, fightingStyle);
+    if (chosen) entries = [...entries, ...chosen.entries];
+  }
 
   return {
     id: compositeId,
@@ -52,6 +65,7 @@ async function getClassOrSubclassFeature(
     name,
     level: row.level,
     entries,
+    progressionTables: kind === 'class_feature' ? LEVEL_PROGRESSION_TABLES[row.name] : undefined,
     ...getFeatureUsage(row.name),
   };
 }
@@ -107,7 +121,11 @@ async function getBackgroundFeature(
   };
 }
 
-export async function getFeatureDetailById(db: SQLiteDatabase, id: string): Promise<FeatureDetail | null> {
+export async function getFeatureDetailById(
+  db: SQLiteDatabase,
+  id: string,
+  fightingStyle?: string | null
+): Promise<FeatureDetail | null> {
   const match = id.match(ID_PATTERN);
   if (!match) return null;
 
@@ -115,7 +133,7 @@ export async function getFeatureDetailById(db: SQLiteDatabase, id: string): Prom
   const numericId = Number(match[2]);
 
   if (kind === 'class_feature' || kind === 'subclass_feature') {
-    return getClassOrSubclassFeature(db, kind, numericId, id);
+    return getClassOrSubclassFeature(db, kind, numericId, id, fightingStyle);
   }
   if (kind === 'racial_trait') {
     return getRacialTrait(db, numericId, id);

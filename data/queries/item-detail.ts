@@ -43,6 +43,9 @@ export interface WeaponItemDetail {
   category: 'weapon';
   id: number;
   name: string;
+  // Raw (untranslated) base_items name - stable across translation edits,
+  // needed by utils/monk-weapons.ts's "Shortsword" special case.
+  englishName: string;
   weight: string;
   categoryLabel: string;
   attackAbility: 'str' | 'dex' | 'finesse';
@@ -53,6 +56,7 @@ export interface WeaponItemDetail {
   propertyCodes: string[];
   isRanged: boolean;
   range?: string;
+  weaponCategory?: 'simple' | 'martial';
 }
 
 export interface ArmorItemDetail {
@@ -102,6 +106,7 @@ function mapWeaponDetail(row: BaseItemDetailRow, name: string): WeaponItemDetail
     category: 'weapon',
     id: row.id,
     name,
+    englishName: row.name,
     weight: formatWeightKg(row.name, row.weight_lb),
     categoryLabel: `Arma ${weaponCategoryLabel} ${isRanged ? 'À Distância' : 'Corpo a Corpo'}`
       .replace(/\s+/g, ' ')
@@ -114,6 +119,7 @@ function mapWeaponDetail(row: BaseItemDetailRow, name: string): WeaponItemDetail
     propertyCodes,
     isRanged,
     range: details.range ? convertRangeToMeters(details.range) : undefined,
+    weaponCategory: details.weaponCategory === 'simple' || details.weaponCategory === 'martial' ? details.weaponCategory : undefined,
   };
 }
 

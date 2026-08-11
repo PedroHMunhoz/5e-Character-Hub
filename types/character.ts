@@ -131,6 +131,12 @@ export interface CharacterSheet {
   race: string;
   // Dragonborn-only - see constants/draconic-ancestry.ts.
   draconicAncestry?: string | null;
+  // Fighter-only at level 1 (PHB p.72) - the raw (English) optional_features
+  // name, e.g. "Archery", not the translated display name or the row id.
+  // Kept stable across reimports/translation edits so rule logic (armor
+  // class, weapon attack/damage bonuses) can key off it directly instead of
+  // round-tripping through the database. See data/wizard/assemble-character.ts.
+  fightingStyle?: string | null;
   backgroundId?: number;
   classes: CharacterClass[];
   inspiration: boolean;

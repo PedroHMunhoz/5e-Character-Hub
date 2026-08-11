@@ -73,6 +73,18 @@ export interface SubclassFeature {
   entries: Entries;
 }
 
+// A row from the `optional_features` table (Fighting Styles, Eldritch
+// Invocations, Battle Master maneuvers, etc.) - only Fighting Styles are
+// consumed today (data/queries/optional-features.ts). `englishName` mirrors
+// Race.englishName's rationale: a stable key for rule lookups (e.g.
+// CharacterSheet.fightingStyle) that doesn't shift with translation edits.
+export interface OptionalFeatureDefinition {
+  id: number;
+  name: string;
+  englishName: string;
+  entries: Entries;
+}
+
 // Raw shape of a races.ability_bonuses JSON entry, e.g. `{"str":2,"cha":1}`
 // or, when the race lets the player pick which abilities benefit (e.g.
 // Half-Elf), `{"cha":2,"choose":{"from":["str","dex","con","int","wis"],"count":2}}`.

@@ -8,19 +8,27 @@ import { WizardStepHeader } from '@/components/wizard/wizard-step-header';
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { useWizardDraft } from '@/context/wizard-context';
-import { classGrantsSubclassAtLevel1, getAllClasses, getSubclassesForClass } from '@/data/queries/classes';
-import { sortByLocalizedName } from '@/utils/sort-by-name';
-import type { CharacterClassDefinition, SubclassDefinition } from '@/types/reference';
+import {
+  classGrantsFightingStyleAtLevel1,
+  classGrantsSubclassAtLevel1,
+  getAllClasses,
+  getSubclassesForClass,
+} from '@/data/queries/classes';
+import { getFightingStyleOptions } from '@/data/queries/optional-features';
+import { sortByLocalizedName, subclassSortKey } from '@/utils/sort-by-name';
+import type { CharacterClassDefinition, OptionalFeatureDefinition, SubclassDefinition } from '@/types/reference';
 
 export default function WizardClassStep() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { draft, setClass, setSubclass } = useWizardDraft();
+  const { draft, setClass, setSubclass, setFightingStyle } = useWizardDraft();
   const goldColor = useThemeColor({}, 'gold');
 
   const [classes, setClasses] = useState<CharacterClassDefinition[] | null>(null);
   const [subclasses, setSubclasses] = useState<SubclassDefinition[] | null>(null);
   const [needsSubclassChoice, setNeedsSubclassChoice] = useState(false);
+  const [fightingStyles, setFightingStyles] = useState<OptionalFeatureDefinition[] | null>(null);
+  const [needsFightingStyle, setNeedsFightingStyle] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,7 +55,29 @@ export default function WizardClassStep() {
         return;
       }
       const data = await getSubclassesForClass(db, draft.classId!);
-      if (!cancelled) setSubclasses(sortByLocalizedName(data));
+      if (!cancelled) setSubclasses(sortByLocalizedName(data, (s) => subclassSortKey(s.name)));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [db, draft.classId]);
+
+  useEffect(() => {
+    if (draft.classId === null) {
+      setFightingStyles(null);
+      setNeedsFightingStyle(false);
+      return;
+    }
+    let cancelled = false;
+    classGrantsFightingStyleAtLevel1(db, draft.classId).then(async (grantsNow) => {
+      if (cancelled) return;
+      setNeedsFightingStyle(grantsNow);
+      if (!grantsNow) {
+        setFightingStyles(null);
+        return;
+      }
+      const data = await getFightingStyleOptions(db);
+      if (!cancelled) setFightingStyles(sortByLocalizedName(data));
     });
     return () => {
       cancelled = true;
@@ -55,8 +85,15 @@ export default function WizardClassStep() {
   }, [db, draft.classId]);
 
   const selectedClass = useMemo(() => (classes ?? []).find((c) => c.id === draft.classId) ?? null, [classes, draft.classId]);
+  const selectedFightingStyle = useMemo(
+    () => (fightingStyles ?? []).find((f) => f.id === draft.fightingStyleId) ?? null,
+    [fightingStyles, draft.fightingStyleId]
+  );
 
-  const canProceed = draft.classId !== null && (!needsSubclassChoice || draft.subclassId !== null);
+  const canProceed =
+    draft.classId !== null &&
+    (!needsSubclassChoice || draft.subclassId !== null) &&
+    (!needsFightingStyle || draft.fightingStyleId !== null);
 
   if (classes === null) {
     return (
@@ -85,6 +122,26 @@ export default function WizardClassStep() {
             options={subclasses.map((s) => ({ value: String(s.id), label: s.name }))}
             onChange={(value) => setSubclass(Number(value))}
           />
+        ) : null}
+
+        {needsFightingStyle && fightingStyles ? (
+          <>
+            <SelectField
+              label="Estilo de Luta"
+              value={draft.fightingStyleId !== null ? String(draft.fightingStyleId) : ''}
+              options={fightingStyles.map((f) => ({ value: String(f.id), label: f.name }))}
+              onChange={(value) => setFightingStyle(Number(value))}
+            />
+            {selectedFightingStyle ? (
+              <View style={[styles.field, { borderColor: goldColor }]}>
+                {selectedFightingStyle.entries.map((entry, index) => (
+                  <ThemedText key={index} style={styles.descriptionParagraph}>
+                    {entry}
+                  </ThemedText>
+                ))}
+              </View>
+            ) : null}
+          </>
         ) : null}
       </ScrollView>
 
@@ -127,5 +184,16 @@ const styles = StyleSheet.create({
   nextButtonText: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  field: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    gap: 8,
+  },
+  descriptionParagraph: {
+    fontSize: 14,
+    lineHeight: 20,
+    opacity: 0.85,
   },
 });
