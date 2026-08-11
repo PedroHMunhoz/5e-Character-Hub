@@ -6,6 +6,7 @@ import { SelectField } from '@/components/character/select-field';
 import { ThemedText } from '@/components/themed-text';
 import { getToolItemsByCategory, normalizeToolCategoryKey, type ToolItem } from '@/data/queries/tools';
 import type { ResolvedEquipmentEntry } from '@/data/wizard/equipment-resolver';
+import { orderEntriesForDisplay } from '@/utils/order-entries-for-display';
 import { sortByLocalizedName } from '@/utils/sort-by-name';
 
 interface ToolChoiceListProps {
@@ -23,7 +24,7 @@ export function ToolChoiceList({ entries, categoryChoices, onChangeCategoryChoic
 
   return (
     <View style={styles.container}>
-      {entries.map((entry, index) => {
+      {orderEntriesForDisplay(entries).map(({ entry, index }) => {
         const entryKey = String(index);
         if (entry.kind === 'item') {
           return (

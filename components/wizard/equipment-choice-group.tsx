@@ -9,6 +9,7 @@ import type { EquipmentLookupItem } from '@/data/queries/equipment-lookup';
 import { resolveCategoryChoiceOptions } from '@/data/wizard/equipment-resolver';
 import type { EquipmentChoiceGroup, ResolvedEquipmentEntry } from '@/data/wizard/equipment-resolver';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { orderEntriesForDisplay } from '@/utils/order-entries-for-display';
 import { sortByLocalizedName } from '@/utils/sort-by-name';
 
 interface EquipmentChoiceGroupViewProps {
@@ -102,7 +103,7 @@ export function EquipmentChoiceGroupView({
   if (group.kind === 'fixed') {
     return (
       <View style={styles.container}>
-        {group.entries.map((entry, index) => (
+        {orderEntriesForDisplay(group.entries).map(({ entry, index }) => (
           <EntryRow
             key={index}
             entry={entry}
@@ -130,7 +131,7 @@ export function EquipmentChoiceGroupView({
               <RadioToggle selected={selected} onSelect={() => onSelectOption(option.key)} />
               <View style={styles.optionEntries}>
                 <ThemedText style={styles.optionKeyLabel}>Opção {option.key.toUpperCase()}</ThemedText>
-                {option.entries.map((entry, index) => (
+                {orderEntriesForDisplay(option.entries).map(({ entry, index }) => (
                   <EntryRow
                     key={index}
                     entry={entry}
