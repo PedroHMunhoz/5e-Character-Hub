@@ -105,6 +105,31 @@ function overrideWeight(name, source, fallback) {
   return Object.prototype.hasOwnProperty.call(weightOverrides, key) ? weightOverrides[key] : fallback;
 }
 
+// Manual corrections for classes/backgrounds.starting_equipment entries
+// that reference the wrong catalog item upstream - e.g. Outlander's gear
+// list says "staff|phb", which 5etools resolves to the Arcane Focus
+// "Staff" (base_items id 106, "Cajado") instead of the mundane weapon
+// "Quarterstaff" (id 82, "Bordão") the printed pt-BR PHB actually lists.
+// See db/overrides/equipment-ref-fixes.json for the full list.
+const equipmentRefFixesPath = path.join(repoRoot, 'db', 'overrides', 'equipment-ref-fixes.json');
+const equipmentRefFixes = fs.existsSync(equipmentRefFixesPath)
+  ? JSON.parse(fs.readFileSync(equipmentRefFixesPath, 'utf8'))
+  : {};
+function applyEquipmentRefFixes(startingEquipment, name, source) {
+  const fixes = equipmentRefFixes[`${name}|${source}`];
+  if (!fixes || startingEquipment == null) return startingEquipment;
+  // Text-level replace on the serialized JSON (via JSON.stringify of each
+  // ref) rather than a deep walk - a ref can appear as a bare string
+  // ("staff|phb") or nested inside an {item: "staff|phb", ...} object, and
+  // stringify-then-replace covers both without duplicating the DSL's shape
+  // here.
+  const text = Object.entries(fixes).reduce(
+    (json, [from, to]) => json.split(JSON.stringify(from)).join(JSON.stringify(to)),
+    JSON.stringify(startingEquipment)
+  );
+  return JSON.parse(text);
+}
+
 const db = new DatabaseSync(outPath);
 db.exec(fs.readFileSync(path.join(repoRoot, 'db', 'schema.sql'), 'utf8'));
 
@@ -187,7 +212,7 @@ runSection('classes', () => {
         c.casterProgression ?? null,
         c.subclassTitle ?? null,
         json(c.startingProficiencies ?? null),
-        json(c.startingEquipment ?? null),
+        json(applyEquipmentRefFixes(c.startingEquipment, c.name, c.source) ?? null),
         json(c.multiclassing ?? null)
       );
       classMap.set(`${c.name}|${c.source}`, info.lastInsertRowid);
@@ -348,7 +373,7 @@ runSection('backgrounds', () => {
       json(b.skillProficiencies ?? null),
       json(b.toolProficiencies ?? null),
       json(b.languageProficiencies ?? null),
-      json(b.startingEquipment ?? null),
+      json(applyEquipmentRefFixes(b.startingEquipment, b.name, b.source) ?? null),
       json(flat)
     );
     bump('backgrounds');

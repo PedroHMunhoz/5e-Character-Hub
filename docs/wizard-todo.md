@@ -55,6 +55,20 @@ em vez de deixar só na memória da conversa, para revisitar depois.
   `EQUIPMENT_TYPE_LABELS` (`constants/equipment-types.ts`) — faltava
   `toolArtisan`, causava o dropdown de categoria vazio pro Artesão da
   Guilda, corrigido.
+- ~~**Forasteiro dava "Cajado" (foco arcano) em vez de "Bordão" (arma)**~~ —
+  resolvido: o `starting_equipment` bruto do antecedente Outlander
+  referencia `"staff|phb"`, que resolve por nome exato para `base_items` id
+  106 ("Staff", tipo `SCF`, Foco Arcano, traduzido "Cajado") em vez de id 82
+  ("Quarterstaff", arma simples, traduzido "Bordão" — o item que o PHB
+  traduzido realmente lista ali). Achado ao vivo num personagem
+  Bárbaro+Forasteiro de teste. É um dado errado que já vem do 5etools
+  (confirmado único no `5e-2014-data/backgrounds.json` via grep, não é
+  problema sistêmico de nomenclatura). Corrigido com um mecanismo de
+  override genérico (`db/overrides/equipment-ref-fixes.json` +
+  `applyEquipmentRefFixes()` em `scripts/import-5e-data.mjs`, aplicado a
+  `classes.starting_equipment` e `backgrounds.starting_equipment`) em vez de
+  um caso especial hardcoded — deixa pronto pra qualquer achado parecido no
+  futuro só editando o JSON.
 - **Traduções faltando: "Explorer's Pack"/"Scholar's Pack".** Achado ao
   vivo consertando o Passo 5 (Equipamento) - esses dois itens do PHB não
   têm NENHUMA linha em `translations` (nem `name` nem `entries`), diferente
