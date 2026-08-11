@@ -9,7 +9,7 @@ import {
   type WeaponHandedness,
 } from '@/constants/item-codes';
 import { parseJson } from '../rows';
-import { categorize, convertRangeToMeters, formatWeightKg, GENERAL_ITEM_TYPE_LABELS } from './base-items';
+import { categorize, convertRangeToMeters, formatRangeDetail, formatWeightKg, GENERAL_ITEM_TYPE_LABELS } from './base-items';
 import { getTranslations, localizedName } from './localize';
 
 interface BaseItemDetailRow {
@@ -56,6 +56,7 @@ export interface WeaponItemDetail {
   propertyCodes: string[];
   isRanged: boolean;
   range?: string;
+  rangeDetail?: string;
   weaponCategory?: 'simple' | 'martial';
 }
 
@@ -101,6 +102,7 @@ function mapWeaponDetail(row: BaseItemDetailRow, name: string): WeaponItemDetail
   const weaponCategoryLabel = details.weaponCategory
     ? (WEAPON_CATEGORY_LABELS[details.weaponCategory] ?? details.weaponCategory)
     : '';
+  const rangeMeters = details.range ? convertRangeToMeters(details.range) : undefined;
 
   return {
     category: 'weapon',
@@ -118,7 +120,8 @@ function mapWeaponDetail(row: BaseItemDetailRow, name: string): WeaponItemDetail
     damageTypeLabel: damage.dmgType ? (DAMAGE_TYPE_LABELS[damage.dmgType] ?? damage.dmgType) : undefined,
     propertyCodes,
     isRanged,
-    range: details.range ? convertRangeToMeters(details.range) : undefined,
+    range: rangeMeters,
+    rangeDetail: rangeMeters ? formatRangeDetail(rangeMeters) : undefined,
     weaponCategory: details.weaponCategory === 'simple' || details.weaponCategory === 'martial' ? details.weaponCategory : undefined,
   };
 }

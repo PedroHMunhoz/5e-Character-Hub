@@ -143,6 +143,13 @@ export default function ItemDetailScreen() {
   const itemId = String(item.id);
   const inventoryState = character.inventoryItems[itemId];
   const selectedProperty = selectedPropertyCode ? propertyDetails.get(selectedPropertyCode) : undefined;
+  const selectedPropertyRangeDetail =
+    item.category === 'weapon' && (selectedPropertyCode === 'A' || selectedPropertyCode === 'T')
+      ? item.rangeDetail
+      : undefined;
+  const selectedPropertyMessage = selectedProperty
+    ? [selectedProperty.description, selectedPropertyRangeDetail].filter(Boolean).join('\n\n')
+    : undefined;
 
   const otherWeaponSlots = Object.entries(character.inventoryItems)
     .filter(([key, state]) => key !== itemId && state.weaponSlot != null)
@@ -236,7 +243,7 @@ export default function ItemDetailScreen() {
       <MessageModal
         visible={selectedPropertyCode != null}
         title={selectedProperty?.name}
-        message={selectedProperty?.description}
+        message={selectedPropertyMessage}
         onClose={() => setSelectedPropertyCode(null)}
       />
 
@@ -343,13 +350,12 @@ function WeaponSection({
         <View style={[styles.field, styles.propertiesField, { borderColor: goldColor }]}>
           <ThemedText style={styles.fieldLabel}>Propriedades</ThemedText>
           <View style={styles.propertiesRow}>
-            {item.propertyCodes.map((code) => (
-              <PropertyPill
-                key={code}
-                label={WEAPON_PROPERTY_LABELS[code] ?? code}
-                onPress={() => onPropertyPress(code)}
-              />
-            ))}
+            {item.propertyCodes.map((code) => {
+              const baseLabel = WEAPON_PROPERTY_LABELS[code] ?? code;
+              const label =
+                (code === 'A' || code === 'T') && item.range ? `${baseLabel} (${item.range})` : baseLabel;
+              return <PropertyPill key={code} label={label} onPress={() => onPropertyPress(code)} />;
+            })}
           </View>
         </View>
       ) : null}

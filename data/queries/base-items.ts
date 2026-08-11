@@ -117,6 +117,18 @@ export function convertRangeToMeters(range: string): string {
     .join('/');
 }
 
+// Detalhe de alcance mostrado no modal da propriedade Munição/Arremesso -
+// além do alcance normal e até o alcance longo, o ataque sofre desvantagem
+// (regra de "Alcance de Ataque à Distância", PHB). `rangeMeters` já está no
+// formato produzido por convertRangeToMeters, ex. "24/96".
+export function formatRangeDetail(rangeMeters: string): string {
+  const toSquares = (meters: string) => Math.floor(Number(meters.replace(',', '.')) / 1.5);
+  const [normal, long] = rangeMeters.split('/');
+  const normalText = `${normal}m/${toSquares(normal)}q (Normal)`;
+  if (!long) return normalText;
+  return `${normalText} OU ${long}m/${toSquares(long)}q (Desvantagem)`;
+}
+
 function formatDamageDice(damageJson: string | null): string | undefined {
   const damage = parseJson<DamageInfo>(damageJson);
   const dmg1 = damage?.dmg1;
@@ -133,9 +145,11 @@ function buildWeaponProperties(row: BaseItemRow): string {
   if (details.weaponCategory) parts.push(WEAPON_CATEGORY_LABELS[details.weaponCategory] ?? details.weaponCategory);
   if (propCodes.includes('A'))
     parts.push(details.range ? `Munição (${convertRangeToMeters(details.range)})` : 'Munição');
+  if (propCodes.includes('T'))
+    parts.push(details.range ? `Arremesso (${convertRangeToMeters(details.range)})` : 'Arremesso');
 
   for (const code of propCodes) {
-    if (code === '2H' || code === 'A') continue;
+    if (code === '2H' || code === 'A' || code === 'T') continue;
     parts.push(WEAPON_PROPERTY_LABELS[code] ?? code);
   }
 
