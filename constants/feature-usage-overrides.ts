@@ -20,6 +20,11 @@ export const FEATURE_USAGE_OVERRIDES: Record<string, FeatureUsageOverride> = {
   'Arcane Recovery': { usageType: 'ativa', maxUses: '1', recovery: ['DL'] },
   'Second Wind': { usageType: 'ativa', maxUses: '1', recovery: ['DC', 'DL'] },
   'Breath Weapon': { usageType: 'ativa', maxUses: '1', recovery: ['DC', 'DL'] },
+  // maxUses is the 1st-level value (2 rages per long rest) - the real PHB
+  // progression scales with barbarian level (table "O Bárbaro"), but the
+  // wizard only creates level-1 characters today, same simplification as
+  // everywhere else level-dependent values are hardcoded in this app.
+  Rage: { usageType: 'ativa', maxUses: '2', recovery: ['DL'] },
 };
 
 export function getFeatureUsage(englishName: string): FeatureUsageOverride {
