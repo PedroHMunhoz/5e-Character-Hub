@@ -16,9 +16,18 @@ interface CharacterListItemProps {
   level: number;
   portraitUri: string;
   onPress: () => void;
+  onLongPress?: () => void;
 }
 
-export function CharacterListItem({ name, race, classesLabel, level, portraitUri, onPress }: CharacterListItemProps) {
+export function CharacterListItem({
+  name,
+  race,
+  classesLabel,
+  level,
+  portraitUri,
+  onPress,
+  onLongPress,
+}: CharacterListItemProps) {
   const goldColor = useThemeColor({}, 'gold');
   const subtitle = race ? `${race} • ${classesLabel}` : classesLabel;
 
@@ -34,7 +43,7 @@ export function CharacterListItem({ name, race, classesLabel, level, portraitUri
   }
 
   return (
-    <Pressable onPress={onPress}>
+    <Pressable onPress={onPress} onLongPress={onLongPress}>
       <ThemedView style={[styles.card, { borderColor: goldColor }]}>
         <PortraitPlaceholder style={{ width: portraitSize, height: portraitSize }} uri={portraitUri} />
         <View style={styles.info} onLayout={handleInfoLayout}>

@@ -65,3 +65,7 @@ export async function saveCharacter(db: SQLiteDatabase, character: CharacterShee
     character.id
   );
 }
+
+export async function deleteCharacter(db: SQLiteDatabase, id: string): Promise<void> {
+  await db.runAsync('DELETE FROM player_characters WHERE id = ?', id);
+}
