@@ -19,13 +19,23 @@ export interface SpellcastingRule {
   // final ability scores.
   spellsKnownFixed?: number;
   preparedFromFullList?: boolean;
+  // Whether the character sheet's "Preparadas" max (aba Magias) uses the
+  // ability-modifier + level formula instead of `spellsKnownFixed`. This is
+  // independent from `preparedFromFullList` above: Cleric/Druid choose which
+  // spells to prepare from the ENTIRE class list (so both creation-time
+  // selection count AND the sheet's max use the formula), but Wizard chooses
+  // from a personal spellbook whose starting size is a flat number
+  // (spellsKnownFixed: 6, correct for the creation step) while still
+  // *preparing* a daily subset of it via the same mod+level formula (so only
+  // the sheet's max needs it, not creation).
+  maxPreparedFormula?: boolean;
 }
 
 export const SPELLCASTING_RULES: Record<string, SpellcastingRule> = {
   Bard: { cantripsKnown: 2, spellsKnownFixed: 4 },
-  Cleric: { cantripsKnown: 3, preparedFromFullList: true },
-  Druid: { cantripsKnown: 2, preparedFromFullList: true },
+  Cleric: { cantripsKnown: 3, preparedFromFullList: true, maxPreparedFormula: true },
+  Druid: { cantripsKnown: 2, preparedFromFullList: true, maxPreparedFormula: true },
   Sorcerer: { cantripsKnown: 4, spellsKnownFixed: 2 },
   Warlock: { cantripsKnown: 2, spellsKnownFixed: 2 },
-  Wizard: { cantripsKnown: 3, spellsKnownFixed: 6 },
+  Wizard: { cantripsKnown: 3, spellsKnownFixed: 6, maxPreparedFormula: true },
 };

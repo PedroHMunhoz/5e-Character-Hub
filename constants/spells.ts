@@ -30,18 +30,6 @@ export const SPELL_SCHOOL_LABELS: Record<string, string> = {
   T: 'Transmutação',
 };
 
-export const SPELL_SLOT_MAX: Record<string, string> = {
-  '1': '4',
-  '2': '3',
-  '3': '3',
-  '4': '2',
-  '5': '2',
-  '6': '1',
-  '7': '1',
-  '8': '1',
-  '9': '1',
-};
-
 export const SPELL_LOADING_MESSAGES: string[] = [
   'Lendo o grimório...',
   'Rezando para os Deuses...',
@@ -50,10 +38,6 @@ export const SPELL_LOADING_MESSAGES: string[] = [
   'Consultando os planos exteriores...',
   'Memorizando fórmulas mágicas...',
 ];
-
-export const MOCK_MAX_PREPARED_SPELLS = 7;
-export const MOCK_SPELL_SAVE_DC = 15;
-export const MOCK_SPELL_ATTACK_BONUS = '+2';
 
 // 5etools castingTime.unit -> pt-BR label. Verified against "Tempo de
 // Conjuração: 1 ação" / "1 minuto" / "10 minutos" / "1 hora" in

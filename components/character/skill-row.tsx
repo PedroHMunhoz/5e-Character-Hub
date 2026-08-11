@@ -8,7 +8,9 @@ interface SkillRowProps {
   label: string;
   proficient: boolean;
   expertise: boolean;
-  onChangeProficiency: (next: { proficient: boolean; expertise: boolean }) => void;
+  // Omit to render a read-only row (locked fields open a breakdown modal
+  // via an outer Pressable instead).
+  onChangeProficiency?: (next: { proficient: boolean; expertise: boolean }) => void;
   modifier: string;
 }
 

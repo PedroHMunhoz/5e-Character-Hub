@@ -94,6 +94,20 @@ export async function getSpellsByIds(db: SQLiteDatabase, ids: number[]): Promise
   return rows.map((row) => mapSpellRow(row, translations));
 }
 
+// Resolves raw 5etools spell name strings (e.g. from a subclass's
+// additional_spells column) to Spell rows - case-insensitive since the
+// source data is all-lowercase while the spells table keeps book casing.
+export async function getSpellsByNames(db: SQLiteDatabase, names: string[]): Promise<Spell[]> {
+  if (names.length === 0) return [];
+  const placeholders = names.map(() => '?').join(', ');
+  const rows = await db.getAllAsync<SpellRow>(
+    `SELECT * FROM spells WHERE LOWER(name) IN (${placeholders}) AND source = 'PHB' ORDER BY level, name`,
+    ...names.map((name) => name.toLowerCase())
+  );
+  const translations = await getTranslations(db, 'spell');
+  return rows.map((row) => mapSpellRow(row, translations));
+}
+
 // Sanitizes to alphanumerics/spaces only, then does a prefix match per term -
 // keeps the FTS5 MATCH syntax from breaking on stray quotes/operators in
 // free-form user input.

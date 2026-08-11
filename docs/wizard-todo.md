@@ -149,6 +149,33 @@ em vez de deixar só na memória da conversa, para revisitar depois.
   padrão direto na raça-base em vez de virar uma sub-raça homônima
   confusa. Se `npm run db:import` for alterado de novo, vale reler esse
   trecho antes de mexer na seção `races`.
+- **CD de Magia/Bônus de Ataque/Preparadas na aba Magias só mostram
+  valores reais para classes em `SPELLCASTING_RULES`**
+  (`constants/spellcasting.ts`: Bardo/Clérigo/Druida/Feiticeiro/Bruxo/
+  Mago). Paladino e Patrulheiro (meio-conjuradores, `caster_progression =
+  '1/2'`) sempre mostram "—", mesmo que a partir do nível 2 eles tenham
+  magias reais pelo livro — a tabela de regras não os inclui (não têm
+  truques/magias no nível 1, e o wizard já pula a etapa de seleção de
+  magias pra eles, `app/wizard/spells.tsx`) e não há UI de progressão de
+  nível no app ainda (`components/character/class-levels.tsx` é somente
+  leitura), então isso é hoje inatingível na prática. Quando o app
+  ganhar level-up, vale expandir `SPELLCASTING_RULES` (ou um mecanismo
+  equivalente) pra cobrir a progressão de magias conhecidas dos
+  meio-conjuradores.
+- **Magias sempre-preparadas de subclasse (`subclasses.additional_spells`)
+  só cobrem o caso sem escolha adicional.** O import
+  (`scripts/import-5e-data.mjs`) só extrai `additionalSpells[].prepared`
+  quando há exatamente uma entrada sem campo `name` — cobre os 7 Domínios
+  do Clérigo do PHB core e Círculo dos Esporos/Fogo Selvagem do Druida.
+  Ficam de fora (coluna fica `null`): **Círculo da Terra** do Druida (o
+  `additionalSpells` bruto é um array com 8 sub-opções nomeadas, uma por
+  bioma — precisaria de um passo de escolha "qual bioma" que não existe
+  no wizard nem no modelo de dados do personagem) e os **Patronos do
+  Bruxo** (Arquifada, Corruptor, Grande Antigo etc. — usam a chave
+  `expanded`, não `prepared`: é uma lista extra de magias que podem ser
+  *escolhidas* como conhecidas, não uma concessão automática de "sempre
+  preparada", mecanismo diferente do que `getSubclassAdditionalSpellsByLevel`
+  resolve hoje).
 - **Ancestralidade Dracônica do Draconato modelada fora do mecanismo de
   sub-raça.** A tabela de 10 linhagens (`constants/draconic-ancestry.ts`) é
   na verdade um template `_versions`/`_implementations` do 5etools que o

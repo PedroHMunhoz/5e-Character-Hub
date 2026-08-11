@@ -47,6 +47,12 @@ CREATE TABLE subclasses (
   short_name TEXT NOT NULL,
   source TEXT NOT NULL REFERENCES sources(code),
   srd INTEGER NOT NULL DEFAULT 0,
+  -- JSON {"<character level>": ["spell name", ...]}, e.g. Cleric domain
+  -- spells / Circle of Spores-Wildfire's bonus spells - always prepared,
+  -- don't count against the prepared limit. Only populated for the
+  -- unambiguous case (single additionalSpells entry, no sub-choice
+  -- required) - see scripts/import-5e-data.mjs.
+  additional_spells TEXT,
   UNIQUE (class_id, short_name, source)
 );
 

@@ -8,7 +8,9 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 interface SavingThrowRowProps {
   label: string;
   proficient: boolean;
-  onToggleProficiency: () => void;
+  // Omit to render a read-only row (locked fields open a breakdown modal
+  // via an outer Pressable instead).
+  onToggleProficiency?: () => void;
   modifier: string;
   style?: StyleProp<ViewStyle>;
 }

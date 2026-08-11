@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { AbilityCard } from '@/components/character/ability-card';
 import { SavingThrowRow } from '@/components/character/saving-throw-row';
 import { SkillRow } from '@/components/character/skill-row';
+import { StatBreakdownModal, type StatBreakdownRow } from '@/components/character/stat-breakdown-modal';
 import { ToolRow } from '@/components/character/tool-row';
 import { ThemedText } from '@/components/themed-text';
 import { ABILITIES, ABILITIES_BY_KEY, SKILLS } from '@/constants/character';
@@ -12,10 +13,12 @@ import { itemKey } from '@/data/queries/equipment-lookup';
 import { getAllToolItems, type ToolItem } from '@/data/queries/tools';
 import { useCharacter } from '@/hooks/use-character';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import type { AbilityKey, SkillKey } from '@/types/character';
 import {
   formatAbilityTotal,
   formatSignedModifier,
   getAbilityModifierFromTotal,
+  getAbilityTotal,
   getDerivedModifier,
   getProficiencyMultiplier,
 } from '@/utils/ability-modifier';
@@ -24,13 +27,27 @@ import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
 const SKILLS_COLUMN_ONE = SKILLS.slice(0, 9);
 const SKILLS_COLUMN_TWO = SKILLS.slice(9, 18);
 
+type OpenField =
+  | { type: 'ability'; key: AbilityKey }
+  | { type: 'saving'; key: AbilityKey }
+  | { type: 'skill'; key: SkillKey }
+  | { type: 'tool'; key: string; label: string }
+  | null;
+
+interface Breakdown {
+  title: string;
+  rows: StatBreakdownRow[];
+  totalLabel: string;
+  totalValue: string;
+}
+
 export function CharacterAttributes() {
   const db = useSQLiteContext();
-  const { character, setAbilityScore, toggleSavingThrowProficiency, setSkillProficiency, toggleToolProficiency } =
-    useCharacter();
+  const { character } = useCharacter();
   const dividerColor = useThemeColor({}, 'gold');
   const goldColor = useThemeColor({}, 'gold');
   const [toolItems, setToolItems] = useState<ToolItem[] | null>(null);
+  const [openField, setOpenField] = useState<OpenField>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,6 +61,87 @@ export function CharacterAttributes() {
 
   const proficiencyBonus = getProficiencyBonus(getCharacterLevel(character.classes));
 
+  function getBreakdown(field: OpenField): Breakdown | null {
+    if (!field) return null;
+
+    if (field.type === 'ability') {
+      const abilityScore = character.abilities[field.key];
+      const total = getAbilityTotal(abilityScore);
+      return {
+        title: ABILITIES_BY_KEY[field.key].label,
+        rows: [
+          { label: 'Base', value: abilityScore.base },
+          { label: 'Bônus Racial', value: formatSignedModifier(abilityScore.racialBonus) },
+        ],
+        totalLabel: 'Pontuação Total',
+        totalValue: String(total ?? '—'),
+      };
+    }
+
+    if (field.type === 'saving') {
+      const abilityScore = character.abilities[field.key];
+      const abilityLabel = ABILITIES_BY_KEY[field.key].label;
+      const proficient = character.savingThrows[field.key].proficient;
+      const abilityModifier = getAbilityModifierFromTotal(abilityScore);
+      const savingThrowModifier = getDerivedModifier(
+        formatAbilityTotal(abilityScore),
+        getProficiencyMultiplier(proficient, false),
+        proficiencyBonus
+      );
+      return {
+        title: `Salvaguarda de ${abilityLabel}`,
+        rows: [
+          { label: `Modificador de ${abilityLabel}`, value: formatSignedModifier(abilityModifier) },
+          {
+            label: 'Bônus de Proficiência',
+            value: formatSignedModifier(proficient ? (proficiencyBonus ?? 0) : 0),
+            note: proficient ? undefined : 'Não proficiente',
+          },
+        ],
+        totalLabel: 'Total',
+        totalValue: formatSignedModifier(savingThrowModifier),
+      };
+    }
+
+    if (field.type === 'skill') {
+      const skill = SKILLS.find((s) => s.key === field.key)!;
+      const skillState = character.skills[field.key];
+      const abilityScore = character.abilities[skill.ability];
+      const abilityLabel = ABILITIES_BY_KEY[skill.ability].label;
+      const multiplier = getProficiencyMultiplier(skillState.proficient, skillState.expertise);
+      const abilityModifier = getAbilityModifierFromTotal(abilityScore);
+      const skillModifier = getDerivedModifier(formatAbilityTotal(abilityScore), multiplier, proficiencyBonus);
+      const note = !skillState.proficient
+        ? 'Não proficiente'
+        : skillState.expertise
+          ? 'Especialização (bônus dobrado)'
+          : undefined;
+      return {
+        title: skill.label,
+        rows: [
+          { label: `Modificador de ${abilityLabel}`, value: formatSignedModifier(abilityModifier) },
+          {
+            label: 'Bônus de Proficiência',
+            value: formatSignedModifier(multiplier > 0 ? (proficiencyBonus ?? 0) * multiplier : 0),
+            note,
+          },
+        ],
+        totalLabel: 'Total',
+        totalValue: formatSignedModifier(skillModifier),
+      };
+    }
+
+    const proficient = character.tools[field.key]?.proficient ?? false;
+    return {
+      title: field.label,
+      rows: [{ label: 'Proficiente', value: proficient ? 'Sim' : 'Não' }],
+      totalLabel: 'Bônus de Proficiência',
+      totalValue: formatSignedModifier(proficient ? (proficiencyBonus ?? 0) : 0),
+    };
+  }
+
+  const breakdown = getBreakdown(openField);
+
   function renderSkillColumn(skills: typeof SKILLS) {
     return skills.map((skill) => {
       const skillState = character.skills[skill.key];
@@ -54,14 +152,14 @@ export function CharacterAttributes() {
       );
 
       return (
-        <SkillRow
-          key={skill.key}
-          label={`${skill.label} (${ABILITIES_BY_KEY[skill.ability].abbr})`}
-          proficient={skillState.proficient}
-          expertise={skillState.expertise}
-          onChangeProficiency={(next) => setSkillProficiency(skill.key, next.proficient, next.expertise)}
-          modifier={formatSignedModifier(skillModifier)}
-        />
+        <Pressable key={skill.key} onPress={() => setOpenField({ type: 'skill', key: skill.key })}>
+          <SkillRow
+            label={`${skill.label} (${ABILITIES_BY_KEY[skill.ability].abbr})`}
+            proficient={skillState.proficient}
+            expertise={skillState.expertise}
+            modifier={formatSignedModifier(skillModifier)}
+          />
+        </Pressable>
       );
     });
   }
@@ -78,23 +176,13 @@ export function CharacterAttributes() {
             const abilityModifier = getAbilityModifierFromTotal(abilityScore);
 
             return (
-              <AbilityCard
+              <Pressable
                 key={ability.key}
                 style={styles.abilityCard}
-                label={ability.label}
-                score={total}
-                onScoreChange={(value) => {
-                  // The box always shows/edits the total (base + racial
-                  // bonus) - solve back for `base` so the wizard-assigned
-                  // racial bonus survives the edit untouched. This is an
-                  // algebraic identity (new total in, same total out), so
-                  // it's safe against partial/in-progress typed values too.
-                  const parsed = Number(value);
-                  const nextBase = Number.isFinite(parsed) ? String(parsed - abilityScore.racialBonus) : value;
-                  setAbilityScore(ability.key, nextBase);
-                }}
-                modifier={formatSignedModifier(abilityModifier)}
-              />
+                onPress={() => setOpenField({ type: 'ability', key: ability.key })}
+              >
+                <AbilityCard label={ability.label} score={total} modifier={formatSignedModifier(abilityModifier)} />
+              </Pressable>
             );
           })}
         </View>
@@ -113,14 +201,17 @@ export function CharacterAttributes() {
             );
 
             return (
-              <SavingThrowRow
+              <Pressable
                 key={ability.key}
                 style={styles.savingThrowRow}
-                label={ability.label}
-                proficient={character.savingThrows[ability.key].proficient}
-                onToggleProficiency={() => toggleSavingThrowProficiency(ability.key)}
-                modifier={formatSignedModifier(savingThrowModifier)}
-              />
+                onPress={() => setOpenField({ type: 'saving', key: ability.key })}
+              >
+                <SavingThrowRow
+                  label={ability.label}
+                  proficient={character.savingThrows[ability.key].proficient}
+                  modifier={formatSignedModifier(savingThrowModifier)}
+                />
+              </Pressable>
             );
           })}
         </View>
@@ -144,16 +235,22 @@ export function CharacterAttributes() {
           knownToolItems.map((item) => {
             const key = itemKey(item.source, item.id);
             return (
-              <ToolRow
-                key={key}
-                label={item.name}
-                proficient={character.tools[key]?.proficient ?? false}
-                onToggleProficiency={() => toggleToolProficiency(key)}
-              />
+              <Pressable key={key} onPress={() => setOpenField({ type: 'tool', key, label: item.name })}>
+                <ToolRow label={item.name} proficient={character.tools[key]?.proficient ?? false} />
+              </Pressable>
             );
           })
         )}
       </View>
+
+      <StatBreakdownModal
+        visible={openField !== null}
+        title={breakdown?.title ?? ''}
+        rows={breakdown?.rows ?? []}
+        totalLabel={breakdown?.totalLabel ?? ''}
+        totalValue={breakdown?.totalValue ?? ''}
+        onClose={() => setOpenField(null)}
+      />
     </ScrollView>
   );
 }

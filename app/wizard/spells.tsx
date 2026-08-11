@@ -13,6 +13,8 @@ import { getRaceById } from '@/data/queries/races';
 import { combineAbilityBonuses, getResolvedRacialBonus } from '@/data/wizard/race-ability-bonus';
 import { getSpellsForClass } from '@/data/queries/spells';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { sortByLocalizedName } from '@/utils/sort-by-name';
+import { getPreparedSpellCount } from '@/utils/spellcasting';
 import type { AbilityKey } from '@/types/character';
 import type { Spell } from '@/types/reference';
 
@@ -61,7 +63,7 @@ export default function WizardSpellsStep() {
         const racialBonus = getResolvedRacialBonus(combined, draft.abilityBonusChoices, abilityKey);
         const base = draft.baseAbilityScores[abilityKey] ?? 10;
         const modifier = Math.floor((base + racialBonus - 10) / 2);
-        setPreparedCount(Math.max(1, modifier + 1));
+        setPreparedCount(getPreparedSpellCount(modifier, 1));
       }
 
       setStatus('ready');
@@ -81,8 +83,8 @@ export default function WizardSpellsStep() {
   }, [status, router]);
 
   const rule = ruleKey ? SPELLCASTING_RULES[ruleKey] : undefined;
-  const cantrips = useMemo(() => spells.filter((spell) => spell.level === 0), [spells]);
-  const level1Spells = useMemo(() => spells.filter((spell) => spell.level === 1), [spells]);
+  const cantrips = useMemo(() => sortByLocalizedName(spells.filter((spell) => spell.level === 0)), [spells]);
+  const level1Spells = useMemo(() => sortByLocalizedName(spells.filter((spell) => spell.level === 1)), [spells]);
   const level1Count = rule?.spellsKnownFixed ?? preparedCount;
 
   const canProceed =

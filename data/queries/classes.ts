@@ -166,6 +166,22 @@ export async function getClassEnglishName(db: SQLiteDatabase, classId: number): 
   return row?.name ?? null;
 }
 
+// Reads a subclass's always-prepared bonus spells (Cleric domain spells,
+// Circle of Spores/Wildfire, etc.) - see subclasses.additional_spells in
+// db/schema.sql. Only populated for the unambiguous case (no sub-choice
+// like Circle of the Land's biome needed), so this is `null` for most
+// subclasses - callers should treat that as "no such mechanic here".
+export async function getSubclassAdditionalSpellsByLevel(
+  db: SQLiteDatabase,
+  subclassId: number
+): Promise<Record<string, string[]> | null> {
+  const row = await db.getFirstAsync<{ additional_spells: string | null }>(
+    'SELECT additional_spells FROM subclasses WHERE id = ?',
+    subclassId
+  );
+  return parseJson(row?.additional_spells ?? null);
+}
+
 // Whether this class grants the "Expertise" feature (doubled proficiency
 // bonus for chosen skills) at level 1 - true for Rogue in the PHB (Bard
 // also has Expertise, but not until level 3, so it correctly returns false

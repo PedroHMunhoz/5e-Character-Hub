@@ -13,9 +13,24 @@ interface SpellRowProps {
   ritual?: boolean;
   prepared?: boolean;
   onTogglePrepared?: () => void;
+  // Dims the "Preparada" checkbox while keeping it tappable - see
+  // CheckboxToggle's `dimmed` prop.
+  preparedDimmed?: boolean;
+  // Marks a subclass's always-prepared bonus spell (e.g. Cleric domain
+  // spells) - shown next to Ritual so it's clear why the checkbox above is
+  // locked checked.
+  domainSpell?: boolean;
 }
 
-export function SpellRow({ name, school, ritual = false, prepared, onTogglePrepared }: SpellRowProps) {
+export function SpellRow({
+  name,
+  school,
+  ritual = false,
+  prepared,
+  onTogglePrepared,
+  preparedDimmed,
+  domainSpell = false,
+}: SpellRowProps) {
   const goldColor = useThemeColor({}, 'gold');
 
   return (
@@ -32,16 +47,22 @@ export function SpellRow({ name, school, ritual = false, prepared, onTogglePrepa
         ) : null}
       </View>
       <View style={styles.statColumn}>
-        {onTogglePrepared ? (
+        {prepared !== undefined ? (
           <View style={styles.statRow}>
             <ThemedText style={styles.preparedLabel}>Preparada</ThemedText>
-            <CheckboxToggle checked={prepared ?? false} onToggle={onTogglePrepared} />
+            <CheckboxToggle checked={prepared} onToggle={onTogglePrepared} dimmed={preparedDimmed} />
           </View>
         ) : null}
         {ritual ? (
           <View style={styles.statRow}>
             <MaterialCommunityIcons name="candle" size={16} color={goldColor} />
             <ThemedText style={[styles.statValue, { color: goldColor }]}>Ritual</ThemedText>
+          </View>
+        ) : null}
+        {domainSpell ? (
+          <View style={styles.statRow}>
+            <MaterialCommunityIcons name="church" size={16} color={goldColor} />
+            <ThemedText style={[styles.statValue, { color: goldColor }]}>Domínio</ThemedText>
           </View>
         ) : null}
       </View>

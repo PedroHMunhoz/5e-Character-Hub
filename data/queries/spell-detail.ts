@@ -9,6 +9,7 @@ import {
   SPELL_SCHOOL_LABELS,
 } from '@/constants/spells';
 import type { Spell } from '@/types/reference';
+import { feetToMeters, getSpeedInSquares } from '@/utils/speed';
 import { convertRangeToMeters } from './base-items';
 import { getSpellById } from './spells';
 
@@ -86,10 +87,16 @@ function formatDistance(distance: SpellDistance | undefined): string {
       return 'Ilimitado';
     case 'sight':
       return 'Visão';
-    case 'feet':
-      return distance.amount != null
-        ? formatMeasurement(convertRangeToMeters(String(distance.amount)), 'metro', 'metros')
-        : '—';
+    case 'feet': {
+      if (distance.amount == null) return '—';
+      const metersText = formatMeasurement(convertRangeToMeters(String(distance.amount)), 'metro', 'metros');
+      // Same 5ft=1,5m square abstraction used by the Resumo tab's
+      // Deslocamento field (utils/speed.ts) - shown alongside the meters
+      // text so players don't have to convert it themselves at the table.
+      const squares = getSpeedInSquares(String(feetToMeters(distance.amount)));
+      if (squares == null) return metersText;
+      return `${metersText} (${squares} ${squares === 1 ? 'quadrado' : 'quadrados'})`;
+    }
     case 'miles': {
       // The book uses a flat x1,5 factor here (not the real-world x1,609) -
       // verified exactly against Clarividência (1 mi -> 1,5 km), Chuva de

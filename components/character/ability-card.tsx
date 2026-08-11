@@ -9,7 +9,9 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 interface AbilityCardProps {
   label: string;
   score: string;
-  onScoreChange: (value: string) => void;
+  // Omit to render a read-only score (locked fields open a breakdown modal
+  // via an outer Pressable instead).
+  onScoreChange?: (value: string) => void;
   modifier: string;
   style?: StyleProp<ViewStyle>;
 }
@@ -23,6 +25,7 @@ export function AbilityCard({ label, score, onScoreChange, modifier, style }: Ab
       <EditableStat
         value={score}
         onChangeText={onScoreChange}
+        editable={onScoreChange != null}
         keyboardType="number-pad"
         inputStyle={styles.scoreInput}
       />

@@ -185,7 +185,7 @@ runSection('classes', () => {
     'INSERT INTO class_features (class_id, name, source, level, entries) VALUES (?,?,?,?,?)'
   );
   const insertSubclass = db.prepare(
-    'INSERT INTO subclasses (class_id, name, short_name, source, srd) VALUES (?,?,?,?,?)'
+    'INSERT INTO subclasses (class_id, name, short_name, source, srd, additional_spells) VALUES (?,?,?,?,?,?)'
   );
   const insertSubclassFeature = db.prepare(
     'INSERT INTO subclass_features (subclass_id, name, source, level, entries) VALUES (?,?,?,?,?)'
@@ -234,7 +234,16 @@ runSection('classes', () => {
       const classId = classMap.get(`${sc.className}|${sc.classSource}`);
       if (classId == null) continue;
       ensureSource(sc.source);
-      const info = insertSubclass.run(classId, sc.name, sc.shortName, sc.source, bit(sc.srd));
+      // Only extract the unambiguous case: exactly one additionalSpells
+      // entry, no `name` (meaning no further sub-choice like Circle of the
+      // Land's biome, or Warlock's `expanded` extra-known-spells mechanic
+      // instead of always-prepared) - see docs/wizard-todo.md.
+      const rawAdditional = sc.additionalSpells;
+      const additionalSpells =
+        Array.isArray(rawAdditional) && rawAdditional.length === 1 && !rawAdditional[0].name && rawAdditional[0].prepared
+          ? rawAdditional[0].prepared
+          : null;
+      const info = insertSubclass.run(classId, sc.name, sc.shortName, sc.source, bit(sc.srd), json(additionalSpells));
       subclassMap.set(`${sc.className}|${sc.classSource}|${sc.shortName}|${sc.source}`, info.lastInsertRowid);
       bump('subclasses');
       addToFts('subclass', info.lastInsertRowid, sc.name, [sc.name]);
