@@ -28,16 +28,20 @@ export function SpellPicker({ title, spells, count, selected, onChange }: SpellP
       <ThemedText type="subtitle" style={styles.title}>
         {title} ({selected.length}/{count})
       </ThemedText>
-      {spells.map((spell) => (
-        <SpellRow
-          key={spell.id}
-          name={spell.name}
-          school={SPELL_SCHOOL_LABELS[spell.school] ?? spell.school}
-          ritual={spell.ritual}
-          prepared={selected.includes(spell.id)}
-          onTogglePrepared={() => toggle(spell.id)}
-        />
-      ))}
+      {spells.map((spell) => {
+        const isSelected = selected.includes(spell.id);
+        return (
+          <SpellRow
+            key={spell.id}
+            name={spell.name}
+            school={SPELL_SCHOOL_LABELS[spell.school] ?? spell.school}
+            ritual={spell.ritual}
+            prepared={isSelected}
+            preparedDimmed={!isSelected && selected.length >= count}
+            onTogglePrepared={() => toggle(spell.id)}
+          />
+        );
+      })}
     </View>
   );
 }

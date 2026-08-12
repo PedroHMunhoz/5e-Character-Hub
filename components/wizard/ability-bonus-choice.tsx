@@ -31,12 +31,19 @@ export function AbilityBonusChoice({ clause, selected, onChange }: AbilityBonusC
       <ThemedText style={styles.hint}>
         Escolha {clause.count} para receber +1 ({selected.length}/{clause.count})
       </ThemedText>
-      {clause.from.map((key) => (
-        <Pressable key={key} style={styles.row} onPress={() => toggle(key)}>
-          <CheckboxToggle checked={selected.includes(key)} onToggle={() => toggle(key)} />
-          <ThemedText style={styles.label}>{ABILITIES_BY_KEY[key].label}</ThemedText>
-        </Pressable>
-      ))}
+      {clause.from.map((key) => {
+        const isSelected = selected.includes(key);
+        return (
+          <Pressable key={key} style={styles.row} onPress={() => toggle(key)}>
+            <CheckboxToggle
+              checked={isSelected}
+              onToggle={() => toggle(key)}
+              dimmed={!isSelected && selected.length >= clause.count}
+            />
+            <ThemedText style={styles.label}>{ABILITIES_BY_KEY[key].label}</ThemedText>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }

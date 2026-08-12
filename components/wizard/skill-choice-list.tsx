@@ -38,12 +38,19 @@ export function SkillChoiceList({ clause, selected, onChange }: SkillChoiceListP
       <ThemedText style={styles.hint}>
         Escolha {clause.count} perícias ({selected.length}/{clause.count})
       </ThemedText>
-      {sortedKeys.map((key) => (
-        <Pressable key={key} style={styles.row} onPress={() => toggle(key)}>
-          <CheckboxToggle checked={selected.includes(key)} onToggle={() => toggle(key)} />
-          <ThemedText style={styles.label}>{LABEL_BY_KEY[key]}</ThemedText>
-        </Pressable>
-      ))}
+      {sortedKeys.map((key) => {
+        const isSelected = selected.includes(key);
+        return (
+          <Pressable key={key} style={styles.row} onPress={() => toggle(key)}>
+            <CheckboxToggle
+              checked={isSelected}
+              onToggle={() => toggle(key)}
+              dimmed={!isSelected && selected.length >= clause.count}
+            />
+            <ThemedText style={styles.label}>{LABEL_BY_KEY[key]}</ThemedText>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
