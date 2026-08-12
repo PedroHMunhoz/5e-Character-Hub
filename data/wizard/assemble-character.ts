@@ -6,9 +6,10 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { ABILITIES, SKILLS } from '@/constants/character';
+import { SPELLCASTING_RULES } from '@/constants/spellcasting';
 import { getSubraceDisplayName } from '@/constants/subrace-names';
 import { getBackgroundById } from '@/data/queries/backgrounds';
-import { getClassById, getSubclassById } from '@/data/queries/classes';
+import { getClassById, getClassEnglishName, getSubclassById } from '@/data/queries/classes';
 import { itemKey } from '@/data/queries/equipment-lookup';
 import { getOptionalFeatureById } from '@/data/queries/optional-features';
 import { getRaceById } from '@/data/queries/races';
@@ -72,6 +73,7 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   const race = await getRaceById(db, draft.raceId);
   const subrace = draft.subraceId !== null ? await getRaceById(db, draft.subraceId) : null;
   const classDef = await getClassById(db, draft.classId);
+  const classEnglishName = await getClassEnglishName(db, draft.classId);
   const subclass = draft.subclassId !== null ? await getSubclassById(db, draft.subclassId) : null;
   const background = await getBackgroundById(db, draft.backgroundId);
   const fightingStyle =
@@ -152,11 +154,16 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
     po: String((draft.equipmentMode === 'gold' ? (draft.goldRolled ?? 0) : 0) + goldFromContainers),
   };
 
-  // Spells: everything the player picked in the (conditional) spells step,
-  // marked as known/prepared from day one - the finer "known but not
-  // prepared today" distinction doesn't exist anywhere in the app yet (see
-  // docs/wizard-todo.md).
-  const spells = Object.fromEntries(draft.spellIds.map((id) => [String(id), { prepared: true }]));
+  // Spells: everything the player picked in the (conditional) spells step.
+  // Wizard is the only class with BOTH a fixed spellbook size
+  // (spellsKnownFixed) AND a separately-computed daily prepared cap
+  // (maxPreparedFormula) - it starts with nothing prepared so the player
+  // chooses what to prepare via the Spells tab's toggle. Every other caster
+  // (known casters, and Cleric/Druid whose creation step already limits the
+  // pick to the prepared cap) starts with everything prepared.
+  const spellcastingRule = classEnglishName ? SPELLCASTING_RULES[classEnglishName] : undefined;
+  const startsPrepared = !(spellcastingRule?.spellsKnownFixed && spellcastingRule?.maxPreparedFormula);
+  const spells = Object.fromEntries(draft.spellIds.map((id) => [String(id), { prepared: startsPrepared }]));
 
   // Hit points: level-1 max HP is always the hit die's full face value +
   // CON modifier (PHB p.12), never rolled at level 1. Draconic Bloodline

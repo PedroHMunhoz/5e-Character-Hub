@@ -24,9 +24,18 @@ em vez de deixar só na memória da conversa, para revisitar depois.
 - **Compra efetiva de itens com o PO** da opção B do passo de Equipamento —
   pedido explícito do usuário para ficar para depois ("posteriormente
   comprar os itens").
-- **Distinção fina entre "magia conhecida" e "magia preparada hoje"** além
-  do toggle que já existe na aba Magias — o wizard grava todas as magias
-  escolhidas como preparadas na criação.
+- ~~Distinção fina entre "magia conhecida" e "magia preparada hoje"~~ —
+  **corrigido**: achado ao vivo num Mago nível 1 com INT +1, que mostrava
+  "6/2" preparadas (grimório de 6 marcado todo como preparado, contra um
+  teto real de 2 pela fórmula mod.INT + nível). Só o Mago tem grimório de
+  tamanho fixo (`spellsKnownFixed`) E teto de preparo calculado à parte
+  (`maxPreparedFormula`) ao mesmo tempo — `data/wizard/assemble-character.ts`
+  agora detecta essa combinação e grava `prepared: false` para as magias
+  dessas classes na criação, deixando o jogador escolher o que preparar pelo
+  toggle que já existe na aba Magias. Clérigo/Druida (preparam da lista
+  completa, etapa de criação já limita a escolha ao teto) e
+  Bardo/Feiticeiro/Bruxo (conjuradores "conhecidos", sem preparo diário)
+  continuam nascendo com tudo preparado, sem mudança.
 - ~~Cobertura do parser de texto livre de proficiência em ferramentas de
   antecedente~~ — **não foi necessário**: descobri que `backgrounds.entries`
   (banco) tinha os cabeçalhos "Tool Proficiencies:"/"Skill Proficiencies:"/
