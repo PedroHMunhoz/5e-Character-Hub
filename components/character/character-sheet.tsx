@@ -5,6 +5,8 @@ import { ClassLevels } from '@/components/character/class-levels';
 import { DeathSaves } from '@/components/character/death-saves';
 import { HexModifierBadge } from '@/components/character/hex-modifier-badge';
 import { InspirationToggle } from '@/components/character/inspiration-toggle';
+import { ManageHpModal, type HpOutcome } from '@/components/character/manage-hp-modal';
+import { MessageModal } from '@/components/character/message-modal';
 import { PassiveScores } from '@/components/character/passive-scores';
 import { PipRow } from '@/components/character/pip-row';
 import { PortraitPlaceholder } from '@/components/character/portrait-placeholder';
@@ -22,10 +24,13 @@ import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
 import { formatSpeed, getMonkUnarmoredMovementBonusMeters } from '@/utils/speed';
 
 export function CharacterSheet() {
-  const { character, toggleInspiration, setExhaustion, setDeathSaves } = useCharacter();
+  const { character, toggleInspiration, setExhaustion, setDeathSaves, setHitPointsField } = useCharacter();
 
   const goldColor = useThemeColor({}, 'gold');
   const [openStat, setOpenStat] = useState<'ac' | 'initiative' | null>(null);
+  const [hpModalVisible, setHpModalVisible] = useState(false);
+  const [tempHpModalVisible, setTempHpModalVisible] = useState(false);
+  const [hpOutcome, setHpOutcome] = useState<HpOutcome | null>(null);
 
   const characterLevel = getCharacterLevel(character.classes);
   const proficiencyBonus = getProficiencyBonus(characterLevel);
@@ -98,6 +103,7 @@ export function CharacterSheet() {
               current={character.hitPoints.current}
               max={character.hitPoints.max}
               gradientColors={['#5c1414', '#8b1e1e']}
+              onPress={() => setHpModalVisible(true)}
             />
             <StatField label="CA" value={String(armorClassBreakdown.total)} onPress={() => setOpenStat('ac')} />
             <StatField
@@ -113,7 +119,12 @@ export function CharacterSheet() {
         </View>
 
         <View style={styles.secondaryRow}>
-          <StatField label="PV Temporário" value={character.hitPoints.temporary} style={styles.secondaryField} />
+          <StatField
+            label="PV Temporário"
+            value={character.hitPoints.temporary}
+            style={styles.secondaryField}
+            onPress={() => setTempHpModalVisible(true)}
+          />
           <StatField
             label="Proficiência"
             value={formatSignedModifier(proficiencyBonus)}
@@ -163,6 +174,40 @@ export function CharacterSheet() {
         totalLabel="Total"
         totalValue={formatSignedModifier(dexModifier ?? 0)}
         onClose={() => setOpenStat(null)}
+      />
+
+      <ManageHpModal
+        visible={hpModalVisible}
+        current={character.hitPoints.current}
+        temporary={character.hitPoints.temporary}
+        max={character.hitPoints.max}
+        onClose={() => setHpModalVisible(false)}
+        onApply={(result, outcome) => {
+          setHitPointsField('current', result.current);
+          setHitPointsField('temporary', result.temporary);
+          setHpModalVisible(false);
+          if (outcome) setHpOutcome(outcome);
+        }}
+      />
+
+      <ManageHpModal
+        visible={tempHpModalVisible}
+        variant="temp-only"
+        current={character.hitPoints.current}
+        temporary={character.hitPoints.temporary}
+        max={character.hitPoints.max}
+        onClose={() => setTempHpModalVisible(false)}
+        onApply={(result) => {
+          setHitPointsField('temporary', result.temporary);
+          setTempHpModalVisible(false);
+        }}
+      />
+
+      <MessageModal
+        visible={hpOutcome !== null}
+        title={hpOutcome?.title}
+        message={hpOutcome?.message}
+        onClose={() => setHpOutcome(null)}
       />
     </ScrollView>
   );

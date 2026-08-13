@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { ThemedText } from '@/components/themed-text';
@@ -11,15 +11,17 @@ interface VitalBarProps {
   max: string;
   gradientColors: [string, string];
   extra?: string;
+  onPress?: () => void;
 }
 
 const TRACK_HEIGHT = 36;
 const TRACK_EMPTY_COLOR = '#1a1a1a';
 
-export function VitalBar({ label, current, max, gradientColors, extra }: VitalBarProps) {
+export function VitalBar({ label, current, max, gradientColors, extra, onPress }: VitalBarProps) {
   const goldColor = useThemeColor({}, 'gold');
   const gradientId = `vitalFill${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const [trackWidth, setTrackWidth] = useState(0);
+  const TrackContainer = onPress ? Pressable : View;
 
   const currentNum = parseInt(current, 10) || 0;
   const maxNum = parseInt(max, 10) || 0;
@@ -32,7 +34,7 @@ export function VitalBar({ label, current, max, gradientColors, extra }: VitalBa
 
   return (
     <View style={styles.row}>
-      <View style={[styles.track, { borderColor: goldColor }]} onLayout={handleLayout}>
+      <TrackContainer style={[styles.track, { borderColor: goldColor }]} onLayout={handleLayout} onPress={onPress}>
         {trackWidth > 0 ? (
           <Svg width={trackWidth} height={TRACK_HEIGHT} style={StyleSheet.absoluteFill}>
             <Defs>
@@ -58,7 +60,7 @@ export function VitalBar({ label, current, max, gradientColors, extra }: VitalBa
             {current || 0} / {max || 0}
           </ThemedText>
         </View>
-      </View>
+      </TrackContainer>
       {extra !== undefined ? (
         extraNum > 0 ? (
           <View style={[styles.extra, { borderColor: goldColor }]}>
@@ -103,6 +105,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
+    opacity: 0.7,
   },
   extra: {
     minWidth: 36,
