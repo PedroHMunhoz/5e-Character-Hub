@@ -8,12 +8,17 @@
 // printed one.
 // Verified against translations/pt-BR/_raw-extracts/PHB.txt (pages 148/151/152).
 // Keyed by English source name since that's stable across re-imports.
+//
+// No entry for singular "Crossbow Bolt" (or Arrow/Blowgun Needle/Sling
+// Bullet) on purpose - formatWeightKg's default weight_lb-based calculation
+// already reconstructs the printed pack weight exactly once multiplied by
+// the owned quantity (see its doc comment), and a rounded per-unit override
+// here would compound rounding error instead.
 export const ITEM_WEIGHT_KG_OVERRIDES: Record<string, string> = {
   'Light Crossbow': '2,5',
   Shortsword: '1',
   Breastplate: '10',
   Shield: '3',
-  'Crossbow Bolt': '0,04', // book prices/weighs bolts by the 20-pack: 0,75 kg / 20
   'Crossbow Bolts (20)': '0,75',
   'Sling Bullets (20)': '0,75',
 };

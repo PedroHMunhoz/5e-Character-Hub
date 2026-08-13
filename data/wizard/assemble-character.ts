@@ -145,7 +145,12 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   let goldFromContainers = 0;
   for (const entry of draft.chosenEquipment) {
     if (entry.kind !== 'item') continue;
-    inventoryItems[itemKey(entry.source, entry.itemId)] = { quantity: String(entry.quantity) };
+    const key = itemKey(entry.source, entry.itemId);
+    // Sum rather than overwrite - the same item can be granted by more than
+    // one resolved entry (e.g. an exploded ammo pack matching an item
+    // already granted elsewhere), and the totals should add up.
+    const existingQuantity = Number(inventoryItems[key]?.quantity ?? 0);
+    inventoryItems[key] = { quantity: String(existingQuantity + entry.quantity) };
     if (entry.containsValueCp) goldFromContainers += entry.containsValueCp / 100;
   }
 

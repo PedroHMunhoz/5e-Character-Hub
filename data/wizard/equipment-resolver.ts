@@ -179,12 +179,21 @@ function resolvePendingEntry(entry: PendingItemEntry, index: Map<string, Equipme
   const match = index.get(refName(entry.ref).toLowerCase());
   if (!match) return { kind: 'unresolved', raw: entry.ref };
 
+  // Packs of one repeated item (ammo, Ball Bearings, Caltrops, Iron Spikes)
+  // are sold as a pack for shopping convenience only - the character should
+  // end up with N of the underlying single item, not 1 of the pack. Falls
+  // back to granting the pack itself if the component name didn't resolve
+  // (shouldn't happen for PHB data), so nothing is silently dropped.
+  const pack = match.singleItemPack;
+  const component = pack ? index.get(refName(pack.itemRef).toLowerCase()) : undefined;
+  const resolved = component ?? match;
+
   return {
     kind: 'item',
-    itemId: match.id,
-    source: match.source,
-    name: match.name,
-    quantity: entry.quantity,
+    itemId: resolved.id,
+    source: resolved.source,
+    name: resolved.name,
+    quantity: entry.quantity * (pack?.quantity ?? 1),
     displayName: entry.displayName,
     containsValueCp: entry.containsValueCp,
   };
@@ -205,7 +214,20 @@ export async function resolveEquipmentItemRefs(
 
   const baseItems = await getBaseItemsByNames(db, uniqueRefs);
   const items = await getItemsByNames(db, uniqueRefs);
-  const index = buildLookupIndex([...baseItems, ...items]);
+  let index = buildLookupIndex([...baseItems, ...items]);
+
+  // Any resolved pack (see EquipmentLookupItem.singleItemPack) needs its
+  // component item resolved too, so resolvePendingEntry can substitute it
+  // in. Only fetch names not already covered by the first pass.
+  const componentRefs = [...baseItems, ...items]
+    .map((matchedItem) => matchedItem.singleItemPack?.itemRef)
+    .filter((ref): ref is string => ref !== undefined && !index.has(refName(ref).toLowerCase()));
+  const uniqueComponentRefs = [...new Set(componentRefs)];
+  if (uniqueComponentRefs.length > 0) {
+    const componentBaseItems = await getBaseItemsByNames(db, uniqueComponentRefs);
+    const componentItems = await getItemsByNames(db, uniqueComponentRefs);
+    index = buildLookupIndex([...baseItems, ...items, ...componentBaseItems, ...componentItems]);
+  }
 
   function resolveEntries(entries: ParsedEntry[]): ResolvedEquipmentEntry[] {
     return entries.map((entry) => (entry.kind === 'pendingItem' ? resolvePendingEntry(entry, index) : entry));

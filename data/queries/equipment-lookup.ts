@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { getSingleItemPackContents } from './base-items';
 import { getTranslations, localizedName } from './localize';
 
 // Item lookups by arbitrary name/category, for the wizard's equipment
@@ -18,6 +19,13 @@ export interface EquipmentLookupItem {
   // by data/queries/races.ts (Race.englishName) and data/queries/tools.ts
   // (ToolItem.englishName).
   englishName: string;
+  // Set when this item is a "pack" of N units of one other catalog item
+  // (ammo bundles like "Crossbow Bolts (20)", or Ball Bearings/Caltrops/
+  // Iron Spikes) - granting it should explode into N of the referenced
+  // component item instead of 1 of the pack itself. Absent for items with
+  // no pack, and for multi-item bundles (Explorer's Pack, ...), which stay
+  // as one granted item - see getSingleItemPackContents.
+  singleItemPack?: { itemRef: string; quantity: number };
 }
 
 // A 5etools item ref like "chain mail|phb" or bare "thieves' tools" (no
@@ -51,8 +59,8 @@ export async function getBaseItemsByNames(db: SQLiteDatabase, refs: string[]): P
   if (refs.length === 0) return [];
   const names = refs.map(refName);
   const placeholders = names.map(() => '?').join(', ');
-  const rows = await db.getAllAsync<{ id: number; name: string }>(
-    `SELECT id, name FROM base_items WHERE source = 'PHB' AND name COLLATE NOCASE IN (${placeholders})`,
+  const rows = await db.getAllAsync<{ id: number; name: string; details: string | null }>(
+    `SELECT id, name, details FROM base_items WHERE source = 'PHB' AND name COLLATE NOCASE IN (${placeholders})`,
     ...names
   );
   const translations = await getTranslations(db, 'base_item');
@@ -61,6 +69,7 @@ export async function getBaseItemsByNames(db: SQLiteDatabase, refs: string[]): P
     source: 'base_items',
     name: localizedName(row.id, row.name, translations),
     englishName: row.name,
+    singleItemPack: getSingleItemPackContents(row.details),
   }));
 }
 
@@ -68,8 +77,8 @@ export async function getItemsByNames(db: SQLiteDatabase, refs: string[]): Promi
   if (refs.length === 0) return [];
   const names = refs.map(refName);
   const placeholders = names.map(() => '?').join(', ');
-  const rows = await db.getAllAsync<{ id: number; name: string }>(
-    `SELECT id, name FROM items WHERE source = 'PHB' AND name COLLATE NOCASE IN (${placeholders})`,
+  const rows = await db.getAllAsync<{ id: number; name: string; details: string | null }>(
+    `SELECT id, name, details FROM items WHERE source = 'PHB' AND name COLLATE NOCASE IN (${placeholders})`,
     ...names
   );
   const translations = await getTranslations(db, 'item');
@@ -78,6 +87,7 @@ export async function getItemsByNames(db: SQLiteDatabase, refs: string[]): Promi
     source: 'items',
     name: localizedName(row.id, row.name, translations),
     englishName: row.name,
+    singleItemPack: getSingleItemPackContents(row.details),
   }));
 }
 

@@ -105,6 +105,23 @@ em vez de deixar só na memória da conversa, para revisitar depois.
   (texto livre do livro, sem linha correspondente em `base_items`/`items`)
   aparecem na tela do wizard mas `InventoryItemState` exige um id de item
   válido — não há hoje um jeito de guardar "item avulso sem id" na ficha.
+- **Quantidade de arma/armadura não aparece em lugar nenhum da UI.**
+  Achado ao vivo: Guerreiro com "2x machadinhas" (equipamento inicial do
+  Lutador em Duelo) — `character.inventoryItems[handaxeKey].quantity` já
+  fica `'2'` corretamente (resolver + soma da explosão de pack cobrem isso),
+  mas `EquipmentItemCard` (usado pelas seções `weapon`/`armor` de
+  `character-inventory.tsx`) não tem prop de quantidade — só
+  `StackableItemCard` (`consumable`) mostra um badge. Discutido com o
+  usuário 2 abordagens, ambas adiadas por enquanto:
+  1. Empilhar (1 card, badge "×2", como consumível) — mudança pequena, mas
+     `weaponSlot` continua sendo 1 só por registro, então não dá pra
+     equipar 1 na mão principal e outra na secundária de verdade.
+  2. Itens separados (cada machadinha com seu próprio registro/weaponSlot,
+     permitindo dual-wield real) — exige remodelar `inventoryItems` de
+     `Record<itemId, InventoryItemState>` pra algo com múltiplas instâncias
+     por item de catálogo; mexe em `types/character.ts`, no reducer de
+     `context/character-context.tsx`, na tela de item e na lista do
+     inventário.
 - ~~Colisão de id entre `base_items` e `items`~~ — **corrigido**: as duas
   tabelas têm ids autoincrementais independentes e algumas linhas realmente
   colidem (ex. id 18 = "Chain Mail" em `base_items` e "+2 Moon Sickle" em

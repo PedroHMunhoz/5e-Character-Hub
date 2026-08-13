@@ -9,7 +9,14 @@ import {
   type WeaponHandedness,
 } from '@/constants/item-codes';
 import { parseJson } from '../rows';
-import { categorize, convertRangeToMeters, formatRangeDetail, formatWeightKg, GENERAL_ITEM_TYPE_LABELS } from './base-items';
+import {
+  categorize,
+  convertRangeToMeters,
+  formatRangeDetail,
+  formatWeightKg,
+  GENERAL_ITEM_TYPE_LABELS,
+  getSingleItemPackContents,
+} from './base-items';
 import { getTranslations, localizedName } from './localize';
 
 interface BaseItemDetailRow {
@@ -144,14 +151,17 @@ function mapArmorDetail(row: BaseItemDetailRow, name: string): ArmorItemDetail {
   };
 }
 
-function mapConsumableDetail(row: BaseItemDetailRow, name: string): ConsumableItemDetail {
+function mapConsumableDetail(row: BaseItemDetailRow, name: string, quantity = 1): ConsumableItemDetail {
   return {
     category: 'consumable',
     id: row.id,
     name,
-    weight: formatWeightKg(row.name, row.weight_lb),
+    // Reflects the full owned stack's weight - see formatWeightKg's doc
+    // comment in data/queries/base-items.ts for why quantity is multiplied
+    // before rounding, not after.
+    weight: formatWeightKg(row.name, row.weight_lb, quantity),
     categoryLabel: 'Munição',
-    defaultQuantity: '20',
+    defaultQuantity: String(getSingleItemPackContents(row.details)?.quantity ?? 1),
   };
 }
 
@@ -165,7 +175,7 @@ function mapGeneralDetail(row: BaseItemDetailRow, name: string): GeneralItemDeta
   };
 }
 
-export async function getBaseItemDetailById(db: SQLiteDatabase, id: number): Promise<ItemDetail | null> {
+export async function getBaseItemDetailById(db: SQLiteDatabase, id: number, quantity = 1): Promise<ItemDetail | null> {
   const row = await db.getFirstAsync<BaseItemDetailRow>(
     'SELECT id, name, type, weight_lb, damage, properties, details FROM base_items WHERE id = ?',
     id
@@ -179,5 +189,5 @@ export async function getBaseItemDetailById(db: SQLiteDatabase, id: number): Pro
   if (category === 'weapon') return mapWeaponDetail(row, name);
   if (category === 'armor') return mapArmorDetail(row, name);
   if (category === 'general') return mapGeneralDetail(row, name);
-  return mapConsumableDetail(row, name);
+  return mapConsumableDetail(row, name, quantity);
 }

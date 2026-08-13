@@ -109,12 +109,14 @@ export default function ItemDetailScreen() {
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
   const [pendingSlot, setPendingSlot] = useState<WeaponSlotValue | null>(null);
 
+  const ownedQuantity = character.inventoryItems[id]?.quantity ?? '1';
+
   useEffect(() => {
     const numericId = Number(id);
     let cancelled = false;
 
     async function load() {
-      const detail = await getBaseItemDetailById(db, numericId);
+      const detail = await getBaseItemDetailById(db, numericId, Number(ownedQuantity) || 1);
       if (cancelled) return;
       setItem(detail);
 
@@ -130,7 +132,7 @@ export default function ItemDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [db, id]);
+  }, [db, id, ownedQuantity]);
 
   if (loading || !item) {
     return (

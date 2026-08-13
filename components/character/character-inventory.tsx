@@ -46,14 +46,18 @@ export function CharacterInventory() {
     async function load() {
       const baseItemIds: number[] = [];
       const itemIds: number[] = [];
+      const quantityById = new Map<number, number>();
       for (const key of inventoryKeys) {
         const parsed = parseItemKey(key);
         (parsed.source === 'base_items' ? baseItemIds : itemIds).push(parsed.id);
+        if (parsed.source === 'base_items') {
+          quantityById.set(parsed.id, Number(character.inventoryItems[key]?.quantity ?? '1') || 1);
+        }
       }
 
       // Sequential, not Promise.all: overlapping queries on the same
       // SQLiteDatabase connection can crash on native (see data/queries/spells.ts).
-      const baseItems = await getBaseItemsByIds(db, baseItemIds);
+      const baseItems = await getBaseItemsByIds(db, baseItemIds, quantityById);
       if (cancelled) return;
       const generalItems = await getItemsByIds(db, itemIds);
       if (cancelled) return;

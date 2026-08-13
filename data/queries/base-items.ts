@@ -57,6 +57,32 @@ interface ArmorDetails {
   ac?: number;
 }
 
+interface PackContentsEntry {
+  item?: string;
+  quantity?: number;
+}
+
+interface PackDetails {
+  packContents?: (string | PackContentsEntry)[];
+}
+
+// `details.packContents` covers two unrelated shapes from the raw 5etools
+// data: a "pack" of N units of one underlying item (ammo like "Crossbow
+// Bolts (20)", or Ball Bearings/Caltrops/Iron Spikes - a single object
+// entry with a `quantity`), and a bundle of different items (Explorer's
+// Pack, Deck of Many Things - multiple entries, some bare strings). Only
+// the former should be exploded into that many units of the component item
+// when granted to a character; verified this length===1-with-quantity rule
+// against every packContents entry in the bundled PHB dataset (base_items
+// and items tables).
+export function getSingleItemPackContents(detailsJson: string | null): { itemRef: string; quantity: number } | undefined {
+  const packContents = parseJson<PackDetails>(detailsJson)?.packContents;
+  if (!Array.isArray(packContents) || packContents.length !== 1) return undefined;
+  const entry = packContents[0];
+  if (typeof entry !== 'object' || !entry.item || !entry.quantity) return undefined;
+  return { itemRef: entry.item, quantity: entry.quantity };
+}
+
 // Armor weight class drives how much of the DEX modifier applies to AC (see
 // utils/armor-class.ts) - shield ('S') isn't a body-armor weight class, so
 // it's intentionally absent here.
@@ -90,12 +116,31 @@ export const GENERAL_ITEM_TYPE_LABELS: Record<string, string> = {
 // ITEM_WEIGHT_KG_OVERRIDES only holds the handful of items that print a
 // different value than that rule (either extra decimal precision, like the
 // 20-packs of ammo, or a genuinely divergent book value - see DUVIDAS.md).
-export function formatWeightKg(name: string, weightLb: number | null): string {
+//
+// `quantity` (default 1) scales the raw per-unit weight *before* rounding -
+// needed for stackable items (ammo) where the catalog row is a single unit
+// (e.g. "Arrow", weight_lb 0.05) but the character owns a stack of them.
+// Rounding per-unit first and multiplying the rounded string afterwards
+// compounds rounding error (0,03kg × 20 = 0,6kg); multiplying the raw
+// weight_lb first reconstructs the printed pack weight exactly (0,05lb ×
+// 0,5 × 20 = 0,5kg) since every ammo type's singular weight_lb is exactly
+// its pack's weight_lb / pack size (verified against the bundled db).
+export function formatWeightKg(name: string, weightLb: number | null, quantity = 1): string {
   const override = ITEM_WEIGHT_KG_OVERRIDES[name];
-  if (override) return override;
+  const kgPerUnit = override ? Number(override.replace(',', '.')) : weightLb == null ? 0 : weightLb * 0.5;
+  const kg = kgPerUnit * quantity;
 
-  if (weightLb == null) return '0';
-  const kg = weightLb * 0.5;
+  if (quantity !== 1) {
+    // A stack's total can land exactly on a value the 1-decimal-primary
+    // rule below can't represent without rounding away from the printed
+    // total (e.g. 20 crossbow bolts = 0,75kg, ambiguous between 0,7/0,8 at
+    // 1 decimal) - round straight to 2 decimals instead. JS's number-to-
+    // string conversion already drops the trailing zero for values that
+    // land on a clean 1-decimal number (0.50 -> "0.5"), so this doesn't add
+    // spurious precision for the common case (e.g. 20 arrows = 0,5kg).
+    return String(Math.round(kg * 100) / 100).replace('.', ',');
+  }
+
   let rounded = Math.round(kg * 10) / 10;
   if (rounded === 0 && kg > 0) rounded = Math.round(kg * 100) / 100;
   return String(rounded).replace('.', ',');
@@ -158,7 +203,7 @@ function buildWeaponProperties(row: BaseItemRow): string {
   return parts.join(', ');
 }
 
-function mapCuratedRow(row: BaseItemRow, translations: TranslationDict): CuratedBaseItem {
+function mapCuratedRow(row: BaseItemRow, translations: TranslationDict, quantity = 1): CuratedBaseItem {
   const category = categorize(row.type);
   const name = localizedName(row.id, row.name, translations);
 
@@ -206,16 +251,26 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict): Curated
     category,
     name,
     properties: 'Munição',
-    weight: formatWeightKg(row.name, row.weight_lb),
-    defaultQuantity: '20',
+    // Consumables are the only stackable category with a quantity indicator
+    // in the UI today (the StackableItemCard badge) - weight here reflects
+    // the full owned stack. Weapon/armor/general above intentionally keep
+    // showing a single unit's weight - see docs/wizard-todo.md for the
+    // deferred "weapon quantity isn't shown anywhere" gap.
+    weight: formatWeightKg(row.name, row.weight_lb, quantity),
+    defaultQuantity: String(getSingleItemPackContents(row.details)?.quantity ?? 1),
   };
 }
 
 // A real character's base_items-sourced inventory rows (weapons/armor/ammo)
 // by id, reusing the exact same categorization/mapping as the curated demo
 // list above - the wizard's starting-equipment resolver grants these by id,
-// not by a fixed name list.
-export async function getBaseItemsByIds(db: SQLiteDatabase, ids: number[]): Promise<CuratedBaseItem[]> {
+// not by a fixed name list. `quantityById` (row id -> owned quantity) scales
+// the displayed weight for stackable (consumable) rows - see mapCuratedRow.
+export async function getBaseItemsByIds(
+  db: SQLiteDatabase,
+  ids: number[],
+  quantityById?: Map<number, number>
+): Promise<CuratedBaseItem[]> {
   if (ids.length === 0) return [];
   const placeholders = ids.map(() => '?').join(', ');
   const rows = await db.getAllAsync<BaseItemRow>(
@@ -223,5 +278,5 @@ export async function getBaseItemsByIds(db: SQLiteDatabase, ids: number[]): Prom
     ...ids
   );
   const translations = await getTranslations(db, 'base_item');
-  return rows.map((row) => mapCuratedRow(row, translations));
+  return rows.map((row) => mapCuratedRow(row, translations, quantityById?.get(row.id) ?? 1));
 }
