@@ -9,13 +9,29 @@ import { CurrencyInput } from '@/components/character/currency-input';
 import { EquipmentItemCard } from '@/components/character/equipment-item-card';
 import { MessageModal } from '@/components/character/message-modal';
 import { StackableItemCard } from '@/components/character/stackable-item-card';
+import { VitalBar } from '@/components/character/vital-bar';
 import { CURRENCY_FIELDS, INVENTORY_CATEGORY_SECTIONS } from '@/constants/inventory';
-import { formatWeightKg, getBaseItemsByIds, type CuratedBaseItem } from '@/data/queries/base-items';
+import { formatWeightKg, getBaseItemsByIds, getWeightKg, type CuratedBaseItem } from '@/data/queries/base-items';
 import { parseItemKey } from '@/data/queries/equipment-lookup';
 import { getItemsByIds } from '@/data/queries/items';
 import { useCharacter } from '@/hooks/use-character';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import type { WeaponSlot } from '@/types/character';
+import { getAbilityTotal } from '@/utils/ability-modifier';
+
+// Same flat "1 kg ~= 2 lb" rule used everywhere else in the app (see
+// getWeightKg/formatWeightKg in data/queries/base-items.ts).
+const KG_PER_LB = 0.5;
+// RAW carrying capacity (PHB): Strength score x 15 lb, no optional
+// encumbrance variant - see docs/TODO.md.
+const CARRY_CAPACITY_KG_PER_STR = 15 * KG_PER_LB;
+// RAW (PHB): every 50 coins, of any denomination, weigh 1 lb.
+const COINS_PER_LB = 50;
+
+function formatKg(value: number): string {
+  const rounded = Math.round(value * 10) / 10;
+  return String(rounded).replace('.', ',');
+}
 
 // A display item carries its inventoryItems key (namespaced for `items`-
 // table rows - see data/queries/equipment-lookup.ts's itemKey) alongside
@@ -71,6 +87,7 @@ export function CharacterInventory() {
           category: 'general' as const,
           name: item.name,
           weight: formatWeightKg(item.name, item.weightLb),
+          weightKg: getWeightKg(item.name, item.weightLb),
         })),
       ];
       setItems(display);
@@ -91,6 +108,21 @@ export function CharacterInventory() {
     [items]
   );
 
+  const totalWeightKg = useMemo(() => {
+    const itemsWeightKg = items.reduce((sum, item) => {
+      const quantity = Number(character.inventoryItems[item.key]?.quantity ?? '1') || 1;
+      return sum + item.weightKg * quantity;
+    }, 0);
+    const coinCount = CURRENCY_FIELDS.reduce((sum, field) => sum + (Number(character.currency[field.key]) || 0), 0);
+    const coinsWeightKg = (coinCount / COINS_PER_LB) * KG_PER_LB;
+    return itemsWeightKg + coinsWeightKg;
+  }, [items, character.inventoryItems, character.currency]);
+
+  const maxCapacityKg = useMemo(
+    () => (getAbilityTotal(character.abilities.str) ?? 0) * CARRY_CAPACITY_KG_PER_STR,
+    [character.abilities.str]
+  );
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -102,6 +134,13 @@ export function CharacterInventory() {
   return (
     <>
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
+        <VitalBar
+          label="Capacidade de Carga"
+          current={formatKg(totalWeightKg)}
+          max={formatKg(maxCapacityKg)}
+          gradientColors={['#4a2f1a', '#8a5a2a']}
+        />
+
         <CollapsibleSection title="Moedas">
           <View style={styles.currencyRow}>
             {CURRENCY_FIELDS.map((field) => (

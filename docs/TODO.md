@@ -377,3 +377,12 @@ usuário).
   genérico à parte. `Book\|PHB` ganhou nome ("Livro") e descrição próprios,
   traduzidos do texto em inglês real do item, em vez de reaproveitar o
   texto do Grimório.
+- **Regra opcional de sobrecarga (encumbrance) não implementada.** A barra
+  "Capacidade de Carga" da aba Inventário (`character-inventory.tsx`)
+  implementa só a regra RAW básica do PHB: capacidade máxima = Força × 15
+  lb (convertido para × 7,5 kg pela mesma regra de arredondamento usada em
+  todo o resto do app, `getWeightKg`/`formatWeightKg` em
+  `data/queries/base-items.ts`), sem a variante opcional de sobrecarga
+  (que reduz o deslocamento em faixas de Força×5/Força×10, e tem uma
+  segunda faixa de "arrastar/levantar" em Força×30). Adiado por
+  simplicidade — decidir no futuro se vale a pena implementar.

@@ -26,6 +26,11 @@ export interface CuratedBaseItem {
   name: string;
   properties?: string;
   weight: string;
+  // Unrounded per-unit weight in kg (same override/×0.5 rule as `weight`,
+  // see getWeightKg) - kept alongside the formatted `weight` string so
+  // callers can sum a stack's real carried weight (e.g. carrying-capacity
+  // bar) without re-parsing the pt-BR-formatted display string.
+  weightKg: number;
   damageDice?: string;
   handedness?: WeaponHandedness;
   armorClassBonus?: string;
@@ -136,10 +141,13 @@ export const GENERAL_ITEM_TYPE_LABELS: Record<string, string> = {
 // weight_lb first reconstructs the printed pack weight exactly (0,05lb ×
 // 0,5 × 20 = 0,5kg) since every ammo type's singular weight_lb is exactly
 // its pack's weight_lb / pack size (verified against the bundled db).
-export function formatWeightKg(name: string, weightLb: number | null, quantity = 1): string {
+export function getWeightKg(name: string, weightLb: number | null): number {
   const override = ITEM_WEIGHT_KG_OVERRIDES[name];
-  const kgPerUnit = override ? Number(override.replace(',', '.')) : weightLb == null ? 0 : weightLb * 0.5;
-  const kg = kgPerUnit * quantity;
+  return override ? Number(override.replace(',', '.')) : weightLb == null ? 0 : weightLb * 0.5;
+}
+
+export function formatWeightKg(name: string, weightLb: number | null, quantity = 1): string {
+  const kg = getWeightKg(name, weightLb) * quantity;
 
   if (quantity !== 1) {
     // A stack's total can land exactly on a value the 1-decimal-primary
@@ -226,6 +234,7 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict, quantity
       name,
       properties: buildWeaponProperties(row),
       weight: formatWeightKg(row.name, row.weight_lb),
+      weightKg: getWeightKg(row.name, row.weight_lb),
       damageDice: formatDamageDice(row.damage),
       handedness: getWeaponHandedness(propCodes),
     };
@@ -241,6 +250,7 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict, quantity
       name,
       properties: ARMOR_TYPE_LABELS[row.type ?? ''] ?? row.type ?? undefined,
       weight: formatWeightKg(row.name, row.weight_lb),
+      weightKg: getWeightKg(row.name, row.weight_lb),
       armorClassBonus: String(armorClassBonus),
       armorSlotKind: getArmorSlotKind(row.type),
       armorWeightClass: ARMOR_WEIGHT_CLASSES[row.type ?? ''],
@@ -254,6 +264,7 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict, quantity
       name,
       properties: GENERAL_ITEM_TYPE_LABELS[row.type ?? ''] ?? row.type ?? undefined,
       weight: formatWeightKg(row.name, row.weight_lb),
+      weightKg: getWeightKg(row.name, row.weight_lb),
     };
   }
 
@@ -266,8 +277,12 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict, quantity
     // in the UI today (the StackableItemCard badge) - weight here reflects
     // the full owned stack. Weapon/armor/general above intentionally keep
     // showing a single unit's weight - see docs/TODO.md for the
-    // deferred "weapon quantity isn't shown anywhere" gap.
+    // deferred "weapon quantity isn't shown anywhere" gap. weightKg stays
+    // per-unit regardless (unlike `weight`) - callers that need a stack's
+    // total (e.g. the carrying-capacity bar) multiply by the owned
+    // quantity themselves, same as every other category.
     weight: formatWeightKg(row.name, row.weight_lb, quantity),
+    weightKg: getWeightKg(row.name, row.weight_lb),
     defaultQuantity: String(getSingleItemPackContents(row.details)?.quantity ?? 1),
   };
 }
