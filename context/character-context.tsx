@@ -237,7 +237,10 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
         inventoryItems: {
           ...state.inventoryItems,
           [action.id]: {
-            ...(state.inventoryItems[action.id] ?? { quantity: '1' }),
+            // Fallback shouldn't be reachable in practice - every inventory
+            // instance is created up front by assembleCharacter, so the UI
+            // only ever dispatches ids that already exist in state.
+            ...(state.inventoryItems[action.id] ?? { itemId: action.id, quantity: '1' }),
             quantity: action.value,
           },
         },
@@ -256,7 +259,7 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
 
       const current = inventoryItems[id];
       inventoryItems[id] = {
-        ...(current ?? { quantity: '1' }),
+        ...(current ?? { itemId: id, quantity: '1' }),
         weaponSlot: slot === 'none' ? undefined : slot,
       };
 
@@ -276,7 +279,7 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
 
       const current = inventoryItems[id];
       inventoryItems[id] = {
-        ...(current ?? { quantity: '1' }),
+        ...(current ?? { itemId: id, quantity: '1' }),
         armorSlot: slot === 'none' ? undefined : slot,
       };
 

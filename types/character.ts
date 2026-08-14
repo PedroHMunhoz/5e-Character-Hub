@@ -87,6 +87,12 @@ export type WeaponSlot = 'main' | 'off' | 'twoHanded';
 export type ArmorSlot = 'body' | 'shield';
 
 export interface InventoryItemState {
+  // Catalog reference (itemKey() - see data/queries/equipment-lookup.ts).
+  // The dictionary key this state lives under (CharacterSheet.inventoryItems)
+  // is an opaque per-instance id instead, so two physical copies of the same
+  // catalog item (e.g. 2x Dagger) can each carry their own weaponSlot/
+  // armorSlot and be equipped independently (dual-wield).
+  itemId: string;
   quantity: string;
   weaponSlot?: WeaponSlot;
   armorSlot?: ArmorSlot;

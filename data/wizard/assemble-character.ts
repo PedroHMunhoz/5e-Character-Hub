@@ -9,6 +9,7 @@ import { ABILITIES, SKILLS } from '@/constants/character';
 import { SPELLCASTING_RULES } from '@/constants/spellcasting';
 import { getSubraceDisplayName } from '@/constants/subrace-names';
 import { getBackgroundById } from '@/data/queries/backgrounds';
+import { getBaseItemCategoriesByIds } from '@/data/queries/base-items';
 import { getClassById, getClassEnglishName, getSubclassById } from '@/data/queries/classes';
 import { itemKey } from '@/data/queries/equipment-lookup';
 import { getOptionalFeatureById } from '@/data/queries/optional-features';
@@ -144,7 +145,57 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   // 'categoryChoice'/'unresolved' entries (shouldn't happen - the
   // equipment step gates on full resolution) are skipped rather than
   // guessed at.
+  //
+  // Weapon/armor grants (base_items only - see getBaseItemCategoriesByIds)
+  // are non-stackable: each unit becomes its own inventoryItems row (its own
+  // future weaponSlot/armorSlot), so e.g. 2x Handaxe from a class's starting
+  // equipment shows as two separate items the player can dual-wield, instead
+  // of collapsing into one row with quantity "2" and a single equip slot.
+  // Everything else (consumables, general gear) still sums into one row per
+  // catalog item, same as before.
+  const baseItemIdsToCategorize = new Set<number>();
+  for (const entry of draft.chosenEquipment) {
+    if (entry.kind !== 'item') continue;
+    if (entry.packContents) {
+      for (const sub of entry.packContents) {
+        if (sub.source === 'base_items') baseItemIdsToCategorize.add(sub.itemId);
+      }
+    } else if (entry.source === 'base_items') {
+      baseItemIdsToCategorize.add(entry.itemId);
+    }
+  }
+  const categoriesById = await getBaseItemCategoriesByIds(db, [...baseItemIdsToCategorize]);
+
+  function isNonStackable(source: 'base_items' | 'items', id: number): boolean {
+    if (source !== 'base_items') return false;
+    const category = categoriesById.get(id);
+    return category === 'weapon' || category === 'armor';
+  }
+
   const inventoryItems: Record<string, InventoryItemState> = {};
+  // Tracks the single instance row for each stackable catalog item, so
+  // repeated grants of the same stackable item keep summing into it instead
+  // of creating duplicate rows.
+  const stackInstanceByKey = new Map<string, string>();
+
+  function addStackable(key: string, quantity: number) {
+    const existingId = stackInstanceByKey.get(key);
+    if (existingId) {
+      const existing = inventoryItems[existingId];
+      inventoryItems[existingId] = { ...existing, quantity: String(Number(existing.quantity) + quantity) };
+      return;
+    }
+    const instanceId = randomId('item');
+    inventoryItems[instanceId] = { itemId: key, quantity: String(quantity) };
+    stackInstanceByKey.set(key, instanceId);
+  }
+
+  function addNonStackable(key: string, quantity: number) {
+    for (let i = 0; i < quantity; i++) {
+      inventoryItems[randomId('item')] = { itemId: key, quantity: '1' };
+    }
+  }
+
   let goldFromEquipment = 0;
   for (const entry of draft.chosenEquipment) {
     // Bare currency grant with no item at all (e.g. Eremita's "5 gp",
@@ -158,24 +209,19 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
     if (entry.kind !== 'item') continue;
     // A multi-item equipment pack (Explorer's Pack, ...) never becomes an
     // inventory row itself - grant its resolved contents instead (see
-    // ResolvedEquipmentEntry.packContents / equipment-resolver.ts). Sum
-    // rather than overwrite, same as the plain-item case below, since a pack
-    // content item can collide with something already granted elsewhere.
+    // ResolvedEquipmentEntry.packContents / equipment-resolver.ts).
     if (entry.packContents) {
       for (const sub of entry.packContents) {
         const subKey = itemKey(sub.source, sub.itemId);
-        const existingSubQuantity = Number(inventoryItems[subKey]?.quantity ?? 0);
-        inventoryItems[subKey] = { quantity: String(existingSubQuantity + sub.quantity) };
+        if (isNonStackable(sub.source, sub.itemId)) addNonStackable(subKey, sub.quantity);
+        else addStackable(subKey, sub.quantity);
       }
       if (entry.containsValueCp) goldFromEquipment += entry.containsValueCp / 100;
       continue;
     }
     const key = itemKey(entry.source, entry.itemId);
-    // Sum rather than overwrite - the same item can be granted by more than
-    // one resolved entry (e.g. an exploded ammo pack matching an item
-    // already granted elsewhere), and the totals should add up.
-    const existingQuantity = Number(inventoryItems[key]?.quantity ?? 0);
-    inventoryItems[key] = { quantity: String(existingQuantity + entry.quantity) };
+    if (isNonStackable(entry.source, entry.itemId)) addNonStackable(key, entry.quantity);
+    else addStackable(key, entry.quantity);
     if (entry.containsValueCp) goldFromEquipment += entry.containsValueCp / 100;
   }
 

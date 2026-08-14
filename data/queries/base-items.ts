@@ -140,6 +140,27 @@ export function categorize(type: string | null): CuratedItemCategory {
   return 'consumable';
 }
 
+// Lightweight category lookup (no translations/weight/etc.) - used by
+// assemble-character.ts to decide whether a granted item is stackable
+// (consumable/general - sum into one inventory row) or not (weapon/armor -
+// one inventory row per physical unit, so e.g. 2x Dagger can be dual-wielded
+// instead of collapsing into a single quantity:2 row with only one
+// weaponSlot). Armor/weapons only ever live in base_items in this app's
+// model (see hooks/use-equipped-armor.ts), so `items`-table grants never
+// need this.
+export async function getBaseItemCategoriesByIds(
+  db: SQLiteDatabase,
+  ids: number[]
+): Promise<Map<number, CuratedItemCategory>> {
+  if (ids.length === 0) return new Map();
+  const placeholders = ids.map(() => '?').join(', ');
+  const rows = await db.getAllAsync<{ id: number; type: string | null }>(
+    `SELECT id, type FROM base_items WHERE id IN (${placeholders})`,
+    ...ids
+  );
+  return new Map(rows.map((row) => [row.id, categorize(row.type)]));
+}
+
 // Short display label for 'general' items (tools, instruments, spellcasting
 // foci) - these aren't stackable consumables, so they don't get a
 // "Munição"-style properties tag. Classification verified against

@@ -110,10 +110,15 @@ export default function ItemDetailScreen() {
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
   const [pendingSlot, setPendingSlot] = useState<WeaponSlotValue | null>(null);
 
-  const ownedQuantity = character.inventoryItems[id]?.quantity ?? '1';
+  // The route param is always an inventory instance id now - the catalog
+  // reference lives in its state's itemId (see types/character.ts's
+  // InventoryItemState).
+  const inventoryState = character.inventoryItems[id];
+  const ownedQuantity = inventoryState?.quantity ?? '1';
 
   useEffect(() => {
-    const parsed = parseItemKey(id);
+    if (!inventoryState) return;
+    const parsed = parseItemKey(inventoryState.itemId);
     let cancelled = false;
 
     async function load() {
@@ -137,9 +142,9 @@ export default function ItemDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [db, id, ownedQuantity]);
+  }, [db, inventoryState, ownedQuantity]);
 
-  if (loading || !item) {
+  if (loading || !item || !inventoryState) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={goldColor} />
@@ -147,12 +152,7 @@ export default function ItemDetailScreen() {
     );
   }
 
-  // The route param, not `String(item.id)` - for an `items`-table row that
-  // would drop the `item:` namespace prefix (see parseItemKey in
-  // equipment-lookup.ts) and could collide with a base_items id of the same
-  // number, pointing inventory reads/writes at the wrong catalog entry.
   const itemId = id;
-  const inventoryState = character.inventoryItems[itemId];
   const selectedProperty = selectedPropertyCode ? propertyDetails.get(selectedPropertyCode) : undefined;
   const selectedPropertyRangeDetail =
     item.category === 'weapon' && (selectedPropertyCode === 'A' || selectedPropertyCode === 'T')

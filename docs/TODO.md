@@ -183,23 +183,25 @@ usuário).
   (texto livre do livro, sem linha correspondente em `base_items`/`items`)
   aparecem na tela do wizard mas `InventoryItemState` exige um id de item
   válido — não há hoje um jeito de guardar "item avulso sem id" na ficha.
-- **Quantidade de arma/armadura não aparece em lugar nenhum da UI.**
-  Achado ao vivo: Guerreiro com "2x machadinhas" (equipamento inicial do
-  Lutador em Duelo) — `character.inventoryItems[handaxeKey].quantity` já
-  fica `'2'` corretamente (resolver + soma da explosão de pack cobrem isso),
-  mas `EquipmentItemCard` (usado pelas seções `weapon`/`armor` de
-  `character-inventory.tsx`) não tem prop de quantidade — só
-  `StackableItemCard` (`consumable`) mostra um badge. Discutido com o
-  usuário 2 abordagens, ambas adiadas por enquanto:
-  1. Empilhar (1 card, badge "×2", como consumível) — mudança pequena, mas
-     `weaponSlot` continua sendo 1 só por registro, então não dá pra
-     equipar 1 na mão principal e outra na secundária de verdade.
-  2. Itens separados (cada machadinha com seu próprio registro/weaponSlot,
-     permitindo dual-wield real) — exige remodelar `inventoryItems` de
-     `Record<itemId, InventoryItemState>` pra algo com múltiplas instâncias
-     por item de catálogo; mexe em `types/character.ts`, no reducer de
-     `context/character-context.tsx`, na tela de item e na lista do
-     inventário.
+- ~~Quantidade de arma/armadura não aparece em lugar nenhum da UI~~ —
+  **implementado (abordagem 2, itens separados)**: `inventoryItems` deixou
+  de ser `Record<itemKey, InventoryItemState>` e virou `Record<instanceId,
+  InventoryItemState>` — cada registro é uma unidade física, com
+  `InventoryItemState.itemId` guardando a referência de catálogo
+  (`types/character.ts`). `assemble-character.ts` agora consulta
+  `getBaseItemCategoriesByIds` (`data/queries/base-items.ts`) e, pra
+  arma/armadura (não-stackável), cria uma instância por unidade concedida em
+  vez de somar quantidade num registro só — 2x Machadinha vira 2 cards na
+  Mochila, cada um com seu próprio `weaponSlot`, permitindo dual-wield real.
+  Itens empilháveis (consumível/geral) continuam somando numa instância só,
+  como antes. `character-inventory.tsx`, a tela de detalhe de item
+  (`app/sheet/[characterId]/item/[id].tsx`) e `hooks/use-equipped-armor.ts`
+  passaram a navegar/ler pelo id de instância, resolvendo o catálogo via
+  `state.itemId`. Saves antigos (sem `itemId`) recebem uma migração de forma
+  na leitura (`data/queries/player-characters.ts`) que evita crash mas não
+  separa retroativamente uma pilha antiga de arma/armadura em instâncias —
+  personagens de teste já criados antes dessa mudança precisam ser apagados
+  e recriados pra ganhar o comportamento novo.
 - ~~Colisão de id entre `base_items` e `items`~~ — **corrigido**: as duas
   tabelas têm ids autoincrementais independentes e algumas linhas realmente
   colidem (ex. id 18 = "Chain Mail" em `base_items` e "+2 Moon Sickle" em

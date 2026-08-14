@@ -15,12 +15,12 @@ export function useEquippedArmor(): EquippedArmorItem[] {
     let cancelled = false;
 
     // Armor only ever comes from base_items in this app's model (armor/
-    // shield rows all live there, never in `items`), so equipped-armor keys
-    // are always the bare, unprefixed form - see data/queries/equipment-
-    // lookup.ts's itemKey.
-    const equippedBaseItemIds = Object.entries(character.inventoryItems)
-      .filter(([, state]) => state.armorSlot != null)
-      .map(([key]) => parseItemKey(key))
+    // shield rows all live there, never in `items`). inventoryItems keys are
+    // opaque per-instance ids now - the catalog reference lives in
+    // state.itemId (see data/queries/equipment-lookup.ts's itemKey).
+    const equippedBaseItemIds = Object.values(character.inventoryItems)
+      .filter((state) => state.armorSlot != null)
+      .map((state) => parseItemKey(state.itemId))
       .filter((parsed) => parsed.source === 'base_items')
       .map((parsed) => parsed.id);
 

@@ -56,45 +56,62 @@ export function CharacterInventory() {
   const [shieldConfirm, setShieldConfirm] = useState<{ id: string; slot: WeaponSlot } | null>(null);
   const goldColor = useThemeColor({}, 'gold');
 
-  const inventoryKeys = useMemo(() => Object.keys(character.inventoryItems), [character.inventoryItems]);
+  // [instanceId, state][] - one entry per physical inventory row. Weapon/
+  // armor grants get one instance per unit (see assemble-character.ts), so
+  // this naturally yields one card per copy instead of collapsing duplicates.
+  const inventoryEntries = useMemo(() => Object.entries(character.inventoryItems), [character.inventoryItems]);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const baseItemIds: number[] = [];
-      const itemIds: number[] = [];
+      const baseItemIds = new Set<number>();
+      const itemIds = new Set<number>();
       const quantityById = new Map<number, number>();
       const itemsQuantityById = new Map<number, number>();
-      for (const key of inventoryKeys) {
-        const parsed = parseItemKey(key);
-        (parsed.source === 'base_items' ? baseItemIds : itemIds).push(parsed.id);
-        const quantity = Number(character.inventoryItems[key]?.quantity ?? '1') || 1;
-        if (parsed.source === 'base_items') quantityById.set(parsed.id, quantity);
-        else itemsQuantityById.set(parsed.id, quantity);
+      for (const [, state] of inventoryEntries) {
+        const parsed = parseItemKey(state.itemId);
+        const quantity = Number(state.quantity ?? '1') || 1;
+        if (parsed.source === 'base_items') {
+          baseItemIds.add(parsed.id);
+          quantityById.set(parsed.id, quantity);
+        } else {
+          itemIds.add(parsed.id);
+          itemsQuantityById.set(parsed.id, quantity);
+        }
       }
 
       // Sequential, not Promise.all: overlapping queries on the same
       // SQLiteDatabase connection can crash on native (see data/queries/spells.ts).
-      const baseItems = await getBaseItemsByIds(db, baseItemIds, quantityById);
+      const baseItems = await getBaseItemsByIds(db, [...baseItemIds], quantityById);
       if (cancelled) return;
-      const generalItems = await getItemsByIds(db, itemIds);
+      const generalItems = await getItemsByIds(db, [...itemIds]);
       if (cancelled) return;
 
-      const display: DisplayItem[] = [
-        ...baseItems.map((item) => ({ ...item, key: String(item.id), navigable: true })),
-        ...generalItems.map((item) => {
-          const quantity = item.category === 'consumable' ? (itemsQuantityById.get(item.id) ?? 1) : 1;
-          return {
-            key: `item:${item.id}`,
+      const baseItemById = new Map(baseItems.map((item) => [item.id, item]));
+      const generalItemById = new Map(generalItems.map((item) => [item.id, item]));
+
+      const display: DisplayItem[] = [];
+      for (const [instanceId, state] of inventoryEntries) {
+        const parsed = parseItemKey(state.itemId);
+        if (parsed.source === 'base_items') {
+          const def = baseItemById.get(parsed.id);
+          if (!def) continue;
+          display.push({ ...def, key: instanceId, navigable: true });
+        } else {
+          const def = generalItemById.get(parsed.id);
+          if (!def) continue;
+          const quantity = def.category === 'consumable' ? (itemsQuantityById.get(def.id) ?? 1) : 1;
+          display.push({
+            key: instanceId,
             navigable: true,
-            id: item.id,
-            category: item.category,
-            name: item.name,
-            weight: formatWeightKg(item.name, item.weightLb, quantity),
-            weightKg: getWeightKg(item.name, item.weightLb),
-          };
-        }),
-      ];
+            id: def.id,
+            category: def.category,
+            name: def.name,
+            weight: formatWeightKg(def.name, def.weightLb, quantity),
+            weightKg: getWeightKg(def.name, def.weightLb),
+          });
+        }
+      }
       setItems(display);
       setLoading(false);
     }
@@ -102,7 +119,7 @@ export function CharacterInventory() {
     return () => {
       cancelled = true;
     };
-  }, [db, inventoryKeys]);
+  }, [db, inventoryEntries]);
 
   const sections = useMemo(
     () =>
@@ -163,15 +180,13 @@ export function CharacterInventory() {
           <CollapsibleSection key={section.key} title={section.label}>
             <View style={styles.cardList}>
               {section.items.map((item) => {
-                const itemId = String(item.id);
-
                 if (section.category === 'weapon' || section.category === 'armor') {
                   const isWeapon = section.category === 'weapon';
                   return (
                     <Pressable
-                      key={itemId}
+                      key={item.key}
                       onPress={() =>
-                        router.push({ pathname: '/sheet/[characterId]/item/[id]', params: { characterId: character.id, id: itemId } })
+                        router.push({ pathname: '/sheet/[characterId]/item/[id]', params: { characterId: character.id, id: item.key } })
                       }
                     >
                       <EquipmentItemCard
@@ -182,19 +197,19 @@ export function CharacterInventory() {
                         statIcon={isWeapon ? 'sword' : 'shield'}
                         equipped={
                           isWeapon
-                            ? character.inventoryItems[itemId]?.weaponSlot != null
-                            : character.inventoryItems[itemId]?.armorSlot != null
+                            ? character.inventoryItems[item.key]?.weaponSlot != null
+                            : character.inventoryItems[item.key]?.armorSlot != null
                         }
                         onToggleEquipped={() => {
                           if (isWeapon) {
-                            const outcome = toggleWeaponEquipped(itemId, item.handedness ?? 'oneHanded');
+                            const outcome = toggleWeaponEquipped(item.key, item.handedness ?? 'oneHanded');
                             if (outcome.kind === 'blocked') setBlockedMessage(outcome.message);
                             else if (outcome.kind === 'confirmShieldUnequip') {
-                              setShieldConfirm({ id: itemId, slot: outcome.slot });
+                              setShieldConfirm({ id: item.key, slot: outcome.slot });
                             }
                             return;
                           }
-                          const message = toggleArmorEquipped(itemId, item.armorSlotKind ?? 'body');
+                          const message = toggleArmorEquipped(item.key, item.armorSlotKind ?? 'body');
                           if (message) setBlockedMessage(message);
                         }}
                       />

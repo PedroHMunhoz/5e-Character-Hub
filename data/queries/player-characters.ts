@@ -2,6 +2,20 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { CharacterSheet, CharacterSummary } from '@/types/character';
 
+// Backward-compat for saves written before inventoryItems became instance-
+// keyed (see types/character.ts's InventoryItemState.itemId): legacy rows
+// were keyed directly by the catalog item key, with no `itemId` field.
+// Backfills the shape so old saves keep loading instead of crashing - does
+// NOT retroactively split a legacy quantity>1 weapon/armor row into separate
+// instances (see docs/TODO.md).
+function migrateInventoryItems(items: CharacterSheet['inventoryItems']): CharacterSheet['inventoryItems'] {
+  const result: CharacterSheet['inventoryItems'] = {};
+  for (const [key, state] of Object.entries(items ?? {})) {
+    result[key] = 'itemId' in state && state.itemId ? state : { ...state, itemId: key };
+  }
+  return result;
+}
+
 interface PlayerCharacterRow {
   id: string;
   name: string;
@@ -34,7 +48,9 @@ export async function getAllCharacterSummaries(db: SQLiteDatabase): Promise<Char
 
 export async function getCharacterById(db: SQLiteDatabase, id: string): Promise<CharacterSheet | null> {
   const row = await db.getFirstAsync<PlayerCharacterRow>('SELECT * FROM player_characters WHERE id = ?', id);
-  return row ? (JSON.parse(row.sheet_json) as CharacterSheet) : null;
+  if (!row) return null;
+  const character = JSON.parse(row.sheet_json) as CharacterSheet;
+  return { ...character, inventoryItems: migrateInventoryItems(character.inventoryItems) };
 }
 
 export async function createCharacter(db: SQLiteDatabase, character: CharacterSheet): Promise<void> {
