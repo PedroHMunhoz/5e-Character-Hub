@@ -41,6 +41,10 @@ export interface Skill {
 
 export interface ToolState {
   proficient: boolean;
+  // Doubles the proficiency bonus for this tool (e.g. Rogue's "Expertise"
+  // class feature at level 1, swapping one of the two skill picks for
+  // thieves' tools). Only meaningful when `proficient` is true.
+  expertise: boolean;
 }
 
 export interface HitPoints {

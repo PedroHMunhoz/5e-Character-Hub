@@ -131,12 +131,16 @@ export function CharacterAttributes() {
       };
     }
 
-    const proficient = character.tools[field.key]?.proficient ?? false;
+    const toolState = character.tools[field.key];
+    const proficient = toolState?.proficient ?? false;
+    const expertise = toolState?.expertise ?? false;
+    const multiplier = getProficiencyMultiplier(proficient, expertise);
+    const note = !proficient ? 'Não proficiente' : expertise ? 'Especialização (bônus dobrado)' : undefined;
     return {
       title: field.label,
-      rows: [{ label: 'Proficiente', value: proficient ? 'Sim' : 'Não' }],
+      rows: [{ label: 'Proficiente', value: proficient ? 'Sim' : 'Não', note }],
       totalLabel: 'Bônus de Proficiência',
-      totalValue: formatSignedModifier(proficient ? (proficiencyBonus ?? 0) : 0),
+      totalValue: formatSignedModifier(multiplier > 0 ? (proficiencyBonus ?? 0) * multiplier : 0),
     };
   }
 
@@ -236,7 +240,11 @@ export function CharacterAttributes() {
             const key = itemKey(item.source, item.id);
             return (
               <Pressable key={key} onPress={() => setOpenField({ type: 'tool', key, label: item.name })}>
-                <ToolRow label={item.name} proficient={character.tools[key]?.proficient ?? false} />
+                <ToolRow
+                  label={item.name}
+                  proficient={character.tools[key]?.proficient ?? false}
+                  expertise={character.tools[key]?.expertise ?? false}
+                />
               </Pressable>
             );
           })

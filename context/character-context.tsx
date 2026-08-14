@@ -201,7 +201,10 @@ function characterReducer(state: CharacterSheet, action: Action): CharacterSheet
         ...state,
         tools: {
           ...state.tools,
-          [action.id]: { proficient: !(state.tools[action.id]?.proficient ?? false) },
+          [action.id]: {
+            proficient: !(state.tools[action.id]?.proficient ?? false),
+            expertise: state.tools[action.id]?.expertise ?? false,
+          },
         },
       };
     case 'SET_SPEED':

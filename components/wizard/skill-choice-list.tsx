@@ -36,7 +36,7 @@ export function SkillChoiceList({ clause, selected, onChange }: SkillChoiceListP
   return (
     <View style={styles.container}>
       <ThemedText style={styles.hint}>
-        Escolha {clause.count} perícias ({selected.length}/{clause.count})
+        Escolha {clause.count} {clause.count === 1 ? 'perícia' : 'perícias'} ({selected.length}/{clause.count})
       </ThemedText>
       {sortedKeys.map((key) => {
         const isSelected = selected.includes(key);

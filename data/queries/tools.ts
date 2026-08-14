@@ -81,3 +81,13 @@ export async function getToolItemsByCategory(db: SQLiteDatabase, category: ToolC
   const all = await getAllToolItems(db);
   return all.filter((item) => item.category === category);
 }
+
+// Looks up a specific tool by its raw English name (e.g. "thieves' tools")
+// rather than category - used where a rule cares about one exact tool
+// instead of "any artisan's tool"/"any gaming set" (e.g. Rogue's Expertise,
+// which can only swap a skill pick for thieves' tools specifically).
+export async function getToolItemByEnglishName(db: SQLiteDatabase, englishName: string): Promise<ToolItem | null> {
+  const all = await getAllToolItems(db);
+  const target = englishName.toLowerCase();
+  return all.find((item) => item.englishName.toLowerCase() === target) ?? null;
+}

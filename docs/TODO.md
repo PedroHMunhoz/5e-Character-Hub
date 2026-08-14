@@ -78,10 +78,21 @@ usuário).
   travados fora do wizard de criação. O mesmo padrão (travado + modal de
   detalhamento) também foi aplicado a testes de resistência, perícias e
   ferramentas, não só atributos.
-- **Alternativa de Especialização do Ladino "1 perícia + proficiência em
-  ferramentas de ladino"** (em vez de "2 perícias"). O modelo `tools` já
-  fica próximo o bastante de `Skill` para ganhar `expertise` no futuro sem
-  retrabalho, mas essa interação específica não é construída agora.
+- ~~Alternativa de Especialização do Ladino "1 perícia + proficiência em
+  ferramentas de ladino" (em vez de "2 perícias")~~ — **implementado**:
+  `ToolState` (`types/character.ts`) ganhou `expertise: boolean`, igual a
+  `Skill`. No passo 4 do wizard (`app/wizard/background.tsx`), quando o
+  personagem tem proficiência em ferramentas de ladrão (classe e/ou
+  antecedente, detectado via `getToolItemByEnglishName` em
+  `data/queries/tools.ts`), aparece um checkbox que troca uma das duas
+  perícias de Especialização pela ferramenta (`WizardDraft.
+  expertiseToolChoice`, guarda a `itemKey()` da ferramenta escolhida);
+  `data/wizard/assemble-character.ts` grava o `expertise: true`
+  correspondente em `character.tools`. Na ficha, `ToolRow`
+  (`components/character/tool-row.tsx`) passou a usar
+  `SkillProficiencyToggle` (mesmo componente 3-estados de perícia) em vez de
+  um checkbox simples, e o modal de detalhamento em
+  `character-attributes.tsx` dobra o bônus de proficiência quando aplicável.
 - **Compra efetiva de itens com o PO** da opção B do passo de Equipamento —
   pedido explícito do usuário para ficar para depois ("posteriormente
   comprar os itens").

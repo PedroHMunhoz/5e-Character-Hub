@@ -134,7 +134,9 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   // track proficiency against (see docs/TODO.md).
   const tools: Record<string, ToolState> = {};
   for (const entry of draft.toolProficiencies) {
-    if (entry.kind === 'item') tools[itemKey(entry.source, entry.itemId)] = { proficient: true };
+    if (entry.kind !== 'item') continue;
+    const key = itemKey(entry.source, entry.itemId);
+    tools[key] = { proficient: true, expertise: key === draft.expertiseToolChoice };
   }
 
   // Inventory: resolved entirely by the equipment step. 'special' flavor

@@ -53,6 +53,10 @@ export interface WizardDraft {
   // whenever needed, same as fixed ability bonuses.
   raceSkillChoices: SkillKey[];
   expertiseSkillChoices: SkillKey[];
+  // itemKey() of the tool swapped in for one of the two Expertise skill
+  // picks (RAW: "one skill proficiency and your proficiency with thieves'
+  // tools" - Rogue only). Null when both picks are ordinary skills.
+  expertiseToolChoice: string | null;
   // Resolved tool grants (fixed + player-picked category choices), see
   // data/wizard/tool-proficiency-resolver.ts.
   toolProficiencies: ResolvedEquipmentEntry[];
@@ -88,6 +92,7 @@ const initialDraft: WizardDraft = {
   classSkillChoices: [],
   raceSkillChoices: [],
   expertiseSkillChoices: [],
+  expertiseToolChoice: null,
   toolProficiencies: [],
   // Defaults to 'starting' (not null) - the equipment step already renders
   // the class/background equipment section by default (the "gold" tab only
@@ -114,6 +119,7 @@ type Action =
   | { type: 'SET_CLASS_SKILL_CHOICES'; keys: SkillKey[] }
   | { type: 'SET_RACE_SKILL_CHOICES'; keys: SkillKey[] }
   | { type: 'SET_EXPERTISE_SKILL_CHOICES'; keys: SkillKey[] }
+  | { type: 'SET_EXPERTISE_TOOL_CHOICE'; key: string | null }
   | { type: 'SET_TOOL_PROFICIENCIES'; entries: ResolvedEquipmentEntry[] }
   | { type: 'SET_EQUIPMENT_MODE'; mode: EquipmentMode | null }
   | { type: 'SET_CHOSEN_EQUIPMENT'; entries: ResolvedEquipmentEntry[] }
@@ -159,6 +165,8 @@ function wizardReducer(state: WizardDraft, action: Action): WizardDraft {
       return { ...state, raceSkillChoices: action.keys };
     case 'SET_EXPERTISE_SKILL_CHOICES':
       return { ...state, expertiseSkillChoices: action.keys };
+    case 'SET_EXPERTISE_TOOL_CHOICE':
+      return { ...state, expertiseToolChoice: action.key };
     case 'SET_TOOL_PROFICIENCIES':
       return { ...state, toolProficiencies: action.entries };
     case 'SET_EQUIPMENT_MODE':
@@ -193,6 +201,7 @@ export interface WizardContextValue {
   setClassSkillChoices: (keys: SkillKey[]) => void;
   setRaceSkillChoices: (keys: SkillKey[]) => void;
   setExpertiseSkillChoices: (keys: SkillKey[]) => void;
+  setExpertiseToolChoice: (key: string | null) => void;
   setToolProficiencies: (entries: ResolvedEquipmentEntry[]) => void;
   setEquipmentMode: (mode: EquipmentMode | null) => void;
   setChosenEquipment: (entries: ResolvedEquipmentEntry[]) => void;
@@ -223,6 +232,7 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       setClassSkillChoices: (keys) => dispatch({ type: 'SET_CLASS_SKILL_CHOICES', keys }),
       setRaceSkillChoices: (keys) => dispatch({ type: 'SET_RACE_SKILL_CHOICES', keys }),
       setExpertiseSkillChoices: (keys) => dispatch({ type: 'SET_EXPERTISE_SKILL_CHOICES', keys }),
+      setExpertiseToolChoice: (key) => dispatch({ type: 'SET_EXPERTISE_TOOL_CHOICE', key }),
       setToolProficiencies: (entries) => dispatch({ type: 'SET_TOOL_PROFICIENCIES', entries }),
       setEquipmentMode: (mode) => dispatch({ type: 'SET_EQUIPMENT_MODE', mode }),
       setChosenEquipment: (entries) => dispatch({ type: 'SET_CHOSEN_EQUIPMENT', entries }),

@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
+import { CheckboxToggle } from '@/components/character/checkbox-toggle';
 import { SelectField } from '@/components/character/select-field';
 import { SkillChoiceList } from '@/components/wizard/skill-choice-list';
 import { ToolChoiceList } from '@/components/wizard/tool-choice-list';
@@ -12,8 +13,9 @@ import { SKILLS } from '@/constants/character';
 import { useWizardDraft } from '@/context/wizard-context';
 import { classGrantsExpertiseAtLevel1, getClassById } from '@/data/queries/classes';
 import { getAllBackgrounds } from '@/data/queries/backgrounds';
+import { itemKey } from '@/data/queries/equipment-lookup';
 import { getRaceById } from '@/data/queries/races';
-import type { ToolItem } from '@/data/queries/tools';
+import { getToolItemByEnglishName, type ToolItem } from '@/data/queries/tools';
 import type { ResolvedEquipmentEntry } from '@/data/wizard/equipment-resolver';
 import { parseBackgroundSkillProficiencies, parseClassSkillChoice, type SkillChoiceClause } from '@/data/wizard/skill-proficiency-resolver';
 import { resolveToolProficiencies } from '@/data/wizard/tool-proficiency-resolver';
@@ -25,11 +27,16 @@ import type { Background, CharacterClassDefinition, Race } from '@/types/referen
 const LABEL_BY_SKILL_KEY = Object.fromEntries(SKILLS.map((skill) => [skill.key, skill.label])) as Record<SkillKey, string>;
 
 // The only PHB class whose level-1 "Expertise" text specifies a count -
-// always "choose two of your skill proficiencies" (Rogue). No other class
-// matches this pattern at level 1 (Bard's Expertise starts at level 3, out
-// of scope for a level-1 wizard), so this is safe to fix rather than parse
-// out of prose.
+// always "choose two of your skill proficiencies, or one of your skill
+// proficiencies and your proficiency with thieves' tools" (Rogue). No other
+// class matches this pattern at level 1 (Bard's Expertise starts at level 3,
+// out of scope for a level-1 wizard). The thieves'-tools swap (below) drops
+// the required skill count from this total to `EXPERTISE_CHOICE_COUNT - 1`.
 const EXPERTISE_CHOICE_COUNT = 2;
+
+// Only exact-match tool proficiency the level-1 Expertise text allows
+// swapping a skill pick for - never "any tool" in general.
+const EXPERTISE_TOOL_ENGLISH_NAME = "thieves' tools";
 
 // Class and background tool grants are resolved independently and then
 // concatenated - if both happen to grant the same tool (e.g. a Rogue with
@@ -56,6 +63,7 @@ export default function WizardBackgroundStep() {
     setClassSkillChoices,
     setRaceSkillChoices,
     setExpertiseSkillChoices,
+    setExpertiseToolChoice,
     setToolProficiencies,
   } = useWizardDraft();
   const goldColor = useThemeColor({}, 'gold');
@@ -66,11 +74,23 @@ export default function WizardBackgroundStep() {
   const [subrace, setSubrace] = useState<Race | null>(null);
   const [expertiseAllowed, setExpertiseAllowed] = useState(false);
   const [toolEntries, setToolEntries] = useState<ResolvedEquipmentEntry[] | null>(null);
+  const [expertiseToolItem, setExpertiseToolItem] = useState<ToolItem | null>(null);
 
   const [classSkillSelected, setClassSkillSelected] = useState<SkillKey[]>(draft.classSkillChoices);
   const [raceSkillSelected, setRaceSkillSelected] = useState<SkillKey[]>(draft.raceSkillChoices);
   const [expertiseSelected, setExpertiseSelected] = useState<SkillKey[]>(draft.expertiseSkillChoices);
+  const [expertiseUsesTool, setExpertiseUsesTool] = useState<boolean>(draft.expertiseToolChoice !== null);
   const [toolCategoryChoices, setToolCategoryChoices] = useState<Record<string, ToolItem>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    getToolItemByEnglishName(db, EXPERTISE_TOOL_ENGLISH_NAME).then((item) => {
+      if (!cancelled) setExpertiseToolItem(item);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [db]);
 
   useEffect(() => {
     let cancelled = false;
@@ -199,6 +219,29 @@ export default function WizardBackgroundStep() {
     [backgroundSkills, raceSkills, classSkillSelected, raceSkillSelected]
   );
 
+  // Whether the character actually has thieves' tools proficiency (from
+  // class and/or background) - only then can Expertise swap a skill pick for
+  // it. Checked against `toolEntries` (fixed grants, already resolved
+  // regardless of any pending categoryChoice) rather than `finalToolEntries`,
+  // since thieves' tools is never granted via an "any artisan's tool"-style
+  // category choice in the PHB.
+  const hasThievesTools = useMemo(() => {
+    if (!expertiseToolItem) return false;
+    return (toolEntries ?? []).some(
+      (entry) => entry.kind === 'item' && entry.itemId === expertiseToolItem.id && entry.source === expertiseToolItem.source
+    );
+  }, [toolEntries, expertiseToolItem]);
+
+  // Guards against the same staleness issue as classSkillSelected/etc above -
+  // if the background changes and thieves' tools proficiency disappears
+  // while the swap was checked, un-check it instead of silently blocking
+  // "Próximo" on an unreachable state.
+  useEffect(() => {
+    if (!hasThievesTools) setExpertiseUsesTool(false);
+  }, [hasThievesTools]);
+
+  const requiredExpertiseSkillCount = EXPERTISE_CHOICE_COUNT - (expertiseUsesTool ? 1 : 0);
+
   const allCategoryChoicesResolved = (toolEntries ?? []).every(
     (entry, index) => entry.kind !== 'categoryChoice' || toolCategoryChoices[String(index)] != null
   );
@@ -207,9 +250,17 @@ export default function WizardBackgroundStep() {
     draft.backgroundId !== null &&
     (classSkillClause === null || classSkillSelected.length === classSkillClause.count) &&
     (raceSkillClause === null || raceSkillSelected.length === raceSkillClause.count) &&
-    (!expertiseAllowed || expertiseSelected.length === EXPERTISE_CHOICE_COUNT) &&
+    (!expertiseAllowed || expertiseSelected.length === requiredExpertiseSkillCount) &&
     toolEntries !== null &&
     allCategoryChoicesResolved;
+
+  function toggleExpertiseTool() {
+    const next = !expertiseUsesTool;
+    setExpertiseUsesTool(next);
+    if (next && expertiseSelected.length > EXPERTISE_CHOICE_COUNT - 1) {
+      setExpertiseSelected(expertiseSelected.slice(0, EXPERTISE_CHOICE_COUNT - 1));
+    }
+  }
 
   function handleNext() {
     if (!canProceed || !toolEntries) return;
@@ -224,6 +275,9 @@ export default function WizardBackgroundStep() {
     setClassSkillChoices(classSkillSelected);
     setRaceSkillChoices(raceSkillSelected);
     setExpertiseSkillChoices(expertiseSelected);
+    setExpertiseToolChoice(
+      expertiseUsesTool && expertiseToolItem ? itemKey(expertiseToolItem.source, expertiseToolItem.id) : null
+    );
     setToolProficiencies(finalToolEntries);
     router.push('/wizard/equipment');
   }
@@ -256,6 +310,7 @@ export default function WizardBackgroundStep() {
             setClassSkillSelected([]);
             setRaceSkillSelected([]);
             setExpertiseSelected([]);
+            setExpertiseUsesTool(false);
           }}
         />
 
@@ -316,8 +371,14 @@ export default function WizardBackgroundStep() {
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Especialização
             </ThemedText>
+            {hasThievesTools ? (
+              <Pressable style={styles.toolExpertiseRow} onPress={toggleExpertiseTool}>
+                <CheckboxToggle checked={expertiseUsesTool} onToggle={toggleExpertiseTool} />
+                <ThemedText style={styles.fixedEntry}>Ferramentas de Ladrão (em vez de uma perícia)</ThemedText>
+              </Pressable>
+            ) : null}
             <SkillChoiceList
-              clause={{ from: proficientSkillPool, count: EXPERTISE_CHOICE_COUNT }}
+              clause={{ from: proficientSkillPool, count: requiredExpertiseSkillCount }}
               selected={expertiseSelected}
               onChange={setExpertiseSelected}
             />
@@ -376,6 +437,12 @@ const styles = StyleSheet.create({
   },
   fixedEntry: {
     fontSize: 15,
+  },
+  toolExpertiseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 4,
   },
   footer: {
     padding: 16,
