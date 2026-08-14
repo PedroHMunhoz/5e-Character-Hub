@@ -154,6 +154,20 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
       continue;
     }
     if (entry.kind !== 'item') continue;
+    // A multi-item equipment pack (Explorer's Pack, ...) never becomes an
+    // inventory row itself - grant its resolved contents instead (see
+    // ResolvedEquipmentEntry.packContents / equipment-resolver.ts). Sum
+    // rather than overwrite, same as the plain-item case below, since a pack
+    // content item can collide with something already granted elsewhere.
+    if (entry.packContents) {
+      for (const sub of entry.packContents) {
+        const subKey = itemKey(sub.source, sub.itemId);
+        const existingSubQuantity = Number(inventoryItems[subKey]?.quantity ?? 0);
+        inventoryItems[subKey] = { quantity: String(existingSubQuantity + sub.quantity) };
+      }
+      if (entry.containsValueCp) goldFromEquipment += entry.containsValueCp / 100;
+      continue;
+    }
     const key = itemKey(entry.source, entry.itemId);
     // Sum rather than overwrite - the same item can be granted by more than
     // one resolved entry (e.g. an exploded ammo pack matching an item

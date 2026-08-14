@@ -12,8 +12,9 @@ import { SelectField, type SelectFieldOption } from '@/components/character/sele
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WEAPON_PROPERTY_LABELS, type WeaponHandedness } from '@/constants/item-codes';
+import { parseItemKey } from '@/data/queries/equipment-lookup';
 import { getItemPropertyDescriptions, type ItemPropertyDetail } from '@/data/queries/item-properties';
-import { getBaseItemDetailById, type ItemDetail } from '@/data/queries/item-detail';
+import { getBaseItemDetailById, getItemDetailById, type ItemDetail } from '@/data/queries/item-detail';
 import { formatAbilityTotal, formatSignedModifier } from '@/utils/ability-modifier';
 import { useCharacter } from '@/hooks/use-character';
 import { useCharacterClassInfo } from '@/hooks/use-character-class-info';
@@ -112,11 +113,15 @@ export default function ItemDetailScreen() {
   const ownedQuantity = character.inventoryItems[id]?.quantity ?? '1';
 
   useEffect(() => {
-    const numericId = Number(id);
+    const parsed = parseItemKey(id);
     let cancelled = false;
 
     async function load() {
-      const detail = await getBaseItemDetailById(db, numericId, Number(ownedQuantity) || 1);
+      const quantity = Number(ownedQuantity) || 1;
+      const detail =
+        parsed.source === 'base_items'
+          ? await getBaseItemDetailById(db, parsed.id, quantity)
+          : await getItemDetailById(db, parsed.id, quantity);
       if (cancelled) return;
       setItem(detail);
 
@@ -142,7 +147,11 @@ export default function ItemDetailScreen() {
     );
   }
 
-  const itemId = String(item.id);
+  // The route param, not `String(item.id)` - for an `items`-table row that
+  // would drop the `item:` namespace prefix (see parseItemKey in
+  // equipment-lookup.ts) and could collide with a base_items id of the same
+  // number, pointing inventory reads/writes at the wrong catalog entry.
+  const itemId = id;
   const inventoryState = character.inventoryItems[itemId];
   const selectedProperty = selectedPropertyCode ? propertyDetails.get(selectedPropertyCode) : undefined;
   const selectedPropertyRangeDetail =
@@ -239,6 +248,17 @@ export default function ItemDetailScreen() {
             quantity={inventoryState?.quantity ?? item.defaultQuantity}
             onQuantityChange={(value) => setItemQuantity(itemId, value)}
           />
+        ) : null}
+
+        {(item.category === 'consumable' || item.category === 'general' || item.category === 'armor') && item.entries.length > 0 ? (
+          <View style={[styles.field, styles.descriptionField, { borderColor: goldColor }]}>
+            <ThemedText style={styles.fieldLabel}>Descrição</ThemedText>
+            {item.entries.map((entry, index) => (
+              <ThemedText key={index} style={styles.descriptionParagraph}>
+                {entry}
+              </ThemedText>
+            ))}
+          </View>
         ) : null}
       </ThemedView>
 
@@ -445,6 +465,14 @@ const styles = StyleSheet.create({
   },
   propertiesField: {
     gap: 8,
+  },
+  descriptionField: {
+    gap: 8,
+  },
+  descriptionParagraph: {
+    fontSize: 14,
+    lineHeight: 20,
+    opacity: 0.85,
   },
   quantityStepper: {
     flexDirection: 'row',

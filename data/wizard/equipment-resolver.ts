@@ -52,6 +52,12 @@ export type ResolvedEquipmentEntry =
       // for every other item, including single-item packs (ammo bundles),
       // which resolve to their exploded component instead of the pack row.
       packEntries?: string[];
+      // Resolved contents of a multi-item equipment pack (Explorer's Pack,
+      // ...) - set whenever this entry's match has EquipmentLookupItem.
+      // packContents. When present, assemble-character.ts grants these
+      // items instead of the pack itself (itemId/name above still describe
+      // the pack, for display purposes only - see resolvePendingEntry).
+      packContents?: { itemId: number; source: 'base_items' | 'items'; quantity: number }[];
     }
   | {
       kind: 'categoryChoice';
@@ -314,28 +320,60 @@ function buildLookupIndex(items: EquipmentLookupItem[]): Map<string, EquipmentLo
   return index;
 }
 
+// Substitutes a single-item pack (ammo, Ball Bearings, Caltrops, Iron
+// Spikes - sold as a pack for shopping convenience only) for N of its
+// underlying component item. Falls back to the pack itself if the component
+// name didn't resolve (shouldn't happen for PHB data), so nothing is
+// silently dropped. Shared between the top-level ref (resolvePendingEntry)
+// and each item inside a multi-item pack's contents (resolvePackContentRef)
+// - the Burglar's Pack's "ball bearings (bag of 1,000)" entry is itself a
+// single-item pack, so the same substitution applies one level down.
+function substituteSingleItemPack(
+  match: EquipmentLookupItem,
+  index: Map<string, EquipmentLookupItem>
+): { resolved: EquipmentLookupItem; quantityMultiplier: number } {
+  const pack = match.singleItemPack;
+  const component = pack ? index.get(refName(pack.itemRef).toLowerCase()) : undefined;
+  return component ? { resolved: component, quantityMultiplier: pack!.quantity } : { resolved: match, quantityMultiplier: 1 };
+}
+
+function resolvePackContentRef(
+  pc: { itemRef: string; quantity: number },
+  index: Map<string, EquipmentLookupItem>
+): { itemId: number; source: 'base_items' | 'items'; quantity: number } | undefined {
+  const innerMatch = index.get(refName(pc.itemRef).toLowerCase());
+  if (!innerMatch) return undefined;
+  const { resolved, quantityMultiplier } = substituteSingleItemPack(innerMatch, index);
+  return { itemId: resolved.id, source: resolved.source, quantity: pc.quantity * quantityMultiplier };
+}
+
 function resolvePendingEntry(entry: PendingItemEntry, index: Map<string, EquipmentLookupItem>): ResolvedEquipmentEntry {
   const match = index.get(refName(entry.ref).toLowerCase());
   if (!match) return { kind: 'unresolved', raw: entry.ref };
 
-  // Packs of one repeated item (ammo, Ball Bearings, Caltrops, Iron Spikes)
-  // are sold as a pack for shopping convenience only - the character should
-  // end up with N of the underlying single item, not 1 of the pack. Falls
-  // back to granting the pack itself if the component name didn't resolve
-  // (shouldn't happen for PHB data), so nothing is silently dropped.
-  const pack = match.singleItemPack;
-  const component = pack ? index.get(refName(pack.itemRef).toLowerCase()) : undefined;
-  const resolved = component ?? match;
+  const { resolved, quantityMultiplier } = substituteSingleItemPack(match, index);
+
+  // Multi-item pack (Explorer's Pack, ...) - resolve its contents to
+  // concrete catalog items so assemble-character.ts can grant those instead
+  // of the pack row itself. Checked on `match`, not `resolved` - packContents
+  // and singleItemPack are mutually exclusive per the dataset (a pack is
+  // either "N of one item" or "a bundle of different items"), so match is
+  // never substituted when it has packContents.
+  const packContents = match.packContents
+    ?.map((pc) => resolvePackContentRef(pc, index))
+    .filter((pc): pc is { itemId: number; source: 'base_items' | 'items'; quantity: number } => pc !== undefined)
+    .map((pc) => ({ ...pc, quantity: pc.quantity * entry.quantity }));
 
   return {
     kind: 'item',
     itemId: resolved.id,
     source: resolved.source,
     name: resolved.name,
-    quantity: entry.quantity * (pack?.quantity ?? 1),
+    quantity: entry.quantity * quantityMultiplier,
     displayName: entry.displayName,
     containsValueCp: entry.containsValueCp,
     packEntries: resolved.entries,
+    packContents,
   };
 }
 
@@ -354,19 +392,33 @@ export async function resolveEquipmentItemRefs(
 
   const baseItems = await getBaseItemsByNames(db, uniqueRefs);
   const items = await getItemsByNames(db, uniqueRefs);
-  let index = buildLookupIndex([...baseItems, ...items]);
+  let allMatched = [...baseItems, ...items];
+  let index = buildLookupIndex(allMatched);
 
-  // Any resolved pack (see EquipmentLookupItem.singleItemPack) needs its
-  // component item resolved too, so resolvePendingEntry can substitute it
-  // in. Only fetch names not already covered by the first pass.
-  const componentRefs = [...baseItems, ...items]
-    .map((matchedItem) => matchedItem.singleItemPack?.itemRef)
-    .filter((ref): ref is string => ref !== undefined && !index.has(refName(ref).toLowerCase()));
-  const uniqueComponentRefs = [...new Set(componentRefs)];
-  if (uniqueComponentRefs.length > 0) {
-    const componentBaseItems = await getBaseItemsByNames(db, uniqueComponentRefs);
-    const componentItems = await getItemsByNames(db, uniqueComponentRefs);
-    index = buildLookupIndex([...baseItems, ...items, ...componentBaseItems, ...componentItems]);
+  // Any resolved pack - a single-item pack (see EquipmentLookupItem.
+  // singleItemPack) or a multi-item pack's contents (see packContents) -
+  // needs its referenced item(s) resolved too, so resolvePendingEntry can
+  // substitute/expand them. Contents can themselves reference a single-item
+  // pack (the Burglar's Pack's "ball bearings (bag of 1,000)" entry is
+  // itself a 1000-unit pack of Ball Bearing), so this loops until a pass
+  // finds nothing new to resolve rather than assuming one fixed depth -
+  // bounded to 3 passes, well above anything the PHB dataset needs.
+  // Sequential, not Promise.all, against the same connection (see
+  // data/queries/spells.ts).
+  for (let pass = 0; pass < 3; pass++) {
+    const nextRefs = allMatched
+      .flatMap((matchedItem) => [
+        matchedItem.singleItemPack?.itemRef,
+        ...(matchedItem.packContents?.map((pc) => pc.itemRef) ?? []),
+      ])
+      .filter((ref): ref is string => ref !== undefined && !index.has(refName(ref).toLowerCase()));
+    const uniqueNextRefs = [...new Set(nextRefs)];
+    if (uniqueNextRefs.length === 0) break;
+
+    const nextBaseItems = await getBaseItemsByNames(db, uniqueNextRefs);
+    const nextItems = await getItemsByNames(db, uniqueNextRefs);
+    allMatched = [...allMatched, ...nextBaseItems, ...nextItems];
+    index = buildLookupIndex(allMatched);
   }
 
   function resolveEntries(entries: ParsedEntry[]): ResolvedEquipmentEntry[] {

@@ -39,17 +39,6 @@ veículos (terrestres + aquáticos), e 12 das 13 classes.
     pt-BR para conferir feature a feature; (c) deixar o Patrulheiro de
     fora do banco pt-BR por enquanto. **Não traduzir/implementar nada do
     Patrulheiro até o usuário retomar esse ponto explicitamente.**
-- **"Sino" (Símbolo Sagrado) pode ser duplicata do item genérico `Bell`.**
-  Ao dar nome em inglês pros itens exclusivos do pt-BR (Sinete/Sino),
-  achei que existe um item genérico `Bell|PHB` (p.150, tipo `G`) com o
-  mesmo preço exato do "Sino" (Símbolo Sagrado, p.151) — mesmo padrão já
-  visto com Manto/Robes (uma duplicata impressa no livro). "Sino" continua
-  em português por ora (não dá pra renomear pra `Bell` sem colidir com
-  esse item real). Decida: (a) mesclar — apagar o "Sino" customizado e
-  usar só o `Bell` genérico (perde o foco de conjuração dedicado); ou
-  (b) manter distintos — decidir um nome em inglês sem colisão pro "Sino".
-  Ver `DUVIDAS.md`, seção "PHB — Itens Gerais".
-
 ### Pendente (decisão de escopo/schema, não é bloqueio de conteúdo)
 
 - **Bens de comércio e bugigangas** ("Comércio de Bens" p.159, "Bugigangas"
@@ -59,13 +48,6 @@ veículos (terrestres + aquáticos), e 12 das 13 classes.
 - **Sourcebooks além do PHB** (Xanathar's, Tasha's, SCAG etc.) — não
   iniciado; todo o wizard está hard-filtrado para `source = 'PHB'` até
   esses livros serem traduzidos (ver item "Fontes além do PHB" abaixo).
-- **Estrutura de pacote→itens** (Artista/Assaltante/Aventureiro/Diplomata/
-  Estudioso/Explorador/Sacerdote, p.153) — nome e conteúdo (prosa) já
-  traduzidos (`translations/pt-BR/PHB/items.json`), mas o schema ainda não
-  modela "pacote contém N de item X" como dado estruturado (o dataset em
-  inglês tem isso em `packContents`, mas nada no schema/import usa esse
-  campo hoje). Só importa se algum dia quisermos resolver o conteúdo do
-  pacote pra itens de catálogo de verdade, em vez de só texto.
 - **Arreios/acessórios de montaria** (Alforje, Armadura de Montaria,
   Estábulo, Freio e rédea, variantes de Sela — mesma seção do livro que
   montarias/veículos, p.157, mas não são tipo `MNT`/`VEH`) — não

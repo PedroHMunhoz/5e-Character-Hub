@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { getSingleItemPackContents, isMultiItemPack } from './base-items';
+import { getMultiItemPackContents, getSingleItemPackContents, isMultiItemPack, type MultiItemPackEntry } from './base-items';
 import { getTranslations, localizedEntries, localizedName } from './localize';
 import { toEntries } from '../rows';
 
@@ -32,6 +32,12 @@ export interface EquipmentLookupItem {
   // populated by getItemsByNames; base_items never carries this (packs
   // only live in `items`).
   entries?: string[];
+  // Structured contents for a multi-item pack - the `kind: 'item'` entries
+  // from getMultiItemPackContents, still carrying unresolved refs (resolved
+  // to concrete ids by equipment-resolver.ts, same second pass that already
+  // resolves singleItemPack). `special`-kind entries (no catalog item) are
+  // dropped here - they can never become an inventory row.
+  packContents?: { itemRef: string; quantity: number }[];
 }
 
 // A 5etools item ref like "chain mail|phb" or bare "thieves' tools" (no
@@ -95,6 +101,9 @@ export async function getItemsByNames(db: SQLiteDatabase, refs: string[]): Promi
     englishName: row.name,
     singleItemPack: getSingleItemPackContents(row.details),
     entries: isMultiItemPack(row.details) ? localizedEntries(row.id, toEntries(row.entries), translations) : undefined,
+    packContents: getMultiItemPackContents(row.details)
+      ?.filter((entry): entry is Extract<MultiItemPackEntry, { kind: 'item' }> => entry.kind === 'item')
+      .map((entry) => ({ itemRef: entry.itemRef, quantity: entry.quantity })),
   }));
 }
 
@@ -105,10 +114,11 @@ export async function getItemsByNames(db: SQLiteDatabase, refs: string[]): Promi
 // and musical instruments turned out to be split across BOTH `base_items`
 // and `items` (e.g. arcane focus items like Crystal/Orb/Wand are
 // base_items, but holy symbols like Amulet/Emblem/Reliquary - plus the
-// pt-BR-only "Sinete"/"Sino" additions from db/overrides/custom-items.json,
-// which have no `details.scfType` at all - are in `items`), so each filter
-// runs against whichever table(s) actually hold matches for that category
-// instead of assuming one table.
+// pt-BR-only "Sinete" addition from db/overrides/custom-items.json and the
+// real PHB "Bell" item (doubling as "Sino"), neither of which has
+// `details.scfType` - are in `items`), so each filter runs against
+// whichever table(s) actually hold matches for that category instead of
+// assuming one table.
 interface EquipmentTypeFilter {
   table: 'base_items' | 'items';
   where: string;
@@ -143,11 +153,15 @@ const EQUIPMENT_TYPE_FILTERS: Record<string, EquipmentTypeFilter[]> = {
   ],
   focusSpellcastingHoly: [
     { table: 'items', where: `type = 'SCF' AND json_extract(details,'$.scfType') = ?`, params: ['holy'] },
-    // Signet/Sino (custom PHB pt-BR entries - Signet is Sinete's English
-    // base name, see db/overrides/custom-items.json) have no `details` at
-    // all, so they can't be matched by scfType - name them explicitly
-    // instead.
-    { table: 'items', where: `type = 'SCF' AND details IS NULL AND name IN ('Signet', 'Sino')`, params: [] },
+    // Signet (custom PHB pt-BR entry - English base name of "Sinete", see
+    // db/overrides/custom-items.json) has no `details` at all, so it can't
+    // be matched by scfType - named explicitly instead. Bell is the real
+    // PHB adventuring-gear item (p.150, type 'G', not 'SCF') that the
+    // Galápagos PHB pt-BR edition also prints as the "Sino" Holy Symbol
+    // variant (p.151, same price) - merged into this one item per user
+    // decision (see translations/pt-BR/DUVIDAS.md), so it's named here too
+    // rather than requiring type='SCF'/details IS NULL like Signet.
+    { table: 'items', where: `name IN ('Signet', 'Bell')`, params: [] },
   ],
 };
 

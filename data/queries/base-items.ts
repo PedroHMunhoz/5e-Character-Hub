@@ -65,11 +65,16 @@ interface ArmorDetails {
 interface PackContentsEntry {
   item?: string;
   quantity?: number;
+  special?: string;
 }
 
 interface PackDetails {
   packContents?: (string | PackContentsEntry)[];
 }
+
+export type MultiItemPackEntry =
+  | { kind: 'item'; itemRef: string; quantity: number }
+  | { kind: 'special'; text: string; quantity: number };
 
 // `details.packContents` covers two unrelated shapes from the raw 5etools
 // data: a "pack" of N units of one underlying item (ammo like "Crossbow
@@ -97,6 +102,26 @@ export function getSingleItemPackContents(detailsJson: string | null): { itemRef
 export function isMultiItemPack(detailsJson: string | null): boolean {
   const packContents = parseJson<PackDetails>(detailsJson)?.packContents;
   return Array.isArray(packContents) && packContents.length > 1;
+}
+
+// Structured form of a multi-item pack's contents (Explorer's Pack, Burglar's
+// Pack, ...), for actually exploding the pack into its component items
+// instead of just showing prose (see isMultiItemPack's preview-only use).
+// Each raw packContents entry is one of three shapes, confirmed live against
+// every multi-item pack in the bundled PHB dataset: a bare string ref
+// (quantity implied 1), an `{item, quantity}` ref, or an `{special, quantity?}`
+// flavor-only entry with no catalog item at all (e.g. "10 feet of string",
+// "alms box") - those become `kind: 'special'` and are never resolvable to an
+// inventory item, same as how a bare `special`-kind DSL grant elsewhere in
+// the wizard has no db row to attach to.
+export function getMultiItemPackContents(detailsJson: string | null): MultiItemPackEntry[] | undefined {
+  const packContents = parseJson<PackDetails>(detailsJson)?.packContents;
+  if (!Array.isArray(packContents) || packContents.length <= 1) return undefined;
+  return packContents.map((entry): MultiItemPackEntry => {
+    if (typeof entry === 'string') return { kind: 'item', itemRef: entry, quantity: 1 };
+    if (entry.item) return { kind: 'item', itemRef: entry.item, quantity: entry.quantity ?? 1 };
+    return { kind: 'special', text: entry.special ?? '', quantity: entry.quantity ?? 1 };
+  });
 }
 
 // Armor weight class drives how much of the DEX modifier applies to AC (see

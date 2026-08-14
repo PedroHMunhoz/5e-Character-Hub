@@ -12,18 +12,6 @@
     "_note": "Exclusivo da tabela 'EQUIPAMENTO' impressa na edição pt-BR (Galápagos) da PHB, p.151, como variante de Símbolo Sagrado 'Sinete' - sem item correspondente no dataset em inglês (5e-2014-data/items.json só modela 3 variantes: Amulet/Emblem/Reliquary), inclusive nenhum item chamado 'Signet' isolado (só combinações tipo 'Signet Ring'/'Guild Signet', itens mágicos não relacionados) - confirmado sem colisão. Nome em inglês é tradução livre (não existe termo oficial 5etools pra esse item exclusivo); tradução pt-BR ('Sinete') agora vive em translations/pt-BR/PHB/items.json (chave `Signet|PHB`), pipeline normal igual a qualquer outro item. Ver translations/pt-BR/DUVIDAS.md, seção 'PHB — Itens Gerais'."
   },
   {
-    "name": "Sino",
-    "source": "PHB",
-    "type": "SCF",
-    "rarity": "none",
-    "value": 100,
-    "weight": null,
-    "entries": [
-      "Um símbolo sagrado é a representação de uma divindade ou um panteão. Pode ser um amuleto com o símbolo de uma divindade, um símbolo talhado cuidadosamente ou encrustado como um emblema em um escudo ou até mesmo uma caixa pequena que guarda um fragmento de uma relíquia sagrada. O apêndice B lista os símbolos comumente associados a muitas divindades no multiverso. Um clérigo ou paladino pode usar um símbolo sagrado como um foco de conjuração, como descrito no capítulo 10. Para usar o símbolo dessa forma, o conjurador precisa segurá-lo em uma mão, usá-lo visivelmente ou hasteá-lo em seu escudo."
-    ],
-    "_note": "Exclusivo da tabela 'EQUIPAMENTO' impressa na edição pt-BR (Galápagos) da PHB, p.151, como variante de Símbolo Sagrado 'Sino'. AINDA NÃO RETROFITADO para nome em inglês (fica com `name` em português por enquanto, fora do pipeline normal de tradução) - diferente do Sinete, este item TEM um candidato a equivalente em inglês: `Bell|PHB` (p.150, tipo G, value=100, mesmo preço exato). Renomear este item para 'Bell' colidiria com esse item real (ambos fonte PHB, UNIQUE(name,source) no schema) - não é uma simples questão de nomenclatura, é uma decisão de regra: são o mesmo objeto listado duas vezes no livro (mesmo padrão já visto com Manto/Robes, aí bastaria usar só o item genérico Bell) ou são mecanicamente distintos (só este item deveria valer como foco de conjuração, já que Bell/p.150 não é modelado como SCF no dataset em inglês)? Decisão pendente do usuário - ver translations/pt-BR/DUVIDAS.md, seção 'PHB — Itens Gerais'."
-  },
-  {
     "name": "Keelboat",
     "source": "PHB",
     "type": "SHP",

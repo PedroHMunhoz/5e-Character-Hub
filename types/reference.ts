@@ -177,4 +177,8 @@ export interface Item {
   weightLb: number | null;
   entries: Entries;
   details: Record<string, unknown> | null;
+  // See categorizeItem in data/queries/items.ts - the `items` table's own
+  // `type` doesn't distinguish consumable gear (Torch, Rations) from
+  // durable gear (Backpack, Rope).
+  category: 'consumable' | 'general';
 }

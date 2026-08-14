@@ -8,7 +8,7 @@ import {
   WEAPON_CATEGORY_LABELS,
   type WeaponHandedness,
 } from '@/constants/item-codes';
-import { parseJson } from '../rows';
+import { parseJson, toEntries } from '../rows';
 import {
   categorize,
   convertRangeToMeters,
@@ -17,7 +17,8 @@ import {
   GENERAL_ITEM_TYPE_LABELS,
   getSingleItemPackContents,
 } from './base-items';
-import { getTranslations, localizedName } from './localize';
+import { categorizeItem } from './items';
+import { getTranslations, localizedEntries, localizedName } from './localize';
 
 interface BaseItemDetailRow {
   id: number;
@@ -26,6 +27,15 @@ interface BaseItemDetailRow {
   weight_lb: number | null;
   damage: string | null;
   properties: string | null;
+  details: string | null;
+  entries: string | null;
+}
+
+interface GeneralItemDetailRow {
+  id: number;
+  name: string;
+  weight_lb: number | null;
+  entries: string | null;
   details: string | null;
 }
 
@@ -77,6 +87,7 @@ export interface ArmorItemDetail {
   strengthRequirement?: number;
   stealthDisadvantage: boolean;
   armorSlotKind: 'body' | 'shield';
+  entries: string[];
 }
 
 export interface ConsumableItemDetail {
@@ -86,6 +97,7 @@ export interface ConsumableItemDetail {
   weight: string;
   categoryLabel: string;
   defaultQuantity: string;
+  entries: string[];
 }
 
 export interface GeneralItemDetail {
@@ -94,6 +106,7 @@ export interface GeneralItemDetail {
   name: string;
   weight: string;
   categoryLabel: string;
+  entries: string[];
 }
 
 export type ItemDetail = WeaponItemDetail | ArmorItemDetail | ConsumableItemDetail | GeneralItemDetail;
@@ -133,7 +146,7 @@ function mapWeaponDetail(row: BaseItemDetailRow, name: string): WeaponItemDetail
   };
 }
 
-function mapArmorDetail(row: BaseItemDetailRow, name: string): ArmorItemDetail {
+function mapArmorDetail(row: BaseItemDetailRow, name: string, entries: string[]): ArmorItemDetail {
   const details = parseJson<ArmorDetails>(row.details) ?? {};
   const ac = details.ac ?? 0;
   const armorClassBonus = row.type === 'S' ? ac : ac - 10;
@@ -148,10 +161,11 @@ function mapArmorDetail(row: BaseItemDetailRow, name: string): ArmorItemDetail {
     strengthRequirement: details.strength,
     stealthDisadvantage: details.stealth ?? false,
     armorSlotKind: getArmorSlotKind(row.type),
+    entries,
   };
 }
 
-function mapConsumableDetail(row: BaseItemDetailRow, name: string, quantity = 1): ConsumableItemDetail {
+function mapConsumableDetail(row: BaseItemDetailRow, name: string, entries: string[], quantity = 1): ConsumableItemDetail {
   return {
     category: 'consumable',
     id: row.id,
@@ -162,32 +176,75 @@ function mapConsumableDetail(row: BaseItemDetailRow, name: string, quantity = 1)
     weight: formatWeightKg(row.name, row.weight_lb, quantity),
     categoryLabel: 'Munição',
     defaultQuantity: String(getSingleItemPackContents(row.details)?.quantity ?? 1),
+    entries,
   };
 }
 
-function mapGeneralDetail(row: BaseItemDetailRow, name: string): GeneralItemDetail {
+function mapGeneralDetail(row: BaseItemDetailRow, name: string, entries: string[]): GeneralItemDetail {
   return {
     category: 'general',
     id: row.id,
     name,
     weight: formatWeightKg(row.name, row.weight_lb),
     categoryLabel: GENERAL_ITEM_TYPE_LABELS[row.type ?? ''] ?? row.type ?? '',
+    entries,
   };
 }
 
 export async function getBaseItemDetailById(db: SQLiteDatabase, id: number, quantity = 1): Promise<ItemDetail | null> {
   const row = await db.getFirstAsync<BaseItemDetailRow>(
-    'SELECT id, name, type, weight_lb, damage, properties, details FROM base_items WHERE id = ?',
+    'SELECT id, name, type, weight_lb, damage, properties, details, entries FROM base_items WHERE id = ?',
     id
   );
   if (!row) return null;
 
   const translations = await getTranslations(db, 'base_item');
   const name = localizedName(row.id, row.name, translations);
+  const entries = localizedEntries(row.id, toEntries(row.entries), translations);
   const category = categorize(row.type);
 
   if (category === 'weapon') return mapWeaponDetail(row, name);
-  if (category === 'armor') return mapArmorDetail(row, name);
-  if (category === 'general') return mapGeneralDetail(row, name);
-  return mapConsumableDetail(row, name, quantity);
+  if (category === 'armor') return mapArmorDetail(row, name, entries);
+  if (category === 'general') return mapGeneralDetail(row, name, entries);
+  return mapConsumableDetail(row, name, entries, quantity);
+}
+
+// Detail for a character's items-table-sourced inventory rows (packs, kits,
+// general adventuring gear) - mirrors getBaseItemDetailById's shape
+// (ConsumableItemDetail/GeneralItemDetail) so app/sheet/[characterId]/
+// item/[id].tsx can render either source with the same JSX, branching only
+// on which query to call (see parseItemKey in equipment-lookup.ts). Weapons/
+// armor never live in the `items` table (confirmed live against the bundled
+// PHB dataset), so there's no weapon/armor case to cover here.
+export async function getItemDetailById(db: SQLiteDatabase, id: number, quantity = 1): Promise<ConsumableItemDetail | GeneralItemDetail | null> {
+  const row = await db.getFirstAsync<GeneralItemDetailRow>(
+    'SELECT id, name, weight_lb, entries, details FROM items WHERE id = ?',
+    id
+  );
+  if (!row) return null;
+
+  const translations = await getTranslations(db, 'item');
+  const name = localizedName(row.id, row.name, translations);
+  const entries = localizedEntries(row.id, toEntries(row.entries), translations);
+  const category = categorizeItem({ englishName: row.name, details: parseJson(row.details) });
+
+  if (category === 'consumable') {
+    return {
+      category: 'consumable',
+      id: row.id,
+      name,
+      weight: formatWeightKg(row.name, row.weight_lb, quantity),
+      categoryLabel: 'Consumível',
+      defaultQuantity: '1',
+      entries,
+    };
+  }
+  return {
+    category: 'general',
+    id: row.id,
+    name,
+    weight: formatWeightKg(row.name, row.weight_lb),
+    categoryLabel: 'Item Geral',
+    entries,
+  };
 }

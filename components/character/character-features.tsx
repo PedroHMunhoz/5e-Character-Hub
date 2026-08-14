@@ -9,6 +9,7 @@ import { getCharacterFeatures, type CuratedFeature, type FeatureSectionKey } fro
 import { useCharacter } from '@/hooks/use-character';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { getCharacterLevel } from '@/utils/proficiency';
+import { sortByLocalizedName } from '@/utils/sort-by-name';
 
 const FEATURE_SECTION_LABELS: { key: FeatureSectionKey | 'outras'; label: string }[] = [
   { key: 'classe', label: 'Características de Classe' },
@@ -54,7 +55,7 @@ export function CharacterFeatures() {
     () =>
       FEATURE_SECTION_LABELS.map((section) => ({
         ...section,
-        items: features.filter((feature) => feature.section === section.key),
+        items: sortByLocalizedName(features.filter((feature) => feature.section === section.key)),
       })),
     [features]
   );

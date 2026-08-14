@@ -18,6 +18,7 @@ import { useCharacter } from '@/hooks/use-character';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import type { WeaponSlot } from '@/types/character';
 import { getAbilityTotal } from '@/utils/ability-modifier';
+import { sortByLocalizedName } from '@/utils/sort-by-name';
 
 // Same flat "1 kg ~= 2 lb" rule used everywhere else in the app (see
 // getWeightKg/formatWeightKg in data/queries/base-items.ts).
@@ -36,10 +37,10 @@ function formatKg(value: number): string {
 // A display item carries its inventoryItems key (namespaced for `items`-
 // table rows - see data/queries/equipment-lookup.ts's itemKey) alongside
 // the fields the existing cards render. `items`-table rows (packs, kits,
-// general gear granted by the creation wizard) have no weapon/armor stats
-// and, unlike base_items, no detail screen to navigate to yet
-// (app/sheet/[characterId]/item/[id].tsx only resolves base_items ids) -
-// see docs/TODO.md.
+// general gear granted by the creation wizard) have no weapon/armor stats,
+// so they only ever render as a StackableItemCard, never the weapon/armor
+// EquipmentItemCard - but they're just as navigable to a detail screen as
+// base_items rows (see app/sheet/[characterId]/item/[id].tsx).
 interface DisplayItem extends CuratedBaseItem {
   key: string;
   navigable: boolean;
@@ -63,12 +64,13 @@ export function CharacterInventory() {
       const baseItemIds: number[] = [];
       const itemIds: number[] = [];
       const quantityById = new Map<number, number>();
+      const itemsQuantityById = new Map<number, number>();
       for (const key of inventoryKeys) {
         const parsed = parseItemKey(key);
         (parsed.source === 'base_items' ? baseItemIds : itemIds).push(parsed.id);
-        if (parsed.source === 'base_items') {
-          quantityById.set(parsed.id, Number(character.inventoryItems[key]?.quantity ?? '1') || 1);
-        }
+        const quantity = Number(character.inventoryItems[key]?.quantity ?? '1') || 1;
+        if (parsed.source === 'base_items') quantityById.set(parsed.id, quantity);
+        else itemsQuantityById.set(parsed.id, quantity);
       }
 
       // Sequential, not Promise.all: overlapping queries on the same
@@ -80,15 +82,18 @@ export function CharacterInventory() {
 
       const display: DisplayItem[] = [
         ...baseItems.map((item) => ({ ...item, key: String(item.id), navigable: true })),
-        ...generalItems.map((item) => ({
-          key: `item:${item.id}`,
-          navigable: false,
-          id: item.id,
-          category: 'general' as const,
-          name: item.name,
-          weight: formatWeightKg(item.name, item.weightLb),
-          weightKg: getWeightKg(item.name, item.weightLb),
-        })),
+        ...generalItems.map((item) => {
+          const quantity = item.category === 'consumable' ? (itemsQuantityById.get(item.id) ?? 1) : 1;
+          return {
+            key: `item:${item.id}`,
+            navigable: true,
+            id: item.id,
+            category: item.category,
+            name: item.name,
+            weight: formatWeightKg(item.name, item.weightLb, quantity),
+            weightKg: getWeightKg(item.name, item.weightLb),
+          };
+        }),
       ];
       setItems(display);
       setLoading(false);
@@ -103,7 +108,7 @@ export function CharacterInventory() {
     () =>
       INVENTORY_CATEGORY_SECTIONS.map((section) => ({
         ...section,
-        items: items.filter((item) => item.category === section.category),
+        items: sortByLocalizedName(items.filter((item) => item.category === section.category)),
       })),
     [items]
   );
