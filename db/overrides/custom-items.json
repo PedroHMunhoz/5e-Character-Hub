@@ -1,6 +1,6 @@
 [
   {
-    "name": "Sinete",
+    "name": "Signet",
     "source": "PHB",
     "type": "SCF",
     "rarity": "none",
@@ -9,7 +9,7 @@
     "entries": [
       "Um símbolo sagrado é a representação de uma divindade ou um panteão. Pode ser um amuleto com o símbolo de uma divindade, um símbolo talhado cuidadosamente ou encrustado como um emblema em um escudo ou até mesmo uma caixa pequena que guarda um fragmento de uma relíquia sagrada. O apêndice B lista os símbolos comumente associados a muitas divindades no multiverso. Um clérigo ou paladino pode usar um símbolo sagrado como um foco de conjuração, como descrito no capítulo 10. Para usar o símbolo dessa forma, o conjurador precisa segurá-lo em uma mão, usá-lo visivelmente ou hasteá-lo em seu escudo."
     ],
-    "_note": "Exclusivo da tabela 'EQUIPAMENTO' impressa na edição pt-BR (Galápagos) da PHB, p.151 - sem item correspondente no dataset em inglês (5e-2014-data/items.json só modela 3 variantes de Símbolo Sagrado: Amulet/Emblem/Reliquary). Ver translations/pt-BR/DUVIDAS.md, seção 'PHB — Itens Gerais'. O campo `name` já está em português (não há nome em inglês para traduzir), por isso não tem entrada correspondente em translations/pt-BR/PHB/items.json."
+    "_note": "Exclusivo da tabela 'EQUIPAMENTO' impressa na edição pt-BR (Galápagos) da PHB, p.151, como variante de Símbolo Sagrado 'Sinete' - sem item correspondente no dataset em inglês (5e-2014-data/items.json só modela 3 variantes: Amulet/Emblem/Reliquary), inclusive nenhum item chamado 'Signet' isolado (só combinações tipo 'Signet Ring'/'Guild Signet', itens mágicos não relacionados) - confirmado sem colisão. Nome em inglês é tradução livre (não existe termo oficial 5etools pra esse item exclusivo); tradução pt-BR ('Sinete') agora vive em translations/pt-BR/PHB/items.json (chave `Signet|PHB`), pipeline normal igual a qualquer outro item. Ver translations/pt-BR/DUVIDAS.md, seção 'PHB — Itens Gerais'."
   },
   {
     "name": "Sino",
@@ -21,6 +21,78 @@
     "entries": [
       "Um símbolo sagrado é a representação de uma divindade ou um panteão. Pode ser um amuleto com o símbolo de uma divindade, um símbolo talhado cuidadosamente ou encrustado como um emblema em um escudo ou até mesmo uma caixa pequena que guarda um fragmento de uma relíquia sagrada. O apêndice B lista os símbolos comumente associados a muitas divindades no multiverso. Um clérigo ou paladino pode usar um símbolo sagrado como um foco de conjuração, como descrito no capítulo 10. Para usar o símbolo dessa forma, o conjurador precisa segurá-lo em uma mão, usá-lo visivelmente ou hasteá-lo em seu escudo."
     ],
-    "_note": "Exclusivo da tabela 'EQUIPAMENTO' impressa na edição pt-BR (Galápagos) da PHB, p.151 - sem item correspondente no dataset em inglês (5e-2014-data/items.json só modela 3 variantes de Símbolo Sagrado: Amulet/Emblem/Reliquary). Ver translations/pt-BR/DUVIDAS.md, seção 'PHB — Itens Gerais'. O campo `name` já está em português (não há nome em inglês para traduzir), por isso não tem entrada correspondente em translations/pt-BR/PHB/items.json."
+    "_note": "Exclusivo da tabela 'EQUIPAMENTO' impressa na edição pt-BR (Galápagos) da PHB, p.151, como variante de Símbolo Sagrado 'Sino'. AINDA NÃO RETROFITADO para nome em inglês (fica com `name` em português por enquanto, fora do pipeline normal de tradução) - diferente do Sinete, este item TEM um candidato a equivalente em inglês: `Bell|PHB` (p.150, tipo G, value=100, mesmo preço exato). Renomear este item para 'Bell' colidiria com esse item real (ambos fonte PHB, UNIQUE(name,source) no schema) - não é uma simples questão de nomenclatura, é uma decisão de regra: são o mesmo objeto listado duas vezes no livro (mesmo padrão já visto com Manto/Robes, aí bastaria usar só o item genérico Bell) ou são mecanicamente distintos (só este item deveria valer como foco de conjuração, já que Bell/p.150 não é modelado como SCF no dataset em inglês)? Decisão pendente do usuário - ver translations/pt-BR/DUVIDAS.md, seção 'PHB — Itens Gerais'."
+  },
+  {
+    "name": "Keelboat",
+    "source": "PHB",
+    "type": "SHP",
+    "rarity": "none",
+    "value": 300000,
+    "weight": null,
+    "entries": [
+      "Barcos de quilha são usados em lagos e rios. Se estiverem a favor da corrente, o deslocamento da corrente (tipicamente 5 km/h) é adicionado ao deslocamento do barco. Não podem ser remados contra qualquer correnteza mais forte, mas podem ser puxados por animais de tração nas margens."
+    ],
+    "_note": "Tabela 'VEÍCULOS AQUÁTICOS' impressa na edição pt-BR (Galápagos) da PHB, p.159 ('Barco de quilha') - sem item correspondente simples no dataset em inglês; 5e-2014-data/vehicles.json só tem uma versão de stat block completo (Keelboat, source GoS, p.188), usada para outra finalidade (combate). Nome em inglês reaproveitado dessa mesma entrada GoS por já ser o termo oficial da 5e, não é tradução livre. Ver translations/pt-BR/DUVIDAS.md, seção 'PHB — Montarias e Veículos'."
+  },
+  {
+    "name": "Rowboat",
+    "source": "PHB",
+    "type": "SHP",
+    "rarity": "none",
+    "value": 5000,
+    "weight": 90,
+    "entries": [
+      "Barcos a remo são usados em lagos e rios. Se estiverem a favor da corrente, o deslocamento da corrente (tipicamente 5 km/h) é adicionado ao deslocamento do barco. Não podem ser remados contra qualquer correnteza mais forte, mas podem ser puxados por animais de tração nas margens. Um barco a remo pesa 45 kg, no caso dos aventureiros desejarem carregá-lo sobre a terra."
+    ],
+    "_note": "Tabela 'VEÍCULOS AQUÁTICOS' impressa na edição pt-BR (Galápagos) da PHB, p.159 ('Barco a remo') - sem item correspondente simples no dataset em inglês; 5e-2014-data/vehicles.json só tem uma versão de stat block completo (Rowboat, source GoS, p.190), usada para outra finalidade (combate). Nome em inglês reaproveitado dessa mesma entrada GoS por já ser o termo oficial da 5e, não é tradução livre. Peso (45 kg) convertido pela mesma regra ×2 usada no resto do app (90 lb). Ver translations/pt-BR/DUVIDAS.md, seção 'PHB — Montarias e Veículos'."
+  },
+  {
+    "name": "Longship",
+    "source": "PHB",
+    "type": "SHP",
+    "rarity": "none",
+    "value": 1000000,
+    "weight": null,
+    "entries": [
+      "Um dracar desloca-se a 5 km/h."
+    ],
+    "_note": "Tabela 'VEÍCULOS AQUÁTICOS' impressa na edição pt-BR (Galápagos) da PHB, p.159 ('Dracar') - sem item correspondente simples no dataset em inglês; 5e-2014-data/vehicles.json só tem uma versão de stat block completo (Longship, source GoS, p.190), usada para outra finalidade (combate). Nome em inglês reaproveitado dessa mesma entrada GoS por já ser o termo oficial da 5e, não é tradução livre. Ver translations/pt-BR/DUVIDAS.md, seção 'PHB — Montarias e Veículos'."
+  },
+  {
+    "name": "Galley",
+    "source": "PHB",
+    "type": "SHP",
+    "rarity": "none",
+    "value": 3000000,
+    "weight": null,
+    "entries": [
+      "Uma galera desloca-se a 6,5 km/h."
+    ],
+    "_note": "Tabela 'VEÍCULOS AQUÁTICOS' impressa na edição pt-BR (Galápagos) da PHB, p.159 ('Galera') - sem item correspondente simples no dataset em inglês; 5e-2014-data/vehicles.json só tem uma versão de stat block completo (Galley, source GoS, p.187), usada para outra finalidade (combate). Nome em inglês reaproveitado dessa mesma entrada GoS por já ser o termo oficial da 5e, não é tradução livre. Ver translations/pt-BR/DUVIDAS.md, seção 'PHB — Montarias e Veículos'."
+  },
+  {
+    "name": "Warship",
+    "source": "PHB",
+    "type": "SHP",
+    "rarity": "none",
+    "value": 2500000,
+    "weight": null,
+    "entries": [
+      "Um navio de guerra desloca-se a 4 km/h."
+    ],
+    "_note": "Tabela 'VEÍCULOS AQUÁTICOS' impressa na edição pt-BR (Galápagos) da PHB, p.159 ('Navio de guerra') - sem item correspondente simples no dataset em inglês; 5e-2014-data/vehicles.json só tem uma versão de stat block completo (Warship, source GoS, p.194), usada para outra finalidade (combate). Nome em inglês reaproveitado dessa mesma entrada GoS por já ser o termo oficial da 5e, não é tradução livre. Ver translations/pt-BR/DUVIDAS.md, seção 'PHB — Montarias e Veículos'."
+  },
+  {
+    "name": "Sailing Ship",
+    "source": "PHB",
+    "type": "SHP",
+    "rarity": "none",
+    "value": 1000000,
+    "weight": null,
+    "entries": [
+      "Um veleiro desloca-se a 3 km/h."
+    ],
+    "_note": "Tabela 'VEÍCULOS AQUÁTICOS' impressa na edição pt-BR (Galápagos) da PHB, p.159 ('Veleiro') - sem item correspondente simples no dataset em inglês; 5e-2014-data/vehicles.json só tem uma versão de stat block completo (Sailing Ship, source GoS, p.192), usada para outra finalidade (combate). Nome em inglês reaproveitado dessa mesma entrada GoS por já ser o termo oficial da 5e, não é tradução livre. Ver translations/pt-BR/DUVIDAS.md, seção 'PHB — Montarias e Veículos'."
   }
 ]

@@ -556,9 +556,18 @@ runSection('items', () => {
 
   // Items printed in a localized sourcebook's table with no equivalent row in
   // the English 5etools dataset (ex: pt-BR PHB's "Sinete"/"Sino" holy symbol
-  // variants - see translations/pt-BR/DUVIDAS.md, "PHB — Itens Gerais"). Their
-  // `name` is already the localized text (there's no English name to translate
-  // from), so these skip the translations overlay entirely.
+  // variants, or the PHB's "Veículos Aquáticos" table - see
+  // translations/pt-BR/DUVIDAS.md, "PHB — Itens Gerais" / "PHB — Montarias e
+  // Veículos"). Convention going forward: `name` here is an English name
+  // (official when one already exists elsewhere in the dataset under a
+  // different source/context, like the water vehicles reusing their GoS stat
+  // block names; free translation otherwise, like "Signet") so these items
+  // flow through the normal translations overlay (translations/pt-BR/PHB/
+  // items.json) just like any other item - no special-casing needed here.
+  // Exception: "Sino" still has its `name` in Portuguese (skips the overlay)
+  // because it can't be renamed to its English candidate ("Bell") without
+  // colliding with a real, distinct `Bell|PHB` row - see the `_note` on that
+  // entry in custom-items.json for the pending decision.
   const customItemsPath = path.join(repoRoot, 'db', 'overrides', 'custom-items.json');
   if (fs.existsSync(customItemsPath)) {
     const customItems = JSON.parse(fs.readFileSync(customItemsPath, 'utf8'));
