@@ -254,7 +254,7 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict, quantity
     // Consumables are the only stackable category with a quantity indicator
     // in the UI today (the StackableItemCard badge) - weight here reflects
     // the full owned stack. Weapon/armor/general above intentionally keep
-    // showing a single unit's weight - see docs/wizard-todo.md for the
+    // showing a single unit's weight - see docs/TODO.md for the
     // deferred "weapon quantity isn't shown anywhere" gap.
     weight: formatWeightKg(row.name, row.weight_lb, quantity),
     defaultQuantity: String(getSingleItemPackContents(row.details)?.quantity ?? 1),

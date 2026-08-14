@@ -237,7 +237,7 @@ runSection('classes', () => {
       // Only extract the unambiguous case: exactly one additionalSpells
       // entry, no `name` (meaning no further sub-choice like Circle of the
       // Land's biome, or Warlock's `expanded` extra-known-spells mechanic
-      // instead of always-prepared) - see docs/wizard-todo.md.
+      // instead of always-prepared) - see docs/TODO.md.
       const rawAdditional = sc.additionalSpells;
       const additionalSpells =
         Array.isArray(rawAdditional) && rawAdditional.length === 1 && !rawAdditional[0].name && rawAdditional[0].prepared

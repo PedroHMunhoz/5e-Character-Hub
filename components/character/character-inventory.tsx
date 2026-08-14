@@ -23,7 +23,7 @@ import type { WeaponSlot } from '@/types/character';
 // general gear granted by the creation wizard) have no weapon/armor stats
 // and, unlike base_items, no detail screen to navigate to yet
 // (app/sheet/[characterId]/item/[id].tsx only resolves base_items ids) -
-// see docs/wizard-todo.md.
+// see docs/TODO.md.
 interface DisplayItem extends CuratedBaseItem {
   key: string;
   navigable: boolean;

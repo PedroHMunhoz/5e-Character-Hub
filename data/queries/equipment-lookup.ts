@@ -93,7 +93,7 @@ export async function getItemsByNames(db: SQLiteDatabase, refs: string[]): Promi
 
 // equipmentType codes seen across the PHB's classes/backgrounds
 // starting_equipment `defaultData` (verified live against the bundled db -
-// see docs/wizard-todo.md for the note to re-check this against every PHB
+// see docs/TODO.md for the note to re-check this against every PHB
 // class, not just the ones inspected during planning). Spellcasting foci
 // and musical instruments turned out to be split across BOTH `base_items`
 // and `items` (e.g. arcane focus items like Crystal/Orb/Wand are

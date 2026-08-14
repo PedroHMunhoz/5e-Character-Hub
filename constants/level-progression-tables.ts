@@ -1,6 +1,6 @@
 // Level-by-level progression tables for a handful of class features whose
 // PHB text just says "as shown in the table" without giving numbers (see
-// docs/wizard-todo.md / the conversation that added these). Keyed by the
+// docs/TODO.md / the conversation that added these). Keyed by the
 // raw (English) class_features.name - same stable-key convention as
 // OptionalFeatureDefinition.englishName - since these numbers are rule data
 // I derived, not translatable book prose, so they don't belong in the

@@ -131,7 +131,7 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   // Tools: resolved entirely by the background step (fixed grants +
   // player-picked category choices) - only 'item' entries map to a
   // concrete tool id; 'special'/'unresolved' entries have no db row to
-  // track proficiency against (see docs/wizard-todo.md).
+  // track proficiency against (see docs/TODO.md).
   const tools: Record<string, ToolState> = {};
   for (const entry of draft.toolProficiencies) {
     if (entry.kind === 'item') tools[itemKey(entry.source, entry.itemId)] = { proficient: true };

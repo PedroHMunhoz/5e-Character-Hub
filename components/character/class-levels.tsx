@@ -11,7 +11,7 @@ interface ClassLevelsProps {
 
 // Read-only display - name/race/class/level are set during character
 // creation (the wizard) or, in the future, a dedicated edit flow (see
-// docs/wizard-todo.md's note on editing race/class/background after
+// docs/TODO.md's note on editing race/class/background after
 // creation). CharacterContext still exposes setName/setRace/setClassName/
 // setClassLevel/addClass/removeClass for that future flow; this summary
 // screen just no longer calls them.

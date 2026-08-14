@@ -1,9 +1,72 @@
-# TODO — Wizard de criação de personagens
+# TODO — Fonte única de pendências do projeto
+
+Registro central de decisões de simplificação/adiamento e pendências em
+aberto, para consulta futura em vez de depender de memória de conversa.
+Substitui o antigo `docs/wizard-todo.md` (conteúdo migrado abaixo, sem
+perdas). Itens já resolvidos ficam marcados com `~~riscado~~` + nota,
+mesmo padrão usado anteriormente — não são apagados, pois documentam o
+porquê de decisões que continuam valendo.
+
+## Tradução PHB (pt-BR)
+
+Fonte detalhada (log completo de dúvidas já resolvidas, page-map de
+extração etc.): `translations/pt-BR/DUVIDAS.md` e
+`translations/pt-BR/_page-maps/PHB.json` (gitignored, não versionados —
+continuam sendo o fluxo de trabalho ativo da tradução; esta seção é só um
+resumo do que falta).
+
+Status geral: praticamente tudo do PHB já foi traduzido e importado —
+magias (361), itens base, itens gerais (tabela EQUIPAMENTO p.152),
+ferramentas, talentos, antecedentes, raças, deuses, idiomas, condições,
+perícias, ações e 12 das 13 classes.
+
+### Bloqueado (aguardando decisão do usuário)
+
+- **Patrulheiro (Ranger) — classe inteira.** O texto impresso do PHB
+  pt-BR parece refletir as regras de 2014 **pré-errata**:
+  - Inimigo Predileto lista só 5 tipos de criatura, contra 13 tipos +
+    opção de duas raças humanoides no banco (que já reflete a errata).
+  - Companheiro Animal do Rastreador de Feras usa lista fixa de animais
+    específicos por 50po/8h, em vez do sistema genérico por CD que a
+    errata trouxe.
+  - O livro imprime um 3º arquétipo, "Conclave do Rastreador Subterrâneo"
+    (p.121-122), que **não existe em nenhuma fonte no banco atual** — só
+    Beast Master e Hunter estão modelados como subclasses PHB do
+    Patrulheiro.
+  - `DUVIDAS.md` registra 3 opções em aberto: (a) usar o texto do livro
+    mesmo sabendo que é pré-errata; (b) usuário obter a errata oficial
+    pt-BR para conferir feature a feature; (c) deixar o Patrulheiro de
+    fora do banco pt-BR por enquanto. **Não traduzir/implementar nada do
+    Patrulheiro até o usuário retomar esse ponto explicitamente.**
+
+### Pendente (decisão de escopo/schema, não é bloqueio de conteúdo)
+
+- **Pacotes de equipamento** (Artista/Assaltante/Diplomata/Exploradora de
+  Masmorras/Artista.../Explorador/Sacerdote, p.153) — schema não tem
+  tabela pack→itens; dado já foi lido do PDF mas não tem onde ser
+  estruturado. Fechar isso antes de começar outros livros (XGE, TCE,
+  SCAG).
+- **Montarias e veículos** (p.157-158) — não existe nenhuma linha de
+  fonte PHB na tabela `vehicles`; pode ser lacuna de import, não só de
+  tradução — investigar se o dado existe em `5e-2014-data` antes.
+- **Bens de comércio e bugigangas** ("Comércio de Bens" p.159, "Bugigangas"
+  d100 p.161) — não existe tabela no schema para isso ainda.
+- **Conteúdo de multiclasse dos talentos** (p.165 em diante) — não existe
+  entidade no banco para representar isso.
+- **Nomes de "Explorer's Pack"/"Scholar's Pack"** — zero linhas de
+  tradução (nem `name` nem `entries`); usuário já pediu para priorizar ao
+  menos o `name` (ex. "Pacote do Explorador"/"Pacote do Erudito") quando
+  for a vez desses itens, passando pelo pipeline formal
+  (`translations/pt-BR/` + `DUVIDAS.md`).
+- **Sourcebooks além do PHB** (Xanathar's, Tasha's, SCAG etc.) — não
+  iniciado; todo o wizard está hard-filtrado para `source = 'PHB'` até
+  esses livros serem traduzidos (ver item "Fontes além do PHB" abaixo).
+
+## Wizard de criação de personagem
 
 Decisões de simplificação/adiamento tomadas durante a implementação do
 wizard de criação de personagens (ver plano original em conversa com o
-usuário). Mesmo espírito do `translations/pt-BR/DUVIDAS.md`: registrar aqui
-em vez de deixar só na memória da conversa, para revisitar depois.
+usuário).
 
 - **Perícia duplicada entre antecedente, raça e classe.** O pool de escolha
   de perícias da classe remove a(s) perícia(s) já concedida(s) pelo
@@ -12,11 +75,18 @@ em vez de deixar só na memória da conversa, para revisitar depois.
   antecedente/raça-fixa/classe-já-escolhida. O RAW diz que, nesse caso, o
   jogador ganha um talento ou proficiência em idioma à escolha em vez da
   perícia repetida — não implementado.
-- **Bloqueio dos campos de atributo após a criação do personagem** + modal
-  de detalhamento "base + bônus racial" ao tocar no campo. O dado
-  (`AbilityScore.base`/`.racialBonus`) já fica persistido separado para
-  viabilizar isso no futuro, mas a UI de bloqueio/detalhamento não é
-  construída nesta feature.
+- ~~Bloqueio dos campos de atributo após a criação do personagem + modal
+  de detalhamento "base + bônus racial" ao tocar no campo~~ —
+  **implementado**: na ficha, `CharacterAttributes`
+  (`components/character/character-attributes.tsx`) renderiza cada
+  atributo dentro de um `Pressable` que abre um `StatBreakdownModal`
+  (`components/character/stat-breakdown-modal.tsx`) com as linhas "Base"
+  e "Bônus Racial"; `AbilityCard`/`EditableStat`
+  (`components/character/ability-card.tsx`) só fica editável quando
+  recebe `onScoreChange`, que a ficha nunca passa — os campos ficam
+  travados fora do wizard de criação. O mesmo padrão (travado + modal de
+  detalhamento) também foi aplicado a testes de resistência, perícias e
+  ferramentas, não só atributos.
 - **Alternativa de Especialização do Ladino "1 perícia + proficiência em
   ferramentas de ladino"** (em vez de "2 perícias"). O modelo `tools` já
   fica próximo o bastante de `Skill` para ganhar `expertise` no futuro sem
@@ -98,8 +168,11 @@ em vez de deixar só na memória da conversa, para revisitar depois.
   referência que o usuário mandou.
 - **Fluxo de multiclasse** (adicionar uma segunda classe depois de criado o
   personagem) — o wizard só cria o 1º nível de uma única classe.
-- **Editar raça/classe/antecedente depois de criado; deletar/duplicar
-  personagem** — nenhuma dessas ações existe ainda na lista de Personagens.
+- **Editar raça/classe/antecedente depois de criado** — decisão do
+  usuário: não será permitido fazer isso; não é lacuna a implementar.
+- ~~Deletar personagem~~ — **implementado**: via longpress na lista de
+  Personagens.
+- **Duplicar personagem** — decisão do usuário: não existirá.
 - **Itens "special" do equipamento resolvido não entram no inventário
   persistido.** Entradas como `{special: "sticks of incense", quantity: 5}`
   (texto livre do livro, sem linha correspondente em `base_items`/`items`)
@@ -212,11 +285,11 @@ em vez de deixar só na memória da conversa, para revisitar depois.
 - **Inimigo Predileto/Explorador Nato do Patrulheiro (1º nível) fora do
   wizard.** O Patrulheiro tem duas escolhas obrigatórias de 1º nível, iguais
   em espírito ao Estilo de Luta do Guerreiro/Domínio Divino do Clérigo, mas
-  a tradução da classe Patrulheiro está deliberadamente bloqueada
-  (`[[project_pt-br-translation]]`/`translations/pt-BR/DUVIDAS.md` — o texto
-  do PHB traduzido é pré-errata). Implementar essa escolha exigiria traduzir
-  justamente o conteúdo bloqueado, então fica de fora até a tradução do
-  Patrulheiro ser retomada.
+  a tradução da classe Patrulheiro está deliberadamente bloqueada (ver
+  seção "Tradução PHB (pt-BR)" acima — o texto do PHB traduzido é
+  pré-errata). Implementar essa escolha exigiria traduzir justamente o
+  conteúdo bloqueado, então fica de fora até a tradução do Patrulheiro ser
+  retomada.
 - **Estilo de Luta do Paladino/Patrulheiro no 2º nível.** Ambos ganham a
   mesma escolha de Estilo de Luta do Guerreiro (implementada em
   `app/wizard/class.tsx`/`data/queries/optional-features.ts`/

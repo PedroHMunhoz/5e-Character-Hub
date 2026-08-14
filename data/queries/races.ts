@@ -45,11 +45,11 @@ function mapRaceRow(row: RaceRow, translations: TranslationDict): Race {
 // PHB-only for now: races/subraces from other sourcebooks exist in the
 // reference db but aren't translated yet, and mixing them in overwhelmed
 // the wizard's race picker with ~220 entries with no clear PHB grouping.
-// See docs/wizard-todo.md for the note to add other sources once translated.
+// See docs/TODO.md for the note to add other sources once translated.
 //
 // Also excludes "Variant" (Variant Human) - it's a real PHB subrace, but its
 // +1/+1 ability choice + bonus skill + feat needs a feat-picker the wizard
-// doesn't have yet. See docs/wizard-todo.md for the note to drop this filter
+// doesn't have yet. See docs/TODO.md for the note to drop this filter
 // once feats are implemented.
 export async function getAllRaces(db: SQLiteDatabase): Promise<Race[]> {
   const rows = await db.getAllAsync<RaceRow>(

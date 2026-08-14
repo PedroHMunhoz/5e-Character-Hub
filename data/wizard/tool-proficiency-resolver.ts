@@ -5,7 +5,7 @@
 // tools": true}`) or an "anyX" category key mapped to a choice count (e.g.
 // `{"anyGamingSet": 1}`). Confirmed live against both classes.starting_
 // proficiencies and backgrounds.tool_proficiencies (see db/schema.sql and
-// docs/wizard-todo.md).
+// docs/TODO.md).
 //
 // Reuses ResolvedEquipmentEntry's `item`/`categoryChoice`/`unresolved`
 // variants from the equipment resolver rather than a parallel type - a

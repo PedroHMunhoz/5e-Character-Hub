@@ -14,7 +14,7 @@ import { normalizeToolCategoryKey } from '@/data/queries/tools';
 import type { EquipmentChoiceGroup, EquipmentChoiceOptionKey, ResolvedEquipmentEntry } from './equipment-resolver';
 
 // Keys ToolItem by `${source}:${id}` so base_items/items id collisions
-// (see docs/wizard-todo.md) never conflate two different catalog rows.
+// (see docs/TODO.md) never conflate two different catalog rows.
 function toolItemKey(source: 'base_items' | 'items', id: number): string {
   return `${source}:${id}`;
 }

@@ -67,7 +67,7 @@ export function CharacterSpells() {
   const rule = englishName ? SPELLCASTING_RULES[englishName] : undefined;
   // Cleric/Druid-style classes choose which spells to prepare from their
   // ENTIRE class list each day, rather than knowing a fixed repertoire -
-  // see docs/wizard-todo.md.
+  // see docs/TODO.md.
   const isFullListCaster = rule?.preparedFromFullList ?? false;
 
   useEffect(() => {

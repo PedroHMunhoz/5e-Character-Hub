@@ -7,7 +7,7 @@
 // every group into a couple of sequential queries.
 //
 // Confirmed raw shapes (verified live against the bundled db - see
-// docs/wizard-todo.md for known coverage gaps):
+// docs/TODO.md for known coverage gaps):
 // - Class: `{ additionalFromBackground, default: string[], goldAlternative:
 //   string, defaultData: RawGroup[] }` - `default` is prose, `defaultData`
 //   is what this module actually parses. Confirmed `defaultData` DOES use

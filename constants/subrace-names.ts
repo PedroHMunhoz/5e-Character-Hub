@@ -5,7 +5,7 @@
 // across reimports/translation edits, unlike `id` or the translated name.
 //
 // Covers every PHB subrace that survives data/queries/races.ts's PHB-only
-// filter (see docs/wizard-todo.md for the note on other sourcebooks) -
+// filter (see docs/TODO.md for the note on other sourcebooks) -
 // Dragonborn/Half-Elf/Half-Orc/Tiefling/Human have none (Human's own +1-to-
 // all bonus lives directly on the base race after the scripts/import-5e-
 // data.mjs fix; Dragonborn's Draconic Ancestry is a separate wizard step,

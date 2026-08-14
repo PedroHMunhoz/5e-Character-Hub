@@ -158,7 +158,7 @@ export default function WizardBackgroundStep() {
     const raw = parseClassSkillChoice(skillsField);
     if (!raw) return null;
     // Don't let the player pick (again) a skill the background/race already
-    // grants for free - the simplification documented in docs/wizard-todo.md
+    // grants for free - the simplification documented in docs/TODO.md
     // (RAW would let them swap it for a feat/language instead).
     return { from: raw.from.filter((key) => !backgroundSkills.includes(key) && !raceSkills.includes(key)), count: raw.count };
   }, [classDef, backgroundSkills, raceSkills]);

@@ -7,7 +7,7 @@ import { getTranslations, localizedName } from './localize';
 // convention as data/queries/base-items.ts); kits (thieves' tools, disguise
 // kit, herbalism kit, ...) and gaming sets are in `items` (type 'T'/'GS'),
 // not `base_items` - confirmed live against the bundled db (see
-// docs/wizard-todo.md for the note to re-verify full PHB coverage).
+// docs/TODO.md for the note to re-verify full PHB coverage).
 export type ToolCategory = 'artisan' | 'instrument' | 'kit' | 'gamingSet';
 
 export interface ToolItem {
