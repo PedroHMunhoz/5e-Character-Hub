@@ -66,24 +66,44 @@ function EntryRow({
 
   if (entry.kind === 'categoryChoice') {
     if (!interactive) {
-      return <ThemedText style={styles.entryText}>{entry.label}</ThemedText>;
+      return (
+        <View style={styles.itemEntry}>
+          <ThemedText style={styles.entryText}>{entry.label}</ThemedText>
+          {entry.flavorText && <ThemedText style={styles.packContents}>{entry.flavorText}</ThemedText>}
+        </View>
+      );
     }
     const selected = categoryChoices[entryKey];
     return (
-      <SelectField
-        label={`Escolha${entry.quantity > 1 ? ` ${entry.quantity}x` : ''}: ${entry.label}`}
-        value={selected ? String(selected.id) : ''}
-        options={sortByLocalizedName(options ?? []).map((item) => ({ value: String(item.id), label: item.name }))}
-        onChange={(value) => {
-          const item = (options ?? []).find((option) => option.id === Number(value));
-          if (item) onChangeCategoryChoice(entryKey, item);
-        }}
-      />
+      <View style={styles.itemEntry}>
+        {entry.flavorText && <ThemedText style={styles.packContents}>{entry.flavorText}</ThemedText>}
+        <SelectField
+          label={`Escolha${entry.quantity > 1 ? ` ${entry.quantity}x` : ''}: ${entry.label}`}
+          value={selected ? String(selected.id) : ''}
+          options={sortByLocalizedName(options ?? []).map((item) => ({ value: String(item.id), label: item.name }))}
+          onChange={(value) => {
+            const item = (options ?? []).find((option) => option.id === Number(value));
+            if (item) onChangeCategoryChoice(entryKey, item);
+          }}
+        />
+      </View>
     );
   }
 
   if (entry.kind === 'unresolved') {
     return <ThemedText style={styles.entryText}>{String(entry.raw)}</ThemedText>;
+  }
+
+  if (entry.kind === 'item' && entry.packEntries && entry.packEntries.length > 0) {
+    const [header, ...items] = entry.packEntries;
+    return (
+      <View style={styles.itemEntry}>
+        <ThemedText style={styles.entryText}>{describeEntry(entry)}</ThemedText>
+        <ThemedText style={styles.packContents}>
+          {header} {items.join(', ')}
+        </ThemedText>
+      </View>
+    );
   }
 
   return <ThemedText style={styles.entryText}>{describeEntry(entry)}</ThemedText>;
@@ -156,6 +176,13 @@ const styles = StyleSheet.create({
   },
   entryText: {
     fontSize: 15,
+  },
+  itemEntry: {
+    gap: 2,
+  },
+  packContents: {
+    fontSize: 12,
+    opacity: 0.7,
   },
   optionCard: {
     borderWidth: 1,

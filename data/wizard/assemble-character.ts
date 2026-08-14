@@ -138,12 +138,21 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   }
 
   // Inventory: resolved entirely by the equipment step. 'special' flavor
-  // entries (no db row) and any leftover 'categoryChoice'/'unresolved'
-  // entries (shouldn't happen - the equipment step gates on full
-  // resolution) are skipped rather than guessed at.
+  // entries with no `valueCp` (no db row) and any leftover
+  // 'categoryChoice'/'unresolved' entries (shouldn't happen - the
+  // equipment step gates on full resolution) are skipped rather than
+  // guessed at.
   const inventoryItems: Record<string, InventoryItemState> = {};
-  let goldFromContainers = 0;
+  let goldFromEquipment = 0;
   for (const entry of draft.chosenEquipment) {
+    // Bare currency grant with no item at all (e.g. Eremita's "5 gp",
+    // {value: 500} in the raw DSL - see equipment-resolver.ts) - same
+    // starting-currency pool as containsValueCp below, just no inventory
+    // item to attach it to.
+    if (entry.kind === 'special') {
+      if (entry.valueCp) goldFromEquipment += entry.valueCp / 100;
+      continue;
+    }
     if (entry.kind !== 'item') continue;
     const key = itemKey(entry.source, entry.itemId);
     // Sum rather than overwrite - the same item can be granted by more than
@@ -151,12 +160,12 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
     // already granted elsewhere), and the totals should add up.
     const existingQuantity = Number(inventoryItems[key]?.quantity ?? 0);
     inventoryItems[key] = { quantity: String(existingQuantity + entry.quantity) };
-    if (entry.containsValueCp) goldFromContainers += entry.containsValueCp / 100;
+    if (entry.containsValueCp) goldFromEquipment += entry.containsValueCp / 100;
   }
 
   const currency: Currency = {
     ...EMPTY_CURRENCY,
-    po: String((draft.equipmentMode === 'gold' ? (draft.goldRolled ?? 0) : 0) + goldFromContainers),
+    po: String((draft.equipmentMode === 'gold' ? (draft.goldRolled ?? 0) : 0) + goldFromEquipment),
   };
 
   // Spells: everything the player picked in the (conditional) spells step.

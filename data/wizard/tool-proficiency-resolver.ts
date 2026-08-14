@@ -20,6 +20,17 @@ import type { ResolvedEquipmentEntry } from './equipment-resolver';
 
 type RawToolProficiencyGroup = Record<string, boolean | number>;
 
+// Vehicle proficiency isn't a tool at all (no catalog row, not a
+// artisan/instrument/gamingSet category) - PHB backgrounds (Folk Hero,
+// Soldier, Sailor) grant it as its own DSL key inside tool_proficiencies.
+// Resolved as a 'special' (display-only) entry purely to localize the text;
+// like every other 'special'/'unresolved' entry, it isn't persisted onto
+// the finished character (see docs/TODO.md).
+const VEHICLE_PROFICIENCY_LABELS: Record<string, string> = {
+  'vehicles (land)': 'Veículos (terrestres)',
+  'vehicles (water)': 'Veículos (aquáticos)',
+};
+
 export async function resolveToolProficiencies(
   db: SQLiteDatabase,
   raw: unknown
@@ -42,6 +53,12 @@ export async function resolveToolProficiencies(
           label: key,
           quantity: typeof value === 'number' ? value : 1,
         });
+        continue;
+      }
+
+      const vehicleLabel = VEHICLE_PROFICIENCY_LABELS[key.toLowerCase()];
+      if (vehicleLabel) {
+        entries.push({ kind: 'special', text: vehicleLabel, quantity: 1 });
         continue;
       }
 

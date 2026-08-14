@@ -83,6 +83,17 @@ export function getSingleItemPackContents(detailsJson: string | null): { itemRef
   return { itemRef: entry.item, quantity: entry.quantity };
 }
 
+// The other packContents shape from getSingleItemPackContents's comment: a
+// bundle of different items (Explorer's Pack, Burglar's Pack, ...) - these
+// stay as one granted item, but the wizard's equipment step wants to show
+// their translated contents as a preview. Structural check (not "does
+// entries[0] look like a header") so it keeps working if the translated
+// lead-in text ever changes.
+export function isMultiItemPack(detailsJson: string | null): boolean {
+  const packContents = parseJson<PackDetails>(detailsJson)?.packContents;
+  return Array.isArray(packContents) && packContents.length > 1;
+}
+
 // Armor weight class drives how much of the DEX modifier applies to AC (see
 // utils/armor-class.ts) - shield ('S') isn't a body-armor weight class, so
 // it's intentionally absent here.

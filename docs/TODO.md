@@ -18,7 +18,8 @@ resumo do que falta).
 Status geral: praticamente tudo do PHB já foi traduzido e importado —
 magias (361), itens base, itens gerais (tabela EQUIPAMENTO p.152),
 ferramentas, talentos, antecedentes, raças, deuses, idiomas, condições,
-perícias, ações e 12 das 13 classes.
+perícias, ações, pacotes de equipamento (nome+conteúdo), montarias e
+veículos (terrestres + aquáticos), e 12 das 13 classes.
 
 ### Bloqueado (aguardando decisão do usuário)
 
@@ -38,29 +39,37 @@ perícias, ações e 12 das 13 classes.
     pt-BR para conferir feature a feature; (c) deixar o Patrulheiro de
     fora do banco pt-BR por enquanto. **Não traduzir/implementar nada do
     Patrulheiro até o usuário retomar esse ponto explicitamente.**
+- **"Sino" (Símbolo Sagrado) pode ser duplicata do item genérico `Bell`.**
+  Ao dar nome em inglês pros itens exclusivos do pt-BR (Sinete/Sino),
+  achei que existe um item genérico `Bell|PHB` (p.150, tipo `G`) com o
+  mesmo preço exato do "Sino" (Símbolo Sagrado, p.151) — mesmo padrão já
+  visto com Manto/Robes (uma duplicata impressa no livro). "Sino" continua
+  em português por ora (não dá pra renomear pra `Bell` sem colidir com
+  esse item real). Decida: (a) mesclar — apagar o "Sino" customizado e
+  usar só o `Bell` genérico (perde o foco de conjuração dedicado); ou
+  (b) manter distintos — decidir um nome em inglês sem colisão pro "Sino".
+  Ver `DUVIDAS.md`, seção "PHB — Itens Gerais".
 
 ### Pendente (decisão de escopo/schema, não é bloqueio de conteúdo)
 
-- **Pacotes de equipamento** (Artista/Assaltante/Diplomata/Exploradora de
-  Masmorras/Artista.../Explorador/Sacerdote, p.153) — schema não tem
-  tabela pack→itens; dado já foi lido do PDF mas não tem onde ser
-  estruturado. Fechar isso antes de começar outros livros (XGE, TCE,
-  SCAG).
-- **Montarias e veículos** (p.157-158) — não existe nenhuma linha de
-  fonte PHB na tabela `vehicles`; pode ser lacuna de import, não só de
-  tradução — investigar se o dado existe em `5e-2014-data` antes.
 - **Bens de comércio e bugigangas** ("Comércio de Bens" p.159, "Bugigangas"
   d100 p.161) — não existe tabela no schema para isso ainda.
 - **Conteúdo de multiclasse dos talentos** (p.165 em diante) — não existe
   entidade no banco para representar isso.
-- **Nomes de "Explorer's Pack"/"Scholar's Pack"** — zero linhas de
-  tradução (nem `name` nem `entries`); usuário já pediu para priorizar ao
-  menos o `name` (ex. "Pacote do Explorador"/"Pacote do Erudito") quando
-  for a vez desses itens, passando pelo pipeline formal
-  (`translations/pt-BR/` + `DUVIDAS.md`).
 - **Sourcebooks além do PHB** (Xanathar's, Tasha's, SCAG etc.) — não
   iniciado; todo o wizard está hard-filtrado para `source = 'PHB'` até
   esses livros serem traduzidos (ver item "Fontes além do PHB" abaixo).
+- **Estrutura de pacote→itens** (Artista/Assaltante/Aventureiro/Diplomata/
+  Estudioso/Explorador/Sacerdote, p.153) — nome e conteúdo (prosa) já
+  traduzidos (`translations/pt-BR/PHB/items.json`), mas o schema ainda não
+  modela "pacote contém N de item X" como dado estruturado (o dataset em
+  inglês tem isso em `packContents`, mas nada no schema/import usa esse
+  campo hoje). Só importa se algum dia quisermos resolver o conteúdo do
+  pacote pra itens de catálogo de verdade, em vez de só texto.
+- **Arreios/acessórios de montaria** (Alforje, Armadura de Montaria,
+  Estábulo, Freio e rédea, variantes de Sela — mesma seção do livro que
+  montarias/veículos, p.157, mas não são tipo `MNT`/`VEH`) — não
+  traduzidos ainda, ficaram de fora da rodada de montarias/veículos.
 
 ## Wizard de criação de personagem
 
@@ -157,15 +166,18 @@ usuário).
   pacotes (ex. "Pacote do Explorador"/"Pacote do Erudito") - `entries`
   (conteúdo) pode vir depois. Passar pelo pipeline formal de tradução
   (`translations/pt-BR/` + `DUVIDAS.md`) quando for a vez desses itens.
-- **Mostrar o conteúdo dos pacotes/kits no Passo 5.** Combinado com o
-  usuário: por ora as opções de equipamento (`components/wizard/
-  equipment-choice-group.tsx`) mostram só o nome do item (ex. "Pacote do
-  Explorador"), sem a lista de conteúdo (`items.entries`, ex. "Inclui:
-  mochila, saco de dormir, ..."). Quando os itens relevantes (packs/kits)
-  tiverem `entries` traduzidas, expor esse campo em `EquipmentLookupItem`/
-  na resolução (hoje só carrega `id`/`source`/`name`/`englishName`) e
-  mostrar como texto de apoio abaixo de cada opção, como no mockup de
-  referência que o usuário mandou.
+- ~~Mostrar o conteúdo dos pacotes/kits no Passo 5~~ — **implementado**:
+  `EquipmentLookupItem`/`ResolvedEquipmentEntry` (`data/queries/
+  equipment-lookup.ts`, `data/wizard/equipment-resolver.ts`) agora carregam
+  as `entries` traduzidas dos 7 pacotes multi-item (sinal estrutural
+  `isMultiItemPack()` em `data/queries/base-items.ts`, não depende do texto
+  "Inclui:" continuar igual), e `equipment-choice-group.tsx` mostra o
+  conteúdo como texto de apoio abaixo do nome (fonte menor, esmaecido,
+  `numberOfLines={2}` pra não estourar o card nos pacotes maiores).
+  Achado durante essa mudança: o filtro de Símbolo Sagrado em
+  `equipment-lookup.ts` ainda buscava `name IN ('Sinete', 'Sino')` — ficou
+  quebrado (silenciosamente) depois do rename Sinete→Signet da rodada de
+  tradução; corrigido junto.
 - **Fluxo de multiclasse** (adicionar uma segunda classe depois de criado o
   personagem) — o wizard só cria o 1º nível de uma única classe.
 - **Editar raça/classe/antecedente depois de criado** — decisão do
@@ -319,3 +331,49 @@ usuário).
   implementar essas mudanças). Se o app ganhar outros sourcebooks
   (Xanathar's, Tasha's) ou level-up, vale refazer esse levantamento para as
   classes/features/níveis que entrarem.
+- **Proficiências "livres" (sem item de catálogo) nunca são persistidas na
+  ficha final do personagem.** Achado ao corrigir a exibição em inglês de
+  "vehicles (land)"/"vehicles (water)" (proficiência de veículo do Herói
+  do Povo/Soldado/Marinheiro): `assemble-character.ts` só grava na ficha
+  as entradas de proficiência `kind === 'item'` — qualquer coisa que
+  resolva pra `kind: 'special'` ou `kind: 'unresolved'` (sem um id de
+  catálogo pra apontar) é descartada silenciosamente. Não é um problema
+  exclusivo de veículo: afeta qualquer proficiência desse formato, hoje e
+  no futuro. Corrigir de verdade exigiria um novo conceito no modelo do
+  personagem (algo como `freeformProficiencies`) — decisão de escopo maior
+  que ficou combinada de adiar (só corrigimos a exibição em português por
+  enquanto, não a persistência).
+- **Quantidade de itens "special" do equipamento inicial nunca aparece pro
+  jogador.** Achado ao traduzir os itens de texto livre do equipamento
+  de antecedente (`EQUIPMENT_FLAVOR_TEXT_LABELS` em
+  `data/wizard/equipment-resolver.ts`) — `describeEntry()`
+  (`components/wizard/equipment-choice-group.tsx`) só lê `entry.text` pra
+  `kind: 'special'`, nunca `entry.quantity`. Ex.: o Acólito ganha "5 sticks
+  of incense" (`quantity: 5`), mas a tela sempre mostrou (mesmo antes desta
+  tradução, já em inglês) só "varetas de incenso", sem o "5". Não corrigido
+  agora (fora do pedido original, só tradução de texto) — se for mexer,
+  o ajuste é mostrar `${quantity}x ${text}` igual já se faz pra
+  `kind: 'item'` em `describeEntry()`.
+- ~~Grant de moeda solta no equipamento inicial (`{value: N}`, sem item) não
+  soma na bolsa do personagem~~ — **corrigido**: achado ao consertar o
+  Eremita (concede 5 po soltos, sem item, único caso desse formato na
+  PHB). Descobri no mesmo processo que o Nobre tinha um problema parecido
+  mas silencioso: sua "purse" (algibeira com 25 po) usa
+  `{special: "purse", containsValue: ...}` em vez do
+  `{item: "pouch|phb", containsValue: ...}` que os outros 11 antecedentes
+  com bolsa de moedas usam — `parseRawEntry` nunca lia `containsValue` de
+  uma entrada `special`, então os 25 po do Nobre eram descartados
+  silenciosamente (só o texto "Algibeira" aparecia, sem valor). Duas
+  correções em `data/wizard/equipment-resolver.ts`: (1) a "purse" do Nobre
+  agora redireciona pro item de catálogo real `Pouch\|PHB` (mesmo item que
+  os outros antecedentes já usavam, resolve/soma normalmente); (2) o
+  grant solto do Eremita ganhou um campo `valueCp` no `kind: 'special'`,
+  somado por `assemble-character.ts` junto com `containsValueCp` (variável
+  renomeada de `goldFromContainers` pra `goldFromEquipment`, já que cobre
+  os dois casos agora).
+- ~~`Book` (item, id 182) estava com o texto de `Spellbook` (id 1354) por
+  engano~~ — **corrigido, confirmado pelo usuário**: o item que o Mago
+  recebe na criação é mesmo o `Spellbook`/Grimório; `Book` é um item
+  genérico à parte. `Book\|PHB` ganhou nome ("Livro") e descrição próprios,
+  traduzidos do texto em inglês real do item, em vez de reaproveitar o
+  texto do Grimório.

@@ -1,7 +1,8 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { getSingleItemPackContents } from './base-items';
-import { getTranslations, localizedName } from './localize';
+import { getSingleItemPackContents, isMultiItemPack } from './base-items';
+import { getTranslations, localizedEntries, localizedName } from './localize';
+import { toEntries } from '../rows';
 
 // Item lookups by arbitrary name/category, for the wizard's equipment
 // resolver (data/wizard/equipment-resolver.ts), which needs to resolve
@@ -26,6 +27,11 @@ export interface EquipmentLookupItem {
   // no pack, and for multi-item bundles (Explorer's Pack, ...), which stay
   // as one granted item - see getSingleItemPackContents.
   singleItemPack?: { itemRef: string; quantity: number };
+  // Translated contents preview, only set for multi-item equipment packs
+  // (Explorer's Pack, Burglar's Pack, ...) - see isMultiItemPack. Only
+  // populated by getItemsByNames; base_items never carries this (packs
+  // only live in `items`).
+  entries?: string[];
 }
 
 // A 5etools item ref like "chain mail|phb" or bare "thieves' tools" (no
@@ -77,8 +83,8 @@ export async function getItemsByNames(db: SQLiteDatabase, refs: string[]): Promi
   if (refs.length === 0) return [];
   const names = refs.map(refName);
   const placeholders = names.map(() => '?').join(', ');
-  const rows = await db.getAllAsync<{ id: number; name: string; details: string | null }>(
-    `SELECT id, name, details FROM items WHERE source = 'PHB' AND name COLLATE NOCASE IN (${placeholders})`,
+  const rows = await db.getAllAsync<{ id: number; name: string; entries: string | null; details: string | null }>(
+    `SELECT id, name, entries, details FROM items WHERE source = 'PHB' AND name COLLATE NOCASE IN (${placeholders})`,
     ...names
   );
   const translations = await getTranslations(db, 'item');
@@ -88,6 +94,7 @@ export async function getItemsByNames(db: SQLiteDatabase, refs: string[]): Promi
     name: localizedName(row.id, row.name, translations),
     englishName: row.name,
     singleItemPack: getSingleItemPackContents(row.details),
+    entries: isMultiItemPack(row.details) ? localizedEntries(row.id, toEntries(row.entries), translations) : undefined,
   }));
 }
 
@@ -136,9 +143,11 @@ const EQUIPMENT_TYPE_FILTERS: Record<string, EquipmentTypeFilter[]> = {
   ],
   focusSpellcastingHoly: [
     { table: 'items', where: `type = 'SCF' AND json_extract(details,'$.scfType') = ?`, params: ['holy'] },
-    // Sinete/Sino (custom PHB pt-BR entries) have no `details` at all, so
-    // they can't be matched by scfType - name them explicitly instead.
-    { table: 'items', where: `type = 'SCF' AND details IS NULL AND name IN ('Sinete', 'Sino')`, params: [] },
+    // Signet/Sino (custom PHB pt-BR entries - Signet is Sinete's English
+    // base name, see db/overrides/custom-items.json) have no `details` at
+    // all, so they can't be matched by scfType - name them explicitly
+    // instead.
+    { table: 'items', where: `type = 'SCF' AND details IS NULL AND name IN ('Signet', 'Sino')`, params: [] },
   ],
 };
 
