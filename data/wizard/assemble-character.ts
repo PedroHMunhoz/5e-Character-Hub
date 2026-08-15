@@ -12,8 +12,13 @@ import { getBackgroundById } from '@/data/queries/backgrounds';
 import { getBaseItemCategoriesByIds } from '@/data/queries/base-items';
 import { getClassById, getClassEnglishName, getSubclassById } from '@/data/queries/classes';
 import { itemKey } from '@/data/queries/equipment-lookup';
+import { getAllLanguages } from '@/data/queries/languages';
 import { getOptionalFeatureById } from '@/data/queries/optional-features';
 import { getRaceById } from '@/data/queries/races';
+import {
+  getClassGrantedLanguageNames,
+  parseFixedLanguageEnglishNames,
+} from '@/data/wizard/language-proficiency-resolver';
 import { combineAbilityBonuses, getResolvedRacialBonus } from '@/data/wizard/race-ability-bonus';
 import { parseBackgroundSkillProficiencies } from '@/data/wizard/skill-proficiency-resolver';
 import { feetToMeters } from '@/utils/speed';
@@ -77,8 +82,7 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   const classEnglishName = await getClassEnglishName(db, draft.classId);
   const subclass = draft.subclassId !== null ? await getSubclassById(db, draft.subclassId) : null;
   const background = await getBackgroundById(db, draft.backgroundId);
-  const fightingStyle =
-    draft.fightingStyleId !== null ? await getOptionalFeatureById(db, draft.fightingStyleId) : null;
+  const fightingStyle = draft.fightingStyleId !== null ? await getOptionalFeatureById(db, draft.fightingStyleId) : null;
 
   if (!race || !classDef || !background) {
     throw new Error('assembleCharacter: failed to load race/class/background from the reference database');
@@ -139,6 +143,28 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
     const key = itemKey(entry.source, entry.itemId);
     tools[key] = { proficient: true, expertise: key === draft.expertiseToolChoice };
   }
+
+  // Languages: race's fixed grant (Common + own language; a subrace's own
+  // `languages` value - only High Elf in the PHB - overwrites the base
+  // race's grant rather than adding to it, same as the wizard's background
+  // step) + background's fixed grant (none in the PHB, but checked for
+  // future sourcebooks) + whatever the player picked for either's
+  // anyStandard choice + any level-1 class feature that grants a specific
+  // language outright (Druid's Druidic, Rogue's Thieves' Cant).
+  const allLanguages = await getAllLanguages(db);
+  const languageByEnglishName = new Map(allLanguages.map((language) => [language.englishName.toLowerCase(), language]));
+  const effectiveRaceLanguagesRaw = subrace?.languages ?? race.languages;
+  const fixedLanguageNames = [
+    ...parseFixedLanguageEnglishNames(effectiveRaceLanguagesRaw),
+    ...parseFixedLanguageEnglishNames(background.languageProficiencies),
+    ...(await getClassGrantedLanguageNames(db, classDef.id, 1)),
+  ];
+  const fixedLanguageIds = fixedLanguageNames
+    .map((name) => languageByEnglishName.get(name.toLowerCase())?.id)
+    .filter((id): id is number => id != null);
+  const languages = [
+    ...new Set([...fixedLanguageIds, ...draft.raceLanguageChoices, ...draft.backgroundLanguageChoices]),
+  ];
 
   // Inventory: resolved entirely by the equipment step. 'special' flavor
   // entries with no `valueCp` (no db row) and any leftover
@@ -277,6 +303,7 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
     abilities,
     savingThrows,
     skills,
+    languages,
     speed: String(feetToMeters(subrace?.speed ?? race.speed ?? 30)),
     hitPoints: { max: String(maxHp), current: String(maxHp), temporary: '0' },
     hitDice: { current: '1', max: '1' },

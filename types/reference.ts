@@ -124,6 +124,14 @@ export interface Race {
   // data/wizard/skill-proficiency-resolver.ts, reusing the same parsers as
   // backgrounds/classes (the DSL shape is identical).
   skillProficiencies: unknown;
+  // Raw JSON, {name: true}/{anyStandard: count} shape (same "anyX" choice
+  // convention as toolProficiencies, not skillProficiencies' free `any`) -
+  // every PHB race grants at least Common + one fixed language; Human/
+  // Half-Elf/High Elf also grant anyStandard:1. A subrace with its own
+  // non-null value here (only High Elf in the PHB) overwrites rather than
+  // adds to the parent race's grant. Resolved by
+  // data/wizard/language-proficiency-resolver.ts.
+  languages: unknown;
 }
 
 export interface RacialTrait {
@@ -152,6 +160,10 @@ export interface Background {
   // CharacterClassDefinition.startingEquipment) - resolved by
   // data/wizard/equipment-resolver.ts.
   startingEquipment: unknown;
+  // Raw JSON, same {name: true}/{anyStandard: count} shape as Race.languages
+  // - no PHB background grants a fixed named language, only anyStandard (1
+  // or 2). Resolved by data/wizard/language-proficiency-resolver.ts.
+  languageProficiencies: unknown;
 }
 
 export interface Feat {

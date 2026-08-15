@@ -121,12 +121,35 @@ usuário).
   `db/schema.sql`, atualizei o import script para populá-la e rodei
   `npm run db:import` + `npm run db:translate` de novo. Proficiência de
   ferramentas de antecedente agora é estruturada, igual à de perícias.
-- **Conferir se outros campos de antecedente sofrem do mesmo problema**
-  (conteúdo descartado pelo import em vez de virar coluna própria) — só
-  verifiquei "Tool Proficiencies:"; "Skill Proficiencies:"/"Equipment:" já
-  tinham colunas estruturadas próprias (`skill_proficiencies`/
-  `starting_equipment`) que continuam corretas, mas vale conferir se sobrou
-  algum outro cabeçalho nessa situação em antecedentes fora do PHB.
+- ~~Conferir se outros campos de antecedente sofrem do mesmo problema~~ —
+  **conferido, nada sobrou**: os 4 campos brutos que um antecedente da PHB
+  pode ter (`skillProficiencies`, `toolProficiencies`,
+  `languageProficiencies`, `startingEquipment`) já têm coluna própria
+  (`skill_proficiencies`/`tool_proficiencies`/`language_proficiencies`/
+  `starting_equipment`) e são importados corretamente por
+  `scripts/import-5e-data.mjs`. Achado ao conferir especificamente
+  `language_proficiencies` (e a coluna equivalente em raça,
+  `races.languages`): a coluna era gravada certinho no banco mas **nunca
+  lida em lugar nenhum do app** — não existia `data/queries/languages.ts`,
+  o wizard não tinha passo de escolha de idiomas, e `CharacterSheet` não
+  tinha nenhum conceito de "idiomas" do personagem. Virou feature nova,
+  implementada na mesma sessão: `data/queries/languages.ts` (catálogo,
+  espelha `data/queries/tools.ts`), `data/wizard/language-proficiency-
+  resolver.ts` (parse da DSL `{name:true}`/`{anyStandard:N}`, mesma
+  convenção de `tool_proficiencies`), novo passo "Idiomas" dentro do Passo 4
+  do wizard (`app/wizard/background.tsx`, `components/wizard/language-
+  choice-list.tsx`) cobrindo idioma fixo + escolha de raça e antecedente
+  (incluindo o caso do Elfo Alto, cuja sub-raça **sobrescreve** o
+  `languageProficiencies` da raça-base em vez de somar), `CharacterSheet.
+  languages: number[]` persistido em `data/wizard/assemble-character.ts`, e
+  exibido na aba Atributos (`components/character/character-attributes.tsx`).
+  A pedido do usuário, também cobre os dois idiomas concedidos por
+  *característica de classe* em vez da DSL de proficiência (Druídico do
+  Druida, Gíria de Ladrão do Ladino, ambos nível 1) — o nome da própria
+  característica bate exatamente com o nome do idioma no catálogo, então
+  `getClassGrantedLanguageNames` (mesmo arquivo do resolver) casa por uma
+  pequena lista explícita em vez de inferência genérica, mesmo padrão já
+  usado por `VEHICLE_PROFICIENCY_LABELS` no resolver de ferramentas.
 - ~~**Mapeamento de `equipmentType`**~~ — resolvido: conferi ao vivo contra
   `starting_equipment` de todas as classes e antecedentes do PHB (não só as
   verificadas no planejamento original) e são exatamente 9 códigos:

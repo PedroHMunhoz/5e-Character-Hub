@@ -52,6 +52,14 @@ export interface WizardDraft {
   // stored here - they're re-derived from the race's own skillProficiencies
   // whenever needed, same as fixed ability bonuses.
   raceSkillChoices: SkillKey[];
+  // Language ids (data/queries/languages.ts's Language.id) picked for the
+  // race's own anyStandard choice (e.g. Human, Half-Elf, High Elf) and the
+  // background's anyStandard choice - kept separate for the same reason as
+  // classSkillChoices/raceSkillChoices (different pools, different reset
+  // triggers). Fixed languages (every race's Common + own language) aren't
+  // stored here - re-derived from race/background.languages whenever needed.
+  raceLanguageChoices: number[];
+  backgroundLanguageChoices: number[];
   expertiseSkillChoices: SkillKey[];
   // itemKey() of the tool swapped in for one of the two Expertise skill
   // picks (RAW: "one skill proficiency and your proficiency with thieves'
@@ -91,6 +99,8 @@ const initialDraft: WizardDraft = {
   backgroundId: null,
   classSkillChoices: [],
   raceSkillChoices: [],
+  raceLanguageChoices: [],
+  backgroundLanguageChoices: [],
   expertiseSkillChoices: [],
   expertiseToolChoice: null,
   toolProficiencies: [],
@@ -118,6 +128,8 @@ type Action =
   | { type: 'SET_BACKGROUND'; backgroundId: number | null }
   | { type: 'SET_CLASS_SKILL_CHOICES'; keys: SkillKey[] }
   | { type: 'SET_RACE_SKILL_CHOICES'; keys: SkillKey[] }
+  | { type: 'SET_RACE_LANGUAGE_CHOICES'; ids: number[] }
+  | { type: 'SET_BACKGROUND_LANGUAGE_CHOICES'; ids: number[] }
   | { type: 'SET_EXPERTISE_SKILL_CHOICES'; keys: SkillKey[] }
   | { type: 'SET_EXPERTISE_TOOL_CHOICE'; key: string | null }
   | { type: 'SET_TOOL_PROFICIENCIES'; entries: ResolvedEquipmentEntry[] }
@@ -140,9 +152,10 @@ function wizardReducer(state: WizardDraft, action: Action): WizardDraft {
         abilityBonusChoices: {},
         draconicAncestry: null,
         raceSkillChoices: [],
+        raceLanguageChoices: [],
       };
     case 'SET_SUBRACE':
-      return { ...state, subraceId: action.subraceId, abilityBonusChoices: {} };
+      return { ...state, subraceId: action.subraceId, abilityBonusChoices: {}, raceLanguageChoices: [] };
     case 'SET_ABILITY_BONUS_CHOICES':
       return { ...state, abilityBonusChoices: action.choices };
     case 'SET_DRACONIC_ANCESTRY':
@@ -158,11 +171,15 @@ function wizardReducer(state: WizardDraft, action: Action): WizardDraft {
     case 'SET_BASE_ABILITY_SCORES':
       return { ...state, baseAbilityScores: action.scores };
     case 'SET_BACKGROUND':
-      return { ...state, backgroundId: action.backgroundId, classSkillChoices: [] };
+      return { ...state, backgroundId: action.backgroundId, classSkillChoices: [], backgroundLanguageChoices: [] };
     case 'SET_CLASS_SKILL_CHOICES':
       return { ...state, classSkillChoices: action.keys };
     case 'SET_RACE_SKILL_CHOICES':
       return { ...state, raceSkillChoices: action.keys };
+    case 'SET_RACE_LANGUAGE_CHOICES':
+      return { ...state, raceLanguageChoices: action.ids };
+    case 'SET_BACKGROUND_LANGUAGE_CHOICES':
+      return { ...state, backgroundLanguageChoices: action.ids };
     case 'SET_EXPERTISE_SKILL_CHOICES':
       return { ...state, expertiseSkillChoices: action.keys };
     case 'SET_EXPERTISE_TOOL_CHOICE':
@@ -200,6 +217,8 @@ export interface WizardContextValue {
   setBackground: (backgroundId: number | null) => void;
   setClassSkillChoices: (keys: SkillKey[]) => void;
   setRaceSkillChoices: (keys: SkillKey[]) => void;
+  setRaceLanguageChoices: (ids: number[]) => void;
+  setBackgroundLanguageChoices: (ids: number[]) => void;
   setExpertiseSkillChoices: (keys: SkillKey[]) => void;
   setExpertiseToolChoice: (key: string | null) => void;
   setToolProficiencies: (entries: ResolvedEquipmentEntry[]) => void;
@@ -231,6 +250,8 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       setBackground: (backgroundId) => dispatch({ type: 'SET_BACKGROUND', backgroundId }),
       setClassSkillChoices: (keys) => dispatch({ type: 'SET_CLASS_SKILL_CHOICES', keys }),
       setRaceSkillChoices: (keys) => dispatch({ type: 'SET_RACE_SKILL_CHOICES', keys }),
+      setRaceLanguageChoices: (ids) => dispatch({ type: 'SET_RACE_LANGUAGE_CHOICES', ids }),
+      setBackgroundLanguageChoices: (ids) => dispatch({ type: 'SET_BACKGROUND_LANGUAGE_CHOICES', ids }),
       setExpertiseSkillChoices: (keys) => dispatch({ type: 'SET_EXPERTISE_SKILL_CHOICES', keys }),
       setExpertiseToolChoice: (key) => dispatch({ type: 'SET_EXPERTISE_TOOL_CHOICE', key }),
       setToolProficiencies: (entries) => dispatch({ type: 'SET_TOOL_PROFICIENCIES', entries }),

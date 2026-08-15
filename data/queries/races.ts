@@ -16,6 +16,7 @@ interface RaceRow {
   darkvision: number | null;
   ability_bonuses: string | null;
   skill_proficiencies: string | null;
+  languages: string | null;
 }
 
 interface RacialTraitRow {
@@ -39,6 +40,7 @@ function mapRaceRow(row: RaceRow, translations: TranslationDict): Race {
     darkvision: row.darkvision,
     abilityBonuses: parseJson<RaceAbilityBonus[]>(row.ability_bonuses),
     skillProficiencies: parseJson(row.skill_proficiencies),
+    languages: parseJson(row.languages),
   };
 }
 

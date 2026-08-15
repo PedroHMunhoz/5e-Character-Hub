@@ -5,6 +5,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 
 import { CheckboxToggle } from '@/components/character/checkbox-toggle';
 import { SelectField } from '@/components/character/select-field';
+import { LanguageChoiceList, type LanguageChoiceClause } from '@/components/wizard/language-choice-list';
 import { SkillChoiceList } from '@/components/wizard/skill-choice-list';
 import { ToolChoiceList } from '@/components/wizard/tool-choice-list';
 import { WizardStepHeader } from '@/components/wizard/wizard-step-header';
@@ -14,17 +15,26 @@ import { useWizardDraft } from '@/context/wizard-context';
 import { classGrantsExpertiseAtLevel1, getClassById } from '@/data/queries/classes';
 import { getAllBackgrounds } from '@/data/queries/backgrounds';
 import { itemKey } from '@/data/queries/equipment-lookup';
+import { getAllLanguages, type Language } from '@/data/queries/languages';
 import { getRaceById } from '@/data/queries/races';
 import { getToolItemByEnglishName, type ToolItem } from '@/data/queries/tools';
 import type { ResolvedEquipmentEntry } from '@/data/wizard/equipment-resolver';
-import { parseBackgroundSkillProficiencies, parseClassSkillChoice, type SkillChoiceClause } from '@/data/wizard/skill-proficiency-resolver';
+import { parseFixedLanguageEnglishNames, parseLanguageChoiceCount } from '@/data/wizard/language-proficiency-resolver';
+import {
+  parseBackgroundSkillProficiencies,
+  parseClassSkillChoice,
+  type SkillChoiceClause,
+} from '@/data/wizard/skill-proficiency-resolver';
 import { resolveToolProficiencies } from '@/data/wizard/tool-proficiency-resolver';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { sortByLocalizedName } from '@/utils/sort-by-name';
 import type { SkillKey } from '@/types/character';
 import type { Background, CharacterClassDefinition, Race } from '@/types/reference';
 
-const LABEL_BY_SKILL_KEY = Object.fromEntries(SKILLS.map((skill) => [skill.key, skill.label])) as Record<SkillKey, string>;
+const LABEL_BY_SKILL_KEY = Object.fromEntries(SKILLS.map((skill) => [skill.key, skill.label])) as Record<
+  SkillKey,
+  string
+>;
 
 // The only PHB class whose level-1 "Expertise" text specifies a count -
 // always "choose two of your skill proficiencies, or one of your skill
@@ -62,6 +72,8 @@ export default function WizardBackgroundStep() {
     setBackground,
     setClassSkillChoices,
     setRaceSkillChoices,
+    setRaceLanguageChoices,
+    setBackgroundLanguageChoices,
     setExpertiseSkillChoices,
     setExpertiseToolChoice,
     setToolProficiencies,
@@ -75,9 +87,14 @@ export default function WizardBackgroundStep() {
   const [expertiseAllowed, setExpertiseAllowed] = useState(false);
   const [toolEntries, setToolEntries] = useState<ResolvedEquipmentEntry[] | null>(null);
   const [expertiseToolItem, setExpertiseToolItem] = useState<ToolItem | null>(null);
+  const [allLanguages, setAllLanguages] = useState<Language[] | null>(null);
 
   const [classSkillSelected, setClassSkillSelected] = useState<SkillKey[]>(draft.classSkillChoices);
   const [raceSkillSelected, setRaceSkillSelected] = useState<SkillKey[]>(draft.raceSkillChoices);
+  const [raceLanguageSelected, setRaceLanguageSelected] = useState<number[]>(draft.raceLanguageChoices);
+  const [backgroundLanguageSelected, setBackgroundLanguageSelected] = useState<number[]>(
+    draft.backgroundLanguageChoices
+  );
   const [expertiseSelected, setExpertiseSelected] = useState<SkillKey[]>(draft.expertiseSkillChoices);
   const [expertiseUsesTool, setExpertiseUsesTool] = useState<boolean>(draft.expertiseToolChoice !== null);
   const [toolCategoryChoices, setToolCategoryChoices] = useState<Record<string, ToolItem>>({});
@@ -96,6 +113,16 @@ export default function WizardBackgroundStep() {
     let cancelled = false;
     getAllBackgrounds(db).then((data) => {
       if (!cancelled) setBackgrounds(sortByLocalizedName(data));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [db]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAllLanguages(db).then((data) => {
+      if (!cancelled) setAllLanguages(data);
     });
     return () => {
       cancelled = true;
@@ -165,7 +192,10 @@ export default function WizardBackgroundStep() {
   // ("choose 2 skills of your choice"). Only Half-Elf has one in the PHB.
   const raceSkillClause: SkillChoiceClause | null = useMemo(() => {
     if (!race) return null;
-    return parseClassSkillChoice(race.skillProficiencies) ?? (subrace ? parseClassSkillChoice(subrace.skillProficiencies) : null);
+    return (
+      parseClassSkillChoice(race.skillProficiencies) ??
+      (subrace ? parseClassSkillChoice(subrace.skillProficiencies) : null)
+    );
   }, [race, subrace]);
 
   const classSkillClause: SkillChoiceClause | null = useMemo(() => {
@@ -180,7 +210,10 @@ export default function WizardBackgroundStep() {
     // Don't let the player pick (again) a skill the background/race already
     // grants for free - the simplification documented in docs/TODO.md
     // (RAW would let them swap it for a feat/language instead).
-    return { from: raw.from.filter((key) => !backgroundSkills.includes(key) && !raceSkills.includes(key)), count: raw.count };
+    return {
+      from: raw.from.filter((key) => !backgroundSkills.includes(key) && !raceSkills.includes(key)),
+      count: raw.count,
+    };
   }, [classDef, backgroundSkills, raceSkills]);
 
   // Resolve tool proficiencies (class + background combined) once both are
@@ -219,6 +252,95 @@ export default function WizardBackgroundStep() {
     [backgroundSkills, raceSkills, classSkillSelected, raceSkillSelected]
   );
 
+  const languageByEnglishName = useMemo(
+    () => new Map((allLanguages ?? []).map((language) => [language.englishName.toLowerCase(), language])),
+    [allLanguages]
+  );
+  // Excludes Common - every PHB race grants it as a fixed language (see
+  // raceLanguagesFixed below), so it'd be a redundant, always-disabled entry
+  // in every anyStandard choice list.
+  const standardLanguages = useMemo(
+    () =>
+      (allLanguages ?? []).filter(
+        (language) => language.type === 'standard' && language.englishName.toLowerCase() !== 'common'
+      ),
+    [allLanguages]
+  );
+
+  // A subrace's own `languages` value (only High Elf in the PHB) overwrites
+  // the base race's grant entirely rather than adding to it - same
+  // "overwrite" flag the raw 5etools data uses, confirmed live against
+  // every PHB race/subrace (see docs/TODO.md).
+  const effectiveRaceLanguagesRaw = subrace?.languages ?? race?.languages ?? null;
+  const raceLanguagesFixedNames = useMemo(
+    () => parseFixedLanguageEnglishNames(effectiveRaceLanguagesRaw),
+    [effectiveRaceLanguagesRaw]
+  );
+  const raceLanguageChoiceCount = useMemo(
+    () => parseLanguageChoiceCount(effectiveRaceLanguagesRaw),
+    [effectiveRaceLanguagesRaw]
+  );
+  const raceLanguagesFixed = useMemo(
+    () =>
+      raceLanguagesFixedNames.map((name) => languageByEnglishName.get(name)).filter((l): l is Language => l != null),
+    [raceLanguagesFixedNames, languageByEnglishName]
+  );
+
+  const backgroundLanguagesFixedNames = useMemo(
+    () => (selectedBackground ? parseFixedLanguageEnglishNames(selectedBackground.languageProficiencies) : []),
+    [selectedBackground]
+  );
+  const backgroundLanguageChoiceCount = useMemo(
+    () => (selectedBackground ? parseLanguageChoiceCount(selectedBackground.languageProficiencies) : null),
+    [selectedBackground]
+  );
+  const backgroundLanguagesFixed = useMemo(
+    () =>
+      backgroundLanguagesFixedNames
+        .map((name) => languageByEnglishName.get(name))
+        .filter((l): l is Language => l != null),
+    [backgroundLanguagesFixedNames, languageByEnglishName]
+  );
+
+  // Languages already granted by the *other* section on this screen - shown
+  // disabled (not hidden) in each list, so picking one in the race section
+  // doesn't make it silently vanish from the background section (or vice
+  // versa) with no explanation. A language's own source still just omits it
+  // from both `from` and `disabled` - it's already visible in that source's
+  // own fixed-grant bullet list just above.
+  const raceLanguageCrossDisabled = useMemo(
+    () =>
+      standardLanguages.filter(
+        (l) => backgroundLanguagesFixed.some((f) => f.id === l.id) || backgroundLanguageSelected.includes(l.id)
+      ),
+    [standardLanguages, backgroundLanguagesFixed, backgroundLanguageSelected]
+  );
+  const backgroundLanguageCrossDisabled = useMemo(
+    () =>
+      standardLanguages.filter(
+        (l) => raceLanguagesFixed.some((f) => f.id === l.id) || raceLanguageSelected.includes(l.id)
+      ),
+    [standardLanguages, raceLanguagesFixed, raceLanguageSelected]
+  );
+
+  const raceLanguageClause: LanguageChoiceClause | null = useMemo(() => {
+    if (raceLanguageChoiceCount === null) return null;
+    const pool = standardLanguages.filter(
+      (l) => !raceLanguagesFixed.some((f) => f.id === l.id) && !raceLanguageCrossDisabled.some((d) => d.id === l.id)
+    );
+    return { from: pool, count: raceLanguageChoiceCount };
+  }, [raceLanguageChoiceCount, standardLanguages, raceLanguagesFixed, raceLanguageCrossDisabled]);
+
+  const backgroundLanguageClause: LanguageChoiceClause | null = useMemo(() => {
+    if (backgroundLanguageChoiceCount === null) return null;
+    const pool = standardLanguages.filter(
+      (l) =>
+        !backgroundLanguagesFixed.some((f) => f.id === l.id) &&
+        !backgroundLanguageCrossDisabled.some((d) => d.id === l.id)
+    );
+    return { from: pool, count: backgroundLanguageChoiceCount };
+  }, [backgroundLanguageChoiceCount, standardLanguages, backgroundLanguagesFixed, backgroundLanguageCrossDisabled]);
+
   // Whether the character actually has thieves' tools proficiency (from
   // class and/or background) - only then can Expertise swap a skill pick for
   // it. Checked against `toolEntries` (fixed grants, already resolved
@@ -228,7 +350,8 @@ export default function WizardBackgroundStep() {
   const hasThievesTools = useMemo(() => {
     if (!expertiseToolItem) return false;
     return (toolEntries ?? []).some(
-      (entry) => entry.kind === 'item' && entry.itemId === expertiseToolItem.id && entry.source === expertiseToolItem.source
+      (entry) =>
+        entry.kind === 'item' && entry.itemId === expertiseToolItem.id && entry.source === expertiseToolItem.source
     );
   }, [toolEntries, expertiseToolItem]);
 
@@ -250,6 +373,8 @@ export default function WizardBackgroundStep() {
     draft.backgroundId !== null &&
     (classSkillClause === null || classSkillSelected.length === classSkillClause.count) &&
     (raceSkillClause === null || raceSkillSelected.length === raceSkillClause.count) &&
+    (raceLanguageClause === null || raceLanguageSelected.length === raceLanguageClause.count) &&
+    (backgroundLanguageClause === null || backgroundLanguageSelected.length === backgroundLanguageClause.count) &&
     (!expertiseAllowed || expertiseSelected.length === requiredExpertiseSkillCount) &&
     toolEntries !== null &&
     allCategoryChoicesResolved;
@@ -274,6 +399,8 @@ export default function WizardBackgroundStep() {
 
     setClassSkillChoices(classSkillSelected);
     setRaceSkillChoices(raceSkillSelected);
+    setRaceLanguageChoices(raceLanguageSelected);
+    setBackgroundLanguageChoices(backgroundLanguageSelected);
     setExpertiseSkillChoices(expertiseSelected);
     setExpertiseToolChoice(
       expertiseUsesTool && expertiseToolItem ? itemKey(expertiseToolItem.source, expertiseToolItem.id) : null
@@ -309,6 +436,8 @@ export default function WizardBackgroundStep() {
             // recomputed pool, silently blocking new picks.
             setClassSkillSelected([]);
             setRaceSkillSelected([]);
+            setRaceLanguageSelected([]);
+            setBackgroundLanguageSelected([]);
             setExpertiseSelected([]);
             setExpertiseUsesTool(false);
           }}
@@ -362,6 +491,60 @@ export default function WizardBackgroundStep() {
               clause={{ from: raceSkillChoicePool, count: raceSkillClause.count }}
               selected={raceSkillSelected}
               onChange={setRaceSkillSelected}
+            />
+          </View>
+        ) : null}
+
+        {raceLanguagesFixed.length > 0 ? (
+          <View style={styles.section}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Idiomas raciais
+            </ThemedText>
+            {raceLanguagesFixed.map((language) => (
+              <ThemedText key={language.id} style={styles.fixedEntry}>
+                • {language.name}
+              </ThemedText>
+            ))}
+          </View>
+        ) : null}
+
+        {backgroundLanguagesFixed.length > 0 ? (
+          <View style={styles.section}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Idiomas do antecedente
+            </ThemedText>
+            {backgroundLanguagesFixed.map((language) => (
+              <ThemedText key={language.id} style={styles.fixedEntry}>
+                • {language.name}
+              </ThemedText>
+            ))}
+          </View>
+        ) : null}
+
+        {raceLanguageClause ? (
+          <View style={styles.section}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Idiomas raciais (escolha)
+            </ThemedText>
+            <LanguageChoiceList
+              clause={raceLanguageClause}
+              selected={raceLanguageSelected}
+              onChange={setRaceLanguageSelected}
+              disabled={raceLanguageCrossDisabled}
+            />
+          </View>
+        ) : null}
+
+        {backgroundLanguageClause ? (
+          <View style={styles.section}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Idiomas do antecedente (escolha)
+            </ThemedText>
+            <LanguageChoiceList
+              clause={backgroundLanguageClause}
+              selected={backgroundLanguageSelected}
+              onChange={setBackgroundLanguageSelected}
+              disabled={backgroundLanguageCrossDisabled}
             />
           </View>
         ) : null}

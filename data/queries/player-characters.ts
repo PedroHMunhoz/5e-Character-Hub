@@ -40,9 +40,7 @@ function classesSummary(character: CharacterSheet): string {
 }
 
 export async function getAllCharacterSummaries(db: SQLiteDatabase): Promise<CharacterSummary[]> {
-  const rows = await db.getAllAsync<PlayerCharacterRow>(
-    'SELECT * FROM player_characters ORDER BY updated_at DESC'
-  );
+  const rows = await db.getAllAsync<PlayerCharacterRow>('SELECT * FROM player_characters ORDER BY updated_at DESC');
   return rows.map(mapSummaryRow);
 }
 
@@ -50,7 +48,13 @@ export async function getCharacterById(db: SQLiteDatabase, id: string): Promise<
   const row = await db.getFirstAsync<PlayerCharacterRow>('SELECT * FROM player_characters WHERE id = ?', id);
   if (!row) return null;
   const character = JSON.parse(row.sheet_json) as CharacterSheet;
-  return { ...character, inventoryItems: migrateInventoryItems(character.inventoryItems) };
+  return {
+    ...character,
+    inventoryItems: migrateInventoryItems(character.inventoryItems),
+    // Backward-compat for saves written before languages existed on
+    // CharacterSheet (see types/character.ts).
+    languages: character.languages ?? [],
+  };
 }
 
 export async function createCharacter(db: SQLiteDatabase, character: CharacterSheet): Promise<void> {

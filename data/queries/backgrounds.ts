@@ -13,6 +13,7 @@ interface BackgroundRow {
   entries: string;
   skill_proficiencies: string | null;
   tool_proficiencies: string | null;
+  language_proficiencies: string | null;
   starting_equipment: string | null;
 }
 
@@ -26,6 +27,7 @@ function mapBackgroundRow(row: BackgroundRow, translations: TranslationDict): Ba
     entries: localizedEntries(row.id, toEntries(row.entries), translations),
     skillProficiencies: parseJson(row.skill_proficiencies),
     toolProficiencies: parseJson(row.tool_proficiencies),
+    languageProficiencies: parseJson(row.language_proficiencies),
     startingEquipment: parseJson(row.starting_equipment),
   };
 }

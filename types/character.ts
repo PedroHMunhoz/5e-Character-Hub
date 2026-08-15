@@ -153,6 +153,12 @@ export interface CharacterSheet {
   abilities: Record<AbilityKey, AbilityScore>;
   savingThrows: Record<AbilityKey, SavingThrow>;
   skills: Record<SkillKey, Skill>;
+  // Ids into the reference languages table (data/queries/languages.ts) -
+  // race's fixed grant + race/background's anyStandard picks + any class
+  // feature that grants a language outright (Druidic, Thieves' Cant). No
+  // proficient/expertise state like Skill/ToolState - a language is just
+  // known or not. See data/wizard/assemble-character.ts.
+  languages: number[];
   speed: string;
   hitPoints: HitPoints;
   hitDice: HitDice;

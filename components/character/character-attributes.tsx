@@ -10,6 +10,7 @@ import { ToolRow } from '@/components/character/tool-row';
 import { ThemedText } from '@/components/themed-text';
 import { ABILITIES, ABILITIES_BY_KEY, SKILLS } from '@/constants/character';
 import { itemKey } from '@/data/queries/equipment-lookup';
+import { getAllLanguages, type Language } from '@/data/queries/languages';
 import { getAllToolItems, type ToolItem } from '@/data/queries/tools';
 import { useCharacter } from '@/hooks/use-character';
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -47,12 +48,23 @@ export function CharacterAttributes() {
   const dividerColor = useThemeColor({}, 'gold');
   const goldColor = useThemeColor({}, 'gold');
   const [toolItems, setToolItems] = useState<ToolItem[] | null>(null);
+  const [languages, setLanguages] = useState<Language[] | null>(null);
   const [openField, setOpenField] = useState<OpenField>(null);
 
   useEffect(() => {
     let cancelled = false;
     getAllToolItems(db).then((items) => {
       if (!cancelled) setToolItems(items);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [db]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAllLanguages(db).then((items) => {
+      if (!cancelled) setLanguages(items);
     });
     return () => {
       cancelled = true;
@@ -169,6 +181,7 @@ export function CharacterAttributes() {
   }
 
   const knownToolItems = (toolItems ?? []).filter((item) => character.tools[itemKey(item.source, item.id)] != null);
+  const knownLanguages = (languages ?? []).filter((language) => character.languages.includes(language.id));
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
@@ -251,6 +264,21 @@ export function CharacterAttributes() {
         )}
       </View>
 
+      <View style={styles.section}>
+        <ThemedText type="subtitle">Idiomas</ThemedText>
+        {languages === null ? (
+          <ActivityIndicator color={goldColor} />
+        ) : knownLanguages.length === 0 ? (
+          <ThemedText style={styles.emptyToolsText}>Nenhum idioma conhecido.</ThemedText>
+        ) : (
+          knownLanguages.map((language) => (
+            <ThemedText key={language.id} style={styles.languageEntry}>
+              • {language.name}
+            </ThemedText>
+          ))
+        )}
+      </View>
+
       <StatBreakdownModal
         visible={openField !== null}
         title={breakdown?.title ?? ''}
@@ -304,5 +332,8 @@ const styles = StyleSheet.create({
   emptyToolsText: {
     fontSize: 14,
     opacity: 0.7,
+  },
+  languageEntry: {
+    fontSize: 15,
   },
 });
