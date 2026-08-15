@@ -82,5 +82,234 @@
       "Um veleiro desloca-se a 3 km/h."
     ],
     "_note": "Tabela 'VEÍCULOS AQUÁTICOS' impressa na edição pt-BR (Galápagos) da PHB, p.159 ('Veleiro') - sem item correspondente simples no dataset em inglês; 5e-2014-data/vehicles.json só tem uma versão de stat block completo (Sailing Ship, source GoS, p.192), usada para outra finalidade (combate). Nome em inglês reaproveitado dessa mesma entrada GoS por já ser o termo oficial da 5e, não é tradução livre. Ver translations/pt-BR/DUVIDAS.md, seção 'PHB — Montarias e Veículos'."
+  },
+  {
+    "name": "Sticks of Incense",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Varetas de incenso"
+    ],
+    "details": { "miscTags": ["CNS"] },
+    "_note": "Equipamento inicial do Acólito (PHB) - grant `{special: \"sticks of incense\", quantity: 5}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json. Nome em inglês é tradução livre baseada nesse texto; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Sticks of Incense|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). `miscTags: [\"CNS\"]` marca como consumível (categorizeItem, data/queries/items.ts) - único item deste grupo tratado como consumível, os demais são bugigangas de item único. Ver docs/TODO.md."
+  },
+  {
+    "name": "Vestments",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Vestimentas"
+    ],
+    "_note": "Equipamento inicial do Acólito (PHB) - grant `{special: \"vestments\"}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json. Nome em inglês é tradução livre baseada nesse texto; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Vestments|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Prayer Wheel",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Uma conta de orações"
+    ],
+    "_note": "Equipamento inicial do Acólito (PHB), opção 'b' do relicário sagrado - grant `{special: \"prayer wheel\"}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json. Nome em inglês é tradução livre baseada nesse texto; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Prayer Wheel|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Stoppered Bottles Filled with Colored Liquid",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Garrafas tampadas preenchidas com líquido colorido"
+    ],
+    "_note": "Equipamento inicial do Charlatão (PHB), uma das 4 opções de 'ferramentas de trapaça' - grant `{special: \"stoppered bottles filled with colored liquid\", quantity: 10}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json. Nome em inglês é tradução livre baseada nesse texto; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Stoppered Bottles Filled with Colored Liquid|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Set of Weighted Dice",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Um conjunto de dados viciados"
+    ],
+    "_note": "Equipamento inicial do Charlatão (PHB), uma das 4 opções de 'ferramentas de trapaça' - grant `{special: \"set of weighted dice\"}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json. Nome em inglês é tradução livre baseada nesse texto; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Set of Weighted Dice|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Deck of Marked Cards",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Um baralho de cartas marcadas"
+    ],
+    "_note": "Equipamento inicial do Charlatão (PHB), uma das 4 opções de 'ferramentas de trapaça' - grant `{special: \"deck of marked cards\"}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json. Nome em inglês é tradução livre baseada nesse texto; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Deck of Marked Cards|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Signet Ring of an Imaginary Duke",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Um anel de sinete de um duque imaginário"
+    ],
+    "_note": "Equipamento inicial do Charlatão (PHB), uma das 4 opções de 'ferramentas de trapaça' - grant `{special: \"signet ring of an imaginary duke\"}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json. Nome em inglês é tradução livre baseada nesse texto; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Signet Ring of an Imaginary Duke|PHB`), pipeline normal igual a qualquer outro item. Não colide com o item real `Signet|PHB` (símbolo sagrado 'Sinete', item diferente) nem com `Signet Ring` de outros sourcebooks. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Favor of an Admirer",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Um presente de um admirador (carta de amor, mecha de cabelo ou uma bijuteria)"
+    ],
+    "_note": "Equipamento inicial do Artista (PHB) - grant `{special: \"the favor of an admirer (love letter, lock of hair, or trinket)\"}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json. Nome em inglês é tradução livre (encurtada) baseada nesse texto; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Favor of an Admirer|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Letter of Introduction from Your Guild",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Uma carta de apresentação da sua guilda"
+    ],
+    "_note": "Equipamento inicial do Artesão de Guilda (PHB) - grant `{special: \"letter of introduction from your guild\"}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json. Nome em inglês é tradução livre baseada nesse texto; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Letter of Introduction from Your Guild|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Scroll of Pedigree",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Um pergaminho de linhagem"
+    ],
+    "_note": "Equipamento inicial do Nobre (PHB) - grant `{special: \"scroll of pedigree\"}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json. Nome em inglês é tradução livre baseada nesse texto; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Scroll of Pedigree|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Trophy from an Animal You Killed",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Um fetiche de um animal que você matou"
+    ],
+    "_note": "Equipamento inicial do Forasteiro (PHB) - grant `{special: \"trophy from an animal you killed\"}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json. Nome em inglês é tradução livre baseada nesse texto; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Trophy from an Animal You Killed|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Quill",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Uma pena"
+    ],
+    "_note": "Equipamento inicial do Sábio (PHB) - grant `{special: \"quill\"}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json (item genérico, sem stats de arma/ferramenta como um item de escrita 'Quill' real teria). Nome em inglês é o próprio texto original; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Quill|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Small Knife",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Uma faca pequena"
+    ],
+    "_note": "Equipamento inicial do Sábio e do Órfão (PHB, mesmo texto nos dois) - grant `{special: \"small knife\"}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json (item de flavor genérico, não modelado como arma real com dano). Nome em inglês é o próprio texto original; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Small Knife|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Letter from a Dead Colleague",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Uma carta de um falecido colega perguntando a você algo que você nunca terá a chance de responder"
+    ],
+    "_note": "Equipamento inicial do Sábio (PHB) - grant `{special: \"letter from a dead colleague posing a question you have not yet been able to answer\"}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json. Nome em inglês é tradução livre (encurtada) baseada nesse texto; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Letter from a Dead Colleague|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Insignia of Rank",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Uma insígnia de patente"
+    ],
+    "_note": "Equipamento inicial do Soldado (PHB) - grant `{special: \"insignia of rank\"}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json. Nome em inglês é o próprio texto original; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Insignia of Rank|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Trophy Taken from a Fallen Enemy",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Um fetiche obtido de um inimigo caído (uma adaga, lâmina partida ou tira de estandarte)"
+    ],
+    "_note": "Equipamento inicial do Soldado (PHB) - grant `{special: \"trophy taken from a fallen enemy (a dagger, broken blade, or piece of a banner)\"}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json. Nome em inglês é tradução livre (encurtada) baseada nesse texto; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Trophy Taken from a Fallen Enemy|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Map of the City You Grew Up In",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Um mapa da cidade em que você cresceu"
+    ],
+    "_note": "Equipamento inicial do Órfão (PHB) - grant `{special: \"map of the city you grew up in\"}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json. Nome em inglês é o próprio texto original; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Map of the City You Grew Up In|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Pet Mouse",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Um rato de estimação"
+    ],
+    "_note": "Equipamento inicial do Órfão (PHB) - grant `{special: \"pet mouse\"}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json (sem stat block de criatura - é só um objeto de flavor no inventário, igual aos demais deste grupo). Nome em inglês é o próprio texto original; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Pet Mouse|PHB`), pipeline normal igual a qualquer outro item. Peso 0. Ver docs/TODO.md."
+  },
+  {
+    "name": "Token to Remember Your Parents By",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Um pequeno objeto para lembrar dos seus pais"
+    ],
+    "_note": "Equipamento inicial do Órfão (PHB) - grant `{special: \"token to remember your parents by\"}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json. Nome em inglês é tradução livre (encurtada) baseada nesse texto; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Token to Remember Your Parents By|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
   }
 ]

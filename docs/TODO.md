@@ -150,15 +150,14 @@ usuário).
   `classes.starting_equipment` e `backgrounds.starting_equipment`) em vez de
   um caso especial hardcoded — deixa pronto pra qualquer achado parecido no
   futuro só editando o JSON.
-- **Traduções faltando: "Explorer's Pack"/"Scholar's Pack".** Achado ao
-  vivo consertando o Passo 5 (Equipamento) - esses dois itens do PHB não
-  têm NENHUMA linha em `translations` (nem `name` nem `entries`), diferente
-  de outros itens que já têm nome traduzido. Aparecem em inglês na tela do
-  wizard mesmo depois do fix de resolução de item (não é bug de código).
-  Pedido explícito do usuário: priorizar pelo menos o `name` desses dois
-  pacotes (ex. "Pacote do Explorador"/"Pacote do Erudito") - `entries`
-  (conteúdo) pode vir depois. Passar pelo pipeline formal de tradução
-  (`translations/pt-BR/` + `DUVIDAS.md`) quando for a vez desses itens.
+- ~~Traduções faltando: "Explorer's Pack"/"Scholar's Pack".~~ —
+  **resolvido**: achado ao vivo consertando o Passo 5 (Equipamento) -
+  esses dois itens do PHB não tinham NENHUMA linha em `translations` (nem
+  `name` nem `entries`), diferente de outros itens que já têm nome
+  traduzido. `translations/pt-BR/PHB/items.json` agora tem `name` +
+  `entries` completos para `"Scholar's Pack|PHB"` ("Pacote de Estudioso")
+  e `"Explorer's Pack|PHB"` ("Pacote de Explorador") — passou pelo
+  pipeline formal de tradução, não só o `name` mínimo pedido originalmente.
 - ~~Mostrar o conteúdo dos pacotes/kits no Passo 5~~ — **implementado**:
   `EquipmentLookupItem`/`ResolvedEquipmentEntry` (`data/queries/
   equipment-lookup.ts`, `data/wizard/equipment-resolver.ts`) agora carregam
@@ -178,11 +177,22 @@ usuário).
 - ~~Deletar personagem~~ — **implementado**: via longpress na lista de
   Personagens.
 - **Duplicar personagem** — decisão do usuário: não existirá.
-- **Itens "special" do equipamento resolvido não entram no inventário
-  persistido.** Entradas como `{special: "sticks of incense", quantity: 5}`
-  (texto livre do livro, sem linha correspondente em `base_items`/`items`)
-  aparecem na tela do wizard mas `InventoryItemState` exige um id de item
-  válido — não há hoje um jeito de guardar "item avulso sem id" na ficha.
+- ~~Itens "special" do equipamento resolvido não entram no inventário
+  persistido.~~ — **resolvido**: as 19 entradas `{special: "...", quantity?:
+  N}` sem linha correspondente em `base_items`/`items` (9 antecedentes do
+  PHB: Acólito/Artesão de Guilda/Artista/Charlatão/Nobre/Forasteiro/Sábio/
+  Soldado/Órfão) ganharam linhas sintéticas reais na tabela `items`
+  (`db/overrides/custom-items.json`, mesmo mecanismo já usado pra
+  "Signet"/embarcações aquáticas), com peso 0 e a `entries` reaproveitando o
+  texto de flavor já traduzido. `EQUIPMENT_SPECIAL_ITEM_REFS`
+  (`data/wizard/equipment-resolver.ts`) redireciona cada texto pra sua linha
+  sintética, então `parseRawEntry` trata como `kind: 'pendingItem'` — mesmo
+  caminho de resolução/estoque/persistência/tela de detalhe de qualquer
+  outro item, sem código novo em `assemble-character.ts` ou na UI. Só
+  "Sticks of Incense" (varetas de incenso, `quantity: 5`) ganhou
+  `details.miscTags: ["CNS"]` pra virar `consumable`; o resto é `general`.
+  Como efeito colateral, resolve também o item abaixo pra esses 19 casos,
+  já que deixam de ser `kind: 'special'`.
 - ~~Quantidade de arma/armadura não aparece em lugar nenhum da UI~~ —
   **implementado (abordagem 2, itens separados)**: `inventoryItems` deixou
   de ser `Record<itemKey, InventoryItemState>` e virou `Record<instanceId,
@@ -214,15 +224,17 @@ usuário).
   "curada" (`getCuratedInventoryBaseItems`, removida) e passou a resolver
   dinamicamente os ids presentes em `character.inventoryItems` (via
   `getBaseItemsByIds`/`getItemsByIds`), mesmo padrão da seção "Ferramentas"
-  da aba Atributos. Ressalva: itens vindos da tabela `items` (kits, sacos de
-  aventureiro) aparecem na lista mas sem navegação para tela de detalhe —
-  `app/sheet/item/[id].tsx` só resolve ids de `base_items`; ver item abaixo.
-- **Tela de detalhe de item não cobre a tabela `items`.**
-  `app/sheet/item/[id].tsx` (`getBaseItemDetailById`) só sabe buscar em
-  `base_items` — itens de `items` (kits, sacos de aventureiro, instrumentos
-  mágicos etc.) concedidos pelo wizard aparecem na aba Inventário como não
-  clicáveis (`DisplayItem.navigable = false` em `character-inventory.tsx`)
-  por não terem tela de detalhe para abrir.
+  da aba Atributos. Ressalva histórica (não se aplica mais, ver item
+  abaixo): itens vindos da tabela `items` (kits, sacos de aventureiro)
+  chegaram a ficar sem navegação para tela de detalhe por um tempo.
+- ~~Tela de detalhe de item não cobre a tabela `items`.~~ — **resolvido**:
+  `app/sheet/[characterId]/item/[id].tsx` (provavelmente como efeito
+  colateral da migração pra inventário baseado em instâncias,
+  `InventoryItemState.itemId`) agora resolve o `itemId` da instância via
+  `parseItemKey` e chama `getBaseItemDetailById` ou `getItemDetailById`
+  (`data/queries/item-detail.ts`) dependendo da origem (`base_items` vs
+  `items`) — itens de `items` (kits, sacos de aventureiro, instrumentos
+  mágicos etc.) já abrem tela de detalhe normalmente.
 - **Fontes além do PHB.** Depois que o teste no celular mostrou todas as
   raças/subraças/classes/antecedentes/magias de TODOS os sourcebooks
   misturados no wizard (sem hierarquia clara, +200 opções sem tradução),
@@ -338,17 +350,15 @@ usuário).
   personagem (algo como `freeformProficiencies`) — decisão de escopo maior
   que ficou combinada de adiar (só corrigimos a exibição em português por
   enquanto, não a persistência).
-- **Quantidade de itens "special" do equipamento inicial nunca aparece pro
-  jogador.** Achado ao traduzir os itens de texto livre do equipamento
-  de antecedente (`EQUIPMENT_FLAVOR_TEXT_LABELS` em
-  `data/wizard/equipment-resolver.ts`) — `describeEntry()`
-  (`components/wizard/equipment-choice-group.tsx`) só lê `entry.text` pra
-  `kind: 'special'`, nunca `entry.quantity`. Ex.: o Acólito ganha "5 sticks
-  of incense" (`quantity: 5`), mas a tela sempre mostrou (mesmo antes desta
-  tradução, já em inglês) só "varetas de incenso", sem o "5". Não corrigido
-  agora (fora do pedido original, só tradução de texto) — se for mexer,
-  o ajuste é mostrar `${quantity}x ${text}` igual já se faz pra
-  `kind: 'item'` em `describeEntry()`.
+- ~~Quantidade de itens "special" do equipamento inicial nunca aparece pro
+  jogador.~~ — **resolvido como efeito colateral**: junto com o item acima
+  ("itens 'special' não entram no inventário persistido"), as 19 entradas
+  de flavor text (Acólito's "5 sticks of incense" incluído) deixaram de ser
+  `kind: 'special'` e passaram a `kind: 'item'` via
+  `EQUIPMENT_SPECIAL_ITEM_REFS` (`data/wizard/equipment-resolver.ts`) — esse
+  `kind` já formata `${quantity}x ${label}` em `describeEntry()`
+  (`components/wizard/equipment-choice-group.tsx`), sem precisar de mudança
+  própria pra isso.
 - ~~Grant de moeda solta no equipamento inicial (`{value: N}`, sem item) não
   soma na bolsa do personagem~~ — **corrigido**: achado ao consertar o
   Eremita (concede 5 po soltos, sem item, único caso desse formato na

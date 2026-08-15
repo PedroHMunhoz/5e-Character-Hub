@@ -587,7 +587,7 @@ runSection('items', () => {
         null,
         null,
         json(i.entries ?? []),
-        null
+        json(i.details ?? null)
       );
       bump('items');
       addToFts('item', info.lastInsertRowid, i.name, i.entries ?? []);

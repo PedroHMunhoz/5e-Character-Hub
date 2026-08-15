@@ -132,51 +132,21 @@ export type UnresolvedEquipmentGroup =
   | { kind: 'fixed'; entries: ParsedEntry[] }
   | { kind: 'choice'; options: { key: EquipmentChoiceOptionKey; entries: ParsedEntry[] }[] };
 
-// Free-text starting-equipment flavor strings have no catalog row to carry
-// a translation, so this text comes straight from the English 5etools
-// dataset with no localization at all - same problem as "vehicles (land)"/
-// "vehicles (water)" in tool-proficiency-resolver.ts, same fix shape: a
-// small label lookup keyed by the lowercased English string, checked
-// before falling through to the raw text. Covers TWO different raw DSL
-// shapes that both end up as free-form flavor text in the UI:
-// - `{special: "..."}` entries (kind: 'special') - confirmed live against
-//   every PHB class/background: classes never use this, only these 9
-//   backgrounds do (Acólito/Artesão de Guilda/Artista/Charlatão/Nobre/
-//   Forasteiro/Sábio/Soldado/Órfão).
-// - `displayName` overrides on an `{item: "..."}` ref (e.g. "bone dice
-//   set" instead of the catalog's own translated "Dice Set" name) -
-//   `describeEntry()` (components/wizard/equipment-choice-group.tsx)
-//   always prefers displayName over the resolved item's translated name,
-//   so an untranslated displayName silently shadows a perfectly good
-//   translation. Confirmed live: exclusively a background phenomenon too
-//   (Acólito x2/Criminoso/Eremita x2/Marinheiro x2/Soldado).
-// Values are capitalized (sentence case) since each renders as a
-// standalone line in the UI, not mid-sentence.
+// `displayName` overrides on an `{item: "..."}` ref (e.g. "bone dice set"
+// instead of the catalog's own translated "Dice Set" name) have no catalog
+// row to carry a translation, so this text comes straight from the English
+// 5etools dataset with no localization at all - same problem as "vehicles
+// (land)"/"vehicles (water)" in tool-proficiency-resolver.ts, same fix
+// shape: a small label lookup keyed by the lowercased English string,
+// checked before falling through to the raw text. `describeEntry()`
+// (components/wizard/equipment-choice-group.tsx) always prefers
+// displayName over the resolved item's translated name, so an
+// untranslated displayName silently shadows a perfectly good translation.
+// Confirmed live: exclusively a background phenomenon (Acólito x2/
+// Criminoso/Eremita x2/Marinheiro x2/Soldado). Values are capitalized
+// (sentence case) since each renders as a standalone line in the UI, not
+// mid-sentence.
 const EQUIPMENT_FLAVOR_TEXT_LABELS: Record<string, string> = {
-  'sticks of incense': 'Varetas de incenso',
-  vestments: 'Vestimentas',
-  'prayer wheel': 'Uma conta de orações',
-  'stoppered bottles filled with colored liquid': 'Garrafas tampadas preenchidas com líquido colorido',
-  'set of weighted dice': 'Um conjunto de dados viciados',
-  'deck of marked cards': 'Um baralho de cartas marcadas',
-  'signet ring of an imaginary duke': 'Um anel de sinete de um duque imaginário',
-  'the favor of an admirer (love letter, lock of hair, or trinket)':
-    'Um presente de um admirador (carta de amor, mecha de cabelo ou uma bijuteria)',
-  'letter of introduction from your guild': 'Uma carta de apresentação da sua guilda',
-  'scroll of pedigree': 'Um pergaminho de linhagem',
-  purse: 'Algibeira',
-  'trophy from an animal you killed': 'Um fetiche de um animal que você matou',
-  quill: 'Uma pena',
-  'small knife': 'Uma faca pequena',
-  'letter from a dead colleague posing a question you have not yet been able to answer':
-    'Uma carta de um falecido colega perguntando a você algo que você nunca terá a chance de responder',
-  'insignia of rank': 'Uma insígnia de patente',
-  'trophy taken from a fallen enemy (a dagger, broken blade, or piece of a banner)':
-    'Um fetiche obtido de um inimigo caído (uma adaga, lâmina partida ou tira de estandarte)',
-  'map of the city you grew up in': 'Um mapa da cidade em que você cresceu',
-  'pet mouse': 'Um rato de estimação',
-  'token to remember your parents by': 'Um pequeno objeto para lembrar dos seus pais',
-  // displayName overrides (see comment above)
   'holy symbol (a gift to you when you entered the priesthood)':
     'Um presente que você recebeu ao entrar para o sacerdócio',
   'prayer book': 'Um livro de preces',
@@ -192,6 +162,44 @@ const EQUIPMENT_FLAVOR_TEXT_LABELS: Record<string, string> = {
 function translateFlavorText(text: string): string {
   return EQUIPMENT_FLAVOR_TEXT_LABELS[text.toLowerCase()] ?? text;
 }
+
+// `{special: "..."}` entries (kind: 'special') with no matching catalog
+// row used to render as untranslated, unpersisted freeform text (see
+// docs/TODO.md) - confirmed live against every PHB class/background:
+// classes never use this, only these 9 backgrounds do (Acólito/Artesão de
+// Guilda/Artista/Charlatão/Nobre/Forasteiro/Sábio/Soldado/Órfão). Each of
+// these flavor strings now has a synthetic catalog row (db/overrides/
+// custom-items.json, e.g. `Sticks of Incense|PHB`) purely to carry a
+// translation, weight and description through the normal item pipeline -
+// this map redirects the raw special text to that row's ref so
+// parseRawEntry treats it as an ordinary `pendingItem` (same resolution/
+// stacking/persistence/detail-screen path as any other granted item).
+// Nobre's "purse" is handled separately below (redirects to the real
+// `Pouch|PHB` item, not a synthetic one, since it's the same physical
+// object every other background's pouch already uses).
+const EQUIPMENT_SPECIAL_ITEM_REFS: Record<string, string> = {
+  'sticks of incense': 'Sticks of Incense|PHB',
+  vestments: 'Vestments|PHB',
+  'prayer wheel': 'Prayer Wheel|PHB',
+  'stoppered bottles filled with colored liquid': 'Stoppered Bottles Filled with Colored Liquid|PHB',
+  'set of weighted dice': 'Set of Weighted Dice|PHB',
+  'deck of marked cards': 'Deck of Marked Cards|PHB',
+  'signet ring of an imaginary duke': 'Signet Ring of an Imaginary Duke|PHB',
+  'the favor of an admirer (love letter, lock of hair, or trinket)': 'Favor of an Admirer|PHB',
+  'letter of introduction from your guild': 'Letter of Introduction from Your Guild|PHB',
+  'scroll of pedigree': 'Scroll of Pedigree|PHB',
+  'trophy from an animal you killed': 'Trophy from an Animal You Killed|PHB',
+  quill: 'Quill|PHB',
+  'small knife': 'Small Knife|PHB',
+  'letter from a dead colleague posing a question you have not yet been able to answer':
+    'Letter from a Dead Colleague|PHB',
+  'insignia of rank': 'Insignia of Rank|PHB',
+  'trophy taken from a fallen enemy (a dagger, broken blade, or piece of a banner)':
+    'Trophy Taken from a Fallen Enemy|PHB',
+  'map of the city you grew up in': 'Map of the City You Grew Up In|PHB',
+  'pet mouse': 'Pet Mouse|PHB',
+  'token to remember your parents by': 'Token to Remember Your Parents By|PHB',
+};
 
 // PHB's "5 gp" is in copper pieces here (same unit as containsValue/
 // value_cp elsewhere in the app) - divide by 100 to show as "X po".
@@ -248,13 +256,22 @@ function parseRawEntry(raw: RawEntry): ParsedEntry {
     // `kind: 'item'` entry and gets summed by assemble-character.ts, same
     // as everyone else's pouch - a `special` entry's containsValue was
     // otherwise silently discarded (parseRawEntry never read it).
-    if (raw.special.toLowerCase() === 'purse' && raw.containsValue) {
+    const specialKey = raw.special.toLowerCase();
+    if (specialKey === 'purse' && raw.containsValue) {
       return {
         kind: 'pendingItem',
         ref: 'pouch|phb',
         quantity: raw.quantity ?? 1,
         containsValueCp: raw.containsValue,
       };
+    }
+    // Redirect to the synthetic catalog row for this flavor text (see
+    // EQUIPMENT_SPECIAL_ITEM_REFS above) so it resolves/persists/displays
+    // like any other granted item instead of falling to the freeform,
+    // unpersisted `kind: 'special'` text below.
+    const specialItemRef = EQUIPMENT_SPECIAL_ITEM_REFS[specialKey];
+    if (specialItemRef) {
+      return { kind: 'pendingItem', ref: specialItemRef, quantity: raw.quantity ?? 1 };
     }
     return { kind: 'special', text: translateFlavorText(raw.special), quantity: raw.quantity ?? 1 };
   }
