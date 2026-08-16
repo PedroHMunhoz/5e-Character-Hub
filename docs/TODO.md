@@ -19,26 +19,25 @@ Status geral: praticamente tudo do PHB já foi traduzido e importado —
 magias (361), itens base, itens gerais (tabela EQUIPAMENTO p.152),
 ferramentas, talentos, antecedentes, raças, deuses, idiomas, condições,
 perícias, ações, pacotes de equipamento (nome+conteúdo), montarias e
-veículos (terrestres + aquáticos), e 12 das 13 classes.
+veículos (terrestres + aquáticos), e as 13 classes (incluindo o
+Patrulheiro — ver nota abaixo). Gaps que sobram estão na seção "Pendente"
+logo abaixo (schema/escopo, não conteúdo de tradução em si).
 
-### Bloqueado (aguardando decisão do usuário)
+### ~~Bloqueado~~ Resolvido — Patrulheiro (Ranger)
 
-- **Patrulheiro (Ranger) — classe inteira.** O texto impresso do PHB
-  pt-BR parece refletir as regras de 2014 **pré-errata**:
-  - Inimigo Predileto lista só 5 tipos de criatura, contra 13 tipos +
-    opção de duas raças humanoides no banco (que já reflete a errata).
-  - Companheiro Animal do Rastreador de Feras usa lista fixa de animais
-    específicos por 50po/8h, em vez do sistema genérico por CD que a
-    errata trouxe.
-  - O livro imprime um 3º arquétipo, "Conclave do Rastreador Subterrâneo"
-    (p.121-122), que **não existe em nenhuma fonte no banco atual** — só
-    Beast Master e Hunter estão modelados como subclasses PHB do
-    Patrulheiro.
-  - `DUVIDAS.md` registra 3 opções em aberto: (a) usar o texto do livro
-    mesmo sabendo que é pré-errata; (b) usuário obter a errata oficial
-    pt-BR para conferir feature a feature; (c) deixar o Patrulheiro de
-    fora do banco pt-BR por enquanto. **Não traduzir/implementar nada do
-    Patrulheiro até o usuário retomar esse ponto explicitamente.**
+~~**Patrulheiro (Ranger) — classe inteira.** O texto impresso do PHB pt-BR
+parece refletir as regras de 2014 pré-errata (...)~~ **Não era pré-errata.**
+Investigação mais a fundo revelou que `books/Livro do Jogador.pdf` (p.115-122)
+não é o PHB — é uma tradução fanmade do Unearthed Arcana "Ranger, Revised"
+(2016) formatada pra imitar o livro oficial (dá pra ver isso pela
+característica "Inimigo Favorito Maior", pelo bônus de dano fixo no Inimigo
+Favorito e pelo 3º arquétipo "Conclave do Rastreador Subterrâneo" — nenhum
+desses três existe no PHB real). O Patrulheiro oficial foi traduzido direto
+de `books/D&D 5E - Player's Handbook.pdf` (que bate 100% com o banco) e o
+conteúdo do UA foi preservado à parte como classe oculta (`source = 'UARR'`,
+ver item "Patrulheiro (Revisado UA)" mais abaixo). Detalhes completos da
+investigação em `translations/pt-BR/DUVIDAS.md`.
+
 ### Pendente (decisão de escopo/schema, não é bloqueio de conteúdo)
 
 - **Bens de comércio e bugigangas** ("Comércio de Bens" p.159, "Bugigangas"
@@ -270,6 +269,20 @@ usuário).
   `subclass_features` internas). Quando outros sourcebooks (Xanathar's,
   Tasha's, etc.) forem traduzidos para pt-BR, tirar esse filtro (ou trocar
   por uma lista configurável de fontes habilitadas) nesses mesmos pontos.
+- **Patrulheiro (Revisado UA), oculto no banco (`source = 'UARR'`).** Ao
+  resolver o bloqueio do Patrulheiro (ver `translations/pt-BR/DUVIDAS.md`),
+  descobri que o texto usado como fonte de tradução (`books/Livro do
+  Jogador.pdf`, capítulo do Patrulheiro) não era o PHB, e sim uma tradução
+  fanmade do Unearthed Arcana "Ranger, Revised" (2016) formatada pra imitar
+  o livro oficial. O Patrulheiro oficial foi traduzido do PHB em inglês
+  normalmente; o conteúdo desse UA não foi descartado — está preservado como
+  uma classe própria (`5e-2014-data/class/class-ranger-ua-revised.json`,
+  `translations/pt-BR/UARR/`), automaticamente fora do wizard hoje porque
+  toda consulta acima já filtra `source = 'PHB'` (mesmo mecanismo que já
+  mantém a `Mystic` da UA e as pseudo-classes Sidekick da TCE fora da
+  criação de personagem). Quando existir um backoffice de mestre pra
+  habilitar/desabilitar conteúdo opcional por mesa, `UARR` é candidata a
+  entrar na lista configurável de fontes mencionada no item acima.
 - **Humano (Variante).** Fica de fora do wizard (`getAllRaces` exclui a raça
   `name = 'Variant'` explicitamente) até o app ter talentos implementados —
   ela dá +1/+1 em dois atributos à escolha, uma perícia à escolha e um
@@ -324,14 +337,20 @@ usuário).
   vier outra raça com esse mesmo mecanismo, vale considerar expandir o
   template genericamente no import em vez de repetir esse padrão hardcoded
   por raça.
-- **Inimigo Predileto/Explorador Nato do Patrulheiro (1º nível) fora do
-  wizard.** O Patrulheiro tem duas escolhas obrigatórias de 1º nível, iguais
-  em espírito ao Estilo de Luta do Guerreiro/Domínio Divino do Clérigo, mas
-  a tradução da classe Patrulheiro está deliberadamente bloqueada (ver
-  seção "Tradução PHB (pt-BR)" acima — o texto do PHB traduzido é
-  pré-errata). Implementar essa escolha exigiria traduzir justamente o
-  conteúdo bloqueado, então fica de fora até a tradução do Patrulheiro ser
-  retomada.
+- **⚠️ Inimigo Favorito/Explorador Natural do Patrulheiro (1º nível) fora do
+  wizard — GAP REAL, não mais bloqueio de tradução.** O Patrulheiro tem duas
+  escolhas obrigatórias de 1º nível (tipo de inimigo favorito + terreno
+  favorito), iguais em espírito ao Estilo de Luta do Guerreiro/Domínio
+  Divino do Clérigo, mas nenhuma tela de wizard existe pra elas ainda. Isso
+  era inofensivo enquanto a tradução do Patrulheiro estava bloqueada (a
+  classe não aparecia no wizard, `WHERE source = 'PHB'`) — mas agora que o
+  Patrulheiro foi traduzido e destravado, ele **já aparece na lista de
+  classes do wizard e é selecionável hoje**, sem nenhuma etapa pra essas
+  duas escolhas. Um jogador que criar um Patrulheiro agora termina com uma
+  ficha sem inimigo favorito nem terreno favorito definidos. Implementar:
+  telas de escolha (mesmo padrão de `SkillChoiceList`/similar), persistência
+  em `WizardDraft`/`CharacterSheet` (não existe campo pra isso hoje) e
+  exibição na aba Características.
 - **Estilo de Luta do Paladino/Patrulheiro no 2º nível.** Ambos ganham a
   mesma escolha de Estilo de Luta do Guerreiro (implementada em
   `app/wizard/class.tsx`/`data/queries/optional-features.ts`/

@@ -118,7 +118,7 @@ Consulte [`docs/data-schema.md`](docs/data-schema.md) para o detalhamento técni
 
 ### Status do projeto
 
-O desenvolvimento está focado, por ora, no conteúdo do Livro do Jogador (PHB). A classe Patrulheiro (Ranger) está temporariamente bloqueada devido a inconsistências na edição impressa em PT-BR, e recursos como multiclasse e evolução de nível ainda não têm interface própria. O backlog detalhado é mantido em [`docs/TODO.md`](docs/TODO.md).
+O desenvolvimento está focado, por ora, no conteúdo do Livro do Jogador (PHB), com as 13 classes já traduzidas. Recursos como multiclasse e evolução de nível ainda não têm interface própria. O backlog detalhado é mantido em [`docs/TODO.md`](docs/TODO.md).
 
 ### Aviso legal
 
@@ -240,7 +240,7 @@ See [`docs/data-schema.md`](docs/data-schema.md) for the full technical breakdow
 
 ### Project Status
 
-Development currently focuses on Player's Handbook (PHB) content. The Ranger class is temporarily blocked due to inconsistencies in the printed PT-BR edition, and features like multiclassing and level-up flows don't have a UI yet. The detailed backlog is tracked in [`docs/TODO.md`](docs/TODO.md).
+Development currently focuses on Player's Handbook (PHB) content, with all 13 classes translated. Features like multiclassing and level-up flows don't have a UI yet. The detailed backlog is tracked in [`docs/TODO.md`](docs/TODO.md).
 
 ### Legal Disclaimer
 
