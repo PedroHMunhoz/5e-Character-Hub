@@ -10,16 +10,25 @@ export interface LanguageChoiceClause {
   count: number;
 }
 
+// A disabled entry can optionally carry a short reason shown next to the
+// label (e.g. "Já selecionado pelo Inimigo Favorito") - callers that don't
+// have a specific reason (the existing race/background cross-disable) just
+// omit `note`.
+export interface DisabledLanguage {
+  language: Language;
+  note?: string;
+}
+
 interface LanguageChoiceListProps {
   clause: LanguageChoiceClause;
   selected: number[];
   onChange: (selected: number[]) => void;
-  // Languages already granted by the *other* language source on this same
-  // screen (e.g. a race pick showing up in the background's own list, or
-  // vice versa) - shown unchecked but non-interactive instead of being
-  // filtered out of the list, so the player sees why it's unavailable
-  // instead of it silently disappearing from the pool.
-  disabled?: Language[];
+  // Languages already granted by some other source (the *other* language
+  // pick on this same screen, or a class feature like the Ranger's Favored
+  // Enemy) - shown unchecked but non-interactive instead of being filtered
+  // out of the list, so the player sees why it's unavailable instead of it
+  // silently disappearing from the pool.
+  disabled?: DisabledLanguage[];
 }
 
 export function LanguageChoiceList({ clause, selected, onChange, disabled = [] }: LanguageChoiceListProps) {
@@ -32,10 +41,10 @@ export function LanguageChoiceList({ clause, selected, onChange, disabled = [] }
     onChange([...selected, id]);
   }
 
-  const disabledIds = useMemo(() => new Set(disabled.map((language) => language.id)), [disabled]);
+  const disabledById = useMemo(() => new Map(disabled.map((d) => [d.language.id, d])), [disabled]);
 
   const sortedLanguages = useMemo(
-    () => [...clause.from, ...disabled].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
+    () => [...clause.from, ...disabled.map((d) => d.language)].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
     [clause.from, disabled]
   );
 
@@ -45,7 +54,8 @@ export function LanguageChoiceList({ clause, selected, onChange, disabled = [] }
         Escolha {clause.count} {clause.count === 1 ? 'idioma' : 'idiomas'} ({selected.length}/{clause.count})
       </ThemedText>
       {sortedLanguages.map((language) => {
-        const isLanguageDisabled = disabledIds.has(language.id);
+        const disabledEntry = disabledById.get(language.id);
+        const isLanguageDisabled = disabledEntry !== undefined;
         const isSelected = selected.includes(language.id);
         return (
           <Pressable
@@ -58,7 +68,10 @@ export function LanguageChoiceList({ clause, selected, onChange, disabled = [] }
               onToggle={isLanguageDisabled ? undefined : () => toggle(language.id)}
               dimmed={!isLanguageDisabled && !isSelected && selected.length >= clause.count}
             />
-            <ThemedText style={[styles.label, isLanguageDisabled && styles.labelDisabled]}>{language.name}</ThemedText>
+            <ThemedText style={[styles.label, isLanguageDisabled && styles.labelDisabled]}>
+              {language.name}
+              {disabledEntry?.note ? ` (${disabledEntry.note})` : ''}
+            </ThemedText>
           </Pressable>
         );
       })}

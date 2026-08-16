@@ -1,6 +1,8 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { formatDraconicAncestryFeatureName } from '@/constants/draconic-ancestry';
+import { formatFavoredEnemyFeatureName } from '@/constants/favored-enemy';
+import { formatFavoredTerrainFeatureName } from '@/constants/favored-terrain';
 import { getFeatureUsage, type RecoveryType } from '@/constants/feature-usage-overrides';
 import { toEntries } from '../rows';
 import { getTranslations, localizedEntries, localizedName } from './localize';
@@ -31,6 +33,14 @@ export interface CharacterFeatureQuery {
   // constants/draconic-ancestry.ts for why this isn't just another racial
   // trait row.
   draconicAncestry?: string | null;
+  // Ranger-only, set by the creation wizard - see constants/favored-enemy.ts
+  // and constants/favored-terrain.ts. Unlike draconicAncestry, these annotate
+  // real class_features rows ("Favored Enemy"/"Natural Explorer") that
+  // already show up via classRows below, rather than injecting a synthetic
+  // feature.
+  favoredEnemyType?: string | null;
+  favoredEnemyHumanoidRaces?: [string, string] | null;
+  favoredTerrainType?: string | null;
 }
 
 // Replaces the earlier hardcoded-id version (built for the app's original
@@ -38,7 +48,10 @@ export interface CharacterFeatureQuery {
 // character carries real raceId/classId/subclassId/backgroundId from the
 // creation wizard - queries the actual grants for THIS character instead of
 // a fixed id list.
-export async function getCharacterFeatures(db: SQLiteDatabase, query: CharacterFeatureQuery): Promise<CuratedFeature[]> {
+export async function getCharacterFeatures(
+  db: SQLiteDatabase,
+  query: CharacterFeatureQuery
+): Promise<CuratedFeature[]> {
   // Sequential, not Promise.all: overlapping queries on the same
   // SQLiteDatabase connection can crash on native (see data/queries/spells.ts).
   const classRows = await db.getAllAsync<{ id: number; name: string }>(
@@ -73,7 +86,13 @@ export async function getCharacterFeatures(db: SQLiteDatabase, query: CharacterF
   const features: CuratedFeature[] = [];
 
   for (const row of classRows) {
-    const name = localizedName(row.id, row.name, classTranslations);
+    let name = localizedName(row.id, row.name, classTranslations);
+    if (row.name === 'Favored Enemy') {
+      name =
+        formatFavoredEnemyFeatureName(query.favoredEnemyType ?? null, query.favoredEnemyHumanoidRaces ?? null) ?? name;
+    } else if (row.name === 'Natural Explorer') {
+      name = formatFavoredTerrainFeatureName(query.favoredTerrainType ?? null) ?? name;
+    }
     features.push(withUsage(`class_feature-${row.id}`, 'classe', row.name, name));
   }
 

@@ -1,9 +1,16 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { getFeatureUsage, type RecoveryType } from '@/constants/feature-usage-overrides';
+import {
+  FAVORED_ENEMY_HUMANOID_KEY,
+  FAVORED_ENEMY_HUMANOID_RACES,
+  getFavoredEnemyDetailEntries,
+} from '@/constants/favored-enemy';
+import { getFavoredTerrainDetailEntries } from '@/constants/favored-terrain';
 import { LEVEL_PROGRESSION_TABLES, type LevelProgressionTableData } from '@/constants/level-progression-tables';
 import { toEntries } from '../rows';
 import { extractBackgroundFeature, type FeatureSectionKey } from './character-features';
+import { getLanguageById } from './languages';
 import { getTranslations, localizedEntries, localizedName } from './localize';
 import { getOptionalFeatureByEnglishName } from './optional-features';
 
@@ -22,6 +29,33 @@ export interface FeatureDetail {
 
 type FeatureKind = 'class_feature' | 'subclass_feature' | 'racial_trait' | 'background';
 
+// The player's own choices for the various level-1 wizard picks that a
+// generic class_features row can't express on its own (see Fighting Style's
+// existing precedent below) - grouped into one object since this list keeps
+// growing.
+export interface FeatureDetailChoices {
+  fightingStyle?: string | null;
+  favoredEnemyType?: string | null;
+  favoredEnemyHumanoidRaces?: [string, string] | null;
+  favoredTerrainType?: string | null;
+  // Slot 0: the single creature type's language, or the first humanoid
+  // race's. Slot 1: only used for the second humanoid race - each favored
+  // enemy grants its own language independently, see
+  // context/wizard-context.tsx's FavoredEnemyLanguageSlot.
+  favoredEnemyLanguageIds?: [number | 'none' | null, number | 'none' | null];
+}
+
+async function formatLanguageName(
+  db: SQLiteDatabase,
+  value: number | 'none' | null | undefined
+): Promise<string | null> {
+  if (typeof value === 'number') {
+    const language = await getLanguageById(db, value);
+    return language?.name ?? null;
+  }
+  return null;
+}
+
 const ID_PATTERN = /^(class_feature|subclass_feature|racial_trait|background)-(\d+)$/;
 
 // Racial traits (and occasionally other sources) echo their own name as the
@@ -36,7 +70,7 @@ async function getClassOrSubclassFeature(
   kind: 'class_feature' | 'subclass_feature',
   numericId: number,
   compositeId: string,
-  fightingStyle?: string | null
+  choices?: FeatureDetailChoices
 ): Promise<FeatureDetail | null> {
   const table = kind === 'class_feature' ? 'class_features' : 'subclass_features';
   const row = await db.getFirstAsync<{ id: number; name: string; level: number; entries: string }>(
@@ -53,9 +87,46 @@ async function getClassOrSubclassFeature(
   // below" - it never says which one the character actually has. Append the
   // chosen style's own rule text (from optional_features) so the player
   // sees the concrete mechanic here instead of just the generic framing.
-  if (kind === 'class_feature' && row.name === 'Fighting Style' && fightingStyle) {
-    const chosen = await getOptionalFeatureByEnglishName(db, fightingStyle);
+  if (kind === 'class_feature' && row.name === 'Fighting Style' && choices?.fightingStyle) {
+    const chosen = await getOptionalFeatureByEnglishName(db, choices.fightingStyle);
     if (chosen) entries = [...entries, ...chosen.entries];
+  }
+
+  // Same reasoning as Fighting Style above - Favored Enemy/Natural Explorer's
+  // book text just says "choose a type", it never names the player's actual
+  // pick, since these have no optional_features catalog to look up (see
+  // constants/favored-enemy.ts).
+  if (kind === 'class_feature' && row.name === 'Favored Enemy' && choices?.favoredEnemyType) {
+    entries = [
+      ...entries,
+      ...getFavoredEnemyDetailEntries(choices.favoredEnemyType, choices.favoredEnemyHumanoidRaces ?? null),
+    ];
+    // PHB: "you also learn one language of your choice that is spoken by
+    // your favored enemies, if they speak one at all" - see
+    // constants/favored-enemy.ts for the per-type/race language lists. Each
+    // favored enemy grants its own language, so the humanoid alternative
+    // shows one line per race instead of a single shared line.
+    const [languageSlot0, languageSlot1] = choices.favoredEnemyLanguageIds ?? [null, null];
+    if (choices.favoredEnemyType === FAVORED_ENEMY_HUMANOID_KEY) {
+      const [raceKey0, raceKey1] = choices.favoredEnemyHumanoidRaces ?? [null, null];
+      for (const [raceKey, languageSlot] of [
+        [raceKey0, languageSlot0],
+        [raceKey1, languageSlot1],
+      ] as const) {
+        const raceLabel = raceKey ? FAVORED_ENEMY_HUMANOID_RACES.find((r) => r.key === raceKey)?.labelPt : null;
+        if (!raceLabel) continue;
+        const languageName = await formatLanguageName(db, languageSlot);
+        if (languageName) entries = [...entries, `Idioma do ${raceLabel}: ${languageName}.`];
+      }
+    } else if (typeof languageSlot0 === 'number') {
+      const languageName = await formatLanguageName(db, languageSlot0);
+      if (languageName) entries = [...entries, `Idioma aprendido: ${languageName}.`];
+    } else if (languageSlot0 === 'none') {
+      entries = [...entries, 'Esse tipo de inimigo normalmente não fala nenhum idioma.'];
+    }
+  }
+  if (kind === 'class_feature' && row.name === 'Natural Explorer' && choices?.favoredTerrainType) {
+    entries = [...entries, ...getFavoredTerrainDetailEntries(choices.favoredTerrainType)];
   }
 
   return {
@@ -124,7 +195,7 @@ async function getBackgroundFeature(
 export async function getFeatureDetailById(
   db: SQLiteDatabase,
   id: string,
-  fightingStyle?: string | null
+  choices?: FeatureDetailChoices
 ): Promise<FeatureDetail | null> {
   const match = id.match(ID_PATTERN);
   if (!match) return null;
@@ -133,7 +204,7 @@ export async function getFeatureDetailById(
   const numericId = Number(match[2]);
 
   if (kind === 'class_feature' || kind === 'subclass_feature') {
-    return getClassOrSubclassFeature(db, kind, numericId, id, fightingStyle);
+    return getClassOrSubclassFeature(db, kind, numericId, id, choices);
   }
   if (kind === 'racial_trait') {
     return getRacialTrait(db, numericId, id);

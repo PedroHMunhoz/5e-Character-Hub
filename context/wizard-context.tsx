@@ -1,10 +1,18 @@
 import { createContext, useContext, useMemo, useReducer, type ReactNode } from 'react';
 
+import { FAVORED_ENEMY_HUMANOID_KEY, FAVORED_ENEMY_NO_LANGUAGE } from '@/constants/favored-enemy';
 import type { ResolvedEquipmentEntry } from '@/data/wizard/equipment-resolver';
 import type { AbilityKey, SkillKey } from '@/types/character';
 
 export type AbilityMethod = 'roll' | 'array' | 'pointBuy';
 export type EquipmentMode = 'starting' | 'gold';
+
+// One favored-enemy language slot: null = not resolved yet,
+// FAVORED_ENEMY_NO_LANGUAGE = locked "doesn't speak one", number = a real
+// languages.id (locked when it's the only option, player-picked when the
+// type/race has more than one plausible language - see
+// constants/favored-enemy.ts).
+export type FavoredEnemyLanguageSlot = number | typeof FAVORED_ENEMY_NO_LANGUAGE | null;
 
 // The character being built, mid-wizard. Deliberately looser/more nullable
 // than CharacterSheet (types/character.ts) - fields fill in incrementally
@@ -37,6 +45,26 @@ export interface WizardDraft {
   // optional_features row id, resolved to the stable English name at
   // assembly time (see data/wizard/assemble-character.ts).
   fightingStyleId: number | null;
+  // Ranger-only (see constants/favored-enemy.ts) - a creature-type key, or
+  // FAVORED_ENEMY_HUMANOID_KEY when the player picked "two humanoid races"
+  // instead. Not modeled via a DB catalog id (unlike fightingStyleId) since
+  // there's no optional_features row backing these options.
+  favoredEnemyType: string | null;
+  // Only meaningful when favoredEnemyType === FAVORED_ENEMY_HUMANOID_KEY -
+  // two distinct HumanoidRaceOption keys from constants/favored-enemy.ts.
+  favoredEnemyHumanoidRaces: [string | null, string | null];
+  // Ranger-only (see constants/favored-terrain.ts) - a terrain key. Lives
+  // inside the "Natural Explorer" class feature, not a feature of its own.
+  favoredTerrainType: string | null;
+  // Ranger-only, the language(s) granted alongside favoredEnemyType (PHB:
+  // "you also learn one language of your choice that is spoken by your
+  // favored enemies, if they speak one at all"). Slot 0 is the single
+  // creature type's language (or the first humanoid race's, when
+  // favoredEnemyType === FAVORED_ENEMY_HUMANOID_KEY); slot 1 is only used
+  // for the second humanoid race - each favored enemy grants its own
+  // language, so the two races in the humanoid alternative resolve
+  // independently instead of sharing one pick.
+  favoredEnemyLanguageIds: [FavoredEnemyLanguageSlot, FavoredEnemyLanguageSlot];
 
   // Passo 3: Atributos
   abilityMethod: AbilityMethod | null;
@@ -94,6 +122,10 @@ const initialDraft: WizardDraft = {
   classId: null,
   subclassId: null,
   fightingStyleId: null,
+  favoredEnemyType: null,
+  favoredEnemyHumanoidRaces: [null, null],
+  favoredTerrainType: null,
+  favoredEnemyLanguageIds: [null, null],
   abilityMethod: null,
   baseAbilityScores: {},
   backgroundId: null,
@@ -123,6 +155,10 @@ type Action =
   | { type: 'SET_CLASS'; classId: number | null }
   | { type: 'SET_SUBCLASS'; subclassId: number | null }
   | { type: 'SET_FIGHTING_STYLE'; fightingStyleId: number | null }
+  | { type: 'SET_FAVORED_ENEMY_TYPE'; favoredEnemyType: string | null }
+  | { type: 'SET_FAVORED_ENEMY_HUMANOID_RACES'; races: [string | null, string | null] }
+  | { type: 'SET_FAVORED_TERRAIN'; favoredTerrainType: string | null }
+  | { type: 'SET_FAVORED_ENEMY_LANGUAGE'; slot: 0 | 1; value: number | typeof FAVORED_ENEMY_NO_LANGUAGE }
   | { type: 'SET_ABILITY_METHOD'; method: AbilityMethod | null }
   | { type: 'SET_BASE_ABILITY_SCORES'; scores: Partial<Record<AbilityKey, number>> }
   | { type: 'SET_BACKGROUND'; backgroundId: number | null }
@@ -161,11 +197,53 @@ function wizardReducer(state: WizardDraft, action: Action): WizardDraft {
     case 'SET_DRACONIC_ANCESTRY':
       return { ...state, draconicAncestry: action.ancestry };
     case 'SET_CLASS':
-      return { ...state, classId: action.classId, subclassId: null, fightingStyleId: null };
+      return {
+        ...state,
+        classId: action.classId,
+        subclassId: null,
+        fightingStyleId: null,
+        favoredEnemyType: null,
+        favoredEnemyHumanoidRaces: [null, null],
+        favoredTerrainType: null,
+        favoredEnemyLanguageIds: [null, null],
+      };
     case 'SET_SUBCLASS':
       return { ...state, subclassId: action.subclassId };
     case 'SET_FIGHTING_STYLE':
       return { ...state, fightingStyleId: action.fightingStyleId };
+    case 'SET_FAVORED_ENEMY_TYPE':
+      // Switching away from the humanoid-races option invalidates whatever
+      // race picks were made for it. Any type change also invalidates both
+      // language slots, since they're derived from the type/races - the
+      // wizard's auto-resolve effect re-fills them right away.
+      return {
+        ...state,
+        favoredEnemyType: action.favoredEnemyType,
+        favoredEnemyHumanoidRaces:
+          action.favoredEnemyType === FAVORED_ENEMY_HUMANOID_KEY ? state.favoredEnemyHumanoidRaces : [null, null],
+        favoredEnemyLanguageIds: [null, null],
+      };
+    case 'SET_FAVORED_ENEMY_HUMANOID_RACES': {
+      // Guard against both slots ending up with the same race (e.g. changing
+      // the first pick to match the already-chosen second one) - null out
+      // the second slot instead of allowing a duplicate. Every humanoid race
+      // resolves to exactly one language (see constants/favored-enemy.ts),
+      // so a race change always invalidates that slot's language too - safe
+      // to reset both, the auto-resolve effect immediately re-locks them.
+      const [first, second] = action.races;
+      return {
+        ...state,
+        favoredEnemyHumanoidRaces: first !== null && first === second ? [first, null] : [first, second],
+        favoredEnemyLanguageIds: [null, null],
+      };
+    }
+    case 'SET_FAVORED_TERRAIN':
+      return { ...state, favoredTerrainType: action.favoredTerrainType };
+    case 'SET_FAVORED_ENEMY_LANGUAGE': {
+      const next: [FavoredEnemyLanguageSlot, FavoredEnemyLanguageSlot] = [...state.favoredEnemyLanguageIds];
+      next[action.slot] = action.value;
+      return { ...state, favoredEnemyLanguageIds: next };
+    }
     case 'SET_ABILITY_METHOD':
       return { ...state, abilityMethod: action.method, baseAbilityScores: {} };
     case 'SET_BASE_ABILITY_SCORES':
@@ -212,6 +290,10 @@ export interface WizardContextValue {
   setClass: (classId: number | null) => void;
   setSubclass: (subclassId: number | null) => void;
   setFightingStyle: (fightingStyleId: number | null) => void;
+  setFavoredEnemyType: (favoredEnemyType: string | null) => void;
+  setFavoredEnemyHumanoidRaces: (races: [string | null, string | null]) => void;
+  setFavoredTerrain: (favoredTerrainType: string | null) => void;
+  setFavoredEnemyLanguage: (slot: 0 | 1, value: number | typeof FAVORED_ENEMY_NO_LANGUAGE) => void;
   setAbilityMethod: (method: AbilityMethod | null) => void;
   setBaseAbilityScores: (scores: Partial<Record<AbilityKey, number>>) => void;
   setBackground: (backgroundId: number | null) => void;
@@ -245,6 +327,10 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       setClass: (classId) => dispatch({ type: 'SET_CLASS', classId }),
       setSubclass: (subclassId) => dispatch({ type: 'SET_SUBCLASS', subclassId }),
       setFightingStyle: (fightingStyleId) => dispatch({ type: 'SET_FIGHTING_STYLE', fightingStyleId }),
+      setFavoredEnemyType: (favoredEnemyType) => dispatch({ type: 'SET_FAVORED_ENEMY_TYPE', favoredEnemyType }),
+      setFavoredEnemyHumanoidRaces: (races) => dispatch({ type: 'SET_FAVORED_ENEMY_HUMANOID_RACES', races }),
+      setFavoredTerrain: (favoredTerrainType) => dispatch({ type: 'SET_FAVORED_TERRAIN', favoredTerrainType }),
+      setFavoredEnemyLanguage: (slot, value) => dispatch({ type: 'SET_FAVORED_ENEMY_LANGUAGE', slot, value }),
       setAbilityMethod: (method) => dispatch({ type: 'SET_ABILITY_METHOD', method }),
       setBaseAbilityScores: (scores) => dispatch({ type: 'SET_BASE_ABILITY_SCORES', scores }),
       setBackground: (backgroundId) => dispatch({ type: 'SET_BACKGROUND', backgroundId }),

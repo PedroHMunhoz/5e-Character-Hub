@@ -1,0 +1,11 @@
+[
+  {
+    "name": "Gnoll",
+    "source": "PHB",
+    "type": "standard",
+    "entries": [
+      "Gnoll é o idioma falado pelos gnolls, uma língua áspera e gutural ligada à sua natureza feroz e caótica."
+    ],
+    "_note": "Idioma do Monster Manual (não é um dos 18 idiomas reais do PHB) - adicionado como source='PHB' de propósito, mesmo truque já usado pelos outros overrides deste arquivo (ex: os barcos 'Keelboat'/'Rowboat'), já que as queries do app (getAllLanguages) filtram WHERE source = 'PHB'. Existe especificamente para a sugestão de idioma da característica Favored Enemy do Patrulheiro quando o jogador escolhe Gnoll como uma das duas raças humanoides - ver constants/favored-enemy.ts. Pedido explícito do usuário (não ficar com 'Nenhum' por falta de opção, já que Gnolls falam Gnoll segundo o Monster Manual)."
+  }
+]

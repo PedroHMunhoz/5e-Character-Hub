@@ -77,7 +77,13 @@ export default function FeatureDetailScreen() {
     let cancelled = false;
 
     async function load() {
-      const detail = await getFeatureDetailById(db, id, character.fightingStyle);
+      const detail = await getFeatureDetailById(db, id, {
+        fightingStyle: character.fightingStyle,
+        favoredEnemyType: character.favoredEnemyType,
+        favoredEnemyHumanoidRaces: character.favoredEnemyHumanoidRaces,
+        favoredTerrainType: character.favoredTerrainType,
+        favoredEnemyLanguageIds: character.favoredEnemyLanguageIds,
+      });
       if (!cancelled) {
         setFeature(detail);
         setLoading(false);
@@ -88,7 +94,15 @@ export default function FeatureDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [db, id, character.fightingStyle]);
+  }, [
+    db,
+    id,
+    character.fightingStyle,
+    character.favoredEnemyType,
+    character.favoredEnemyHumanoidRaces,
+    character.favoredTerrainType,
+    character.favoredEnemyLanguageIds,
+  ]);
 
   if (loading || !feature) {
     return (

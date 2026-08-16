@@ -41,3 +41,12 @@ export async function getLanguageByEnglishName(db: SQLiteDatabase, englishName: 
   const target = englishName.toLowerCase();
   return all.find((language) => language.englishName.toLowerCase() === target) ?? null;
 }
+
+// Looks up a specific language by its row id - used to display the concrete
+// language granted by a player's choice (e.g. Ranger's Favored Enemy
+// language pick, see data/queries/feature-detail.ts) back in its translated
+// display name.
+export async function getLanguageById(db: SQLiteDatabase, id: number): Promise<Language | null> {
+  const all = await getAllLanguages(db);
+  return all.find((language) => language.id === id) ?? null;
+}

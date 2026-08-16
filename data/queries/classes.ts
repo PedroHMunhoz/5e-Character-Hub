@@ -2,7 +2,13 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { CharacterClassDefinition, ClassFeature, SubclassDefinition, SubclassFeature } from '@/types/reference';
 import { parseJson, toEntries } from '../rows';
-import { getTranslations, localizedEntries, localizedName, localizedSubclassTitle, type TranslationDict } from './localize';
+import {
+  getTranslations,
+  localizedEntries,
+  localizedName,
+  localizedSubclassTitle,
+  type TranslationDict,
+} from './localize';
 
 interface ClassRow {
   id: number;
@@ -202,6 +208,29 @@ export async function classGrantsExpertiseAtLevel1(db: SQLiteDatabase, classId: 
 export async function classGrantsFightingStyleAtLevel1(db: SQLiteDatabase, classId: number): Promise<boolean> {
   const row = await db.getFirstAsync<{ id: number }>(
     `SELECT id FROM class_features WHERE class_id = ? AND level = 1 AND name = 'Fighting Style' AND source = 'PHB'`,
+    classId
+  );
+  return row != null;
+}
+
+// Whether this class grants a Favored Enemy pick at level 1 - true only for
+// Ranger in the PHB. Same query-by-name/level reasoning as
+// classGrantsFightingStyleAtLevel1 above.
+export async function classGrantsFavoredEnemyAtLevel1(db: SQLiteDatabase, classId: number): Promise<boolean> {
+  const row = await db.getFirstAsync<{ id: number }>(
+    `SELECT id FROM class_features WHERE class_id = ? AND level = 1 AND name = 'Favored Enemy' AND source = 'PHB'`,
+    classId
+  );
+  return row != null;
+}
+
+// Whether this class grants a Favored Terrain pick at level 1 - true only for
+// Ranger in the PHB. The favored-terrain choice lives inside the "Natural
+// Explorer" class feature (not a feature named "Favored Terrain" itself), so
+// the query is by that name - see constants/favored-terrain.ts.
+export async function classGrantsFavoredTerrainAtLevel1(db: SQLiteDatabase, classId: number): Promise<boolean> {
+  const row = await db.getFirstAsync<{ id: number }>(
+    `SELECT id FROM class_features WHERE class_id = ? AND level = 1 AND name = 'Natural Explorer' AND source = 'PHB'`,
     classId
   );
   return row != null;

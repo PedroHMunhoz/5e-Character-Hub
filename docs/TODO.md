@@ -85,7 +85,7 @@ usuário).
   antecedente, detectado via `getToolItemByEnglishName` em
   `data/queries/tools.ts`), aparece um checkbox que troca uma das duas
   perícias de Especialização pela ferramenta (`WizardDraft.
-  expertiseToolChoice`, guarda a `itemKey()` da ferramenta escolhida);
+expertiseToolChoice`, guarda a `itemKey()` da ferramenta escolhida);
   `data/wizard/assemble-character.ts` grava o `expertise: true`
   correspondente em `character.tools`. Na ficha, `ToolRow`
   (`components/character/tool-row.tsx`) passou a usar
@@ -134,16 +134,16 @@ usuário).
   tinha nenhum conceito de "idiomas" do personagem. Virou feature nova,
   implementada na mesma sessão: `data/queries/languages.ts` (catálogo,
   espelha `data/queries/tools.ts`), `data/wizard/language-proficiency-
-  resolver.ts` (parse da DSL `{name:true}`/`{anyStandard:N}`, mesma
+resolver.ts` (parse da DSL `{name:true}`/`{anyStandard:N}`, mesma
   convenção de `tool_proficiencies`), novo passo "Idiomas" dentro do Passo 4
   do wizard (`app/wizard/background.tsx`, `components/wizard/language-
-  choice-list.tsx`) cobrindo idioma fixo + escolha de raça e antecedente
+choice-list.tsx`) cobrindo idioma fixo + escolha de raça e antecedente
   (incluindo o caso do Elfo Alto, cuja sub-raça **sobrescreve** o
   `languageProficiencies` da raça-base em vez de somar), `CharacterSheet.
-  languages: number[]` persistido em `data/wizard/assemble-character.ts`, e
+languages: number[]` persistido em `data/wizard/assemble-character.ts`, e
   exibido na aba Atributos (`components/character/character-attributes.tsx`).
   A pedido do usuário, também cobre os dois idiomas concedidos por
-  *característica de classe* em vez da DSL de proficiência (Druídico do
+  _característica de classe_ em vez da DSL de proficiência (Druídico do
   Druida, Gíria de Ladrão do Ladino, ambos nível 1) — o nome da própria
   característica bate exatamente com o nome do idioma no catálogo, então
   `getClassGrantedLanguageNames` (mesmo arquivo do resolver) casa por uma
@@ -182,7 +182,7 @@ usuário).
   pipeline formal de tradução, não só o `name` mínimo pedido originalmente.
 - ~~Mostrar o conteúdo dos pacotes/kits no Passo 5~~ — **implementado**:
   `EquipmentLookupItem`/`ResolvedEquipmentEntry` (`data/queries/
-  equipment-lookup.ts`, `data/wizard/equipment-resolver.ts`) agora carregam
+equipment-lookup.ts`, `data/wizard/equipment-resolver.ts`) agora carregam
   as `entries` traduzidas dos 7 pacotes multi-item (sinal estrutural
   `isMultiItemPack()` em `data/queries/base-items.ts`, não depende do texto
   "Inclui:" continuar igual), e `equipment-choice-group.tsx` mostra o
@@ -201,7 +201,7 @@ usuário).
 - **Duplicar personagem** — decisão do usuário: não existirá.
 - ~~Itens "special" do equipamento resolvido não entram no inventário
   persistido.~~ — **resolvido**: as 19 entradas `{special: "...", quantity?:
-  N}` sem linha correspondente em `base_items`/`items` (9 antecedentes do
+N}` sem linha correspondente em `base_items`/`items` (9 antecedentes do
   PHB: Acólito/Artesão de Guilda/Artista/Charlatão/Nobre/Forasteiro/Sábio/
   Soldado/Órfão) ganharam linhas sintéticas reais na tabela `items`
   (`db/overrides/custom-items.json`, mesmo mecanismo já usado pra
@@ -218,7 +218,7 @@ usuário).
 - ~~Quantidade de arma/armadura não aparece em lugar nenhum da UI~~ —
   **implementado (abordagem 2, itens separados)**: `inventoryItems` deixou
   de ser `Record<itemKey, InventoryItemState>` e virou `Record<instanceId,
-  InventoryItemState>` — cada registro é uma unidade física, com
+InventoryItemState>` — cada registro é uma unidade física, com
   `InventoryItemState.itemId` guardando a referência de catálogo
   (`types/character.ts`). `assemble-character.ts` agora consulta
   `getBaseItemCategoriesByIds` (`data/queries/base-items.ts`) e, pra
@@ -272,7 +272,7 @@ usuário).
 - **Patrulheiro (Revisado UA), oculto no banco (`source = 'UARR'`).** Ao
   resolver o bloqueio do Patrulheiro (ver `translations/pt-BR/DUVIDAS.md`),
   descobri que o texto usado como fonte de tradução (`books/Livro do
-  Jogador.pdf`, capítulo do Patrulheiro) não era o PHB, e sim uma tradução
+Jogador.pdf`, capítulo do Patrulheiro) não era o PHB, e sim uma tradução
   fanmade do Unearthed Arcana "Ranger, Revised" (2016) formatada pra imitar
   o livro oficial. O Patrulheiro oficial foi traduzido do PHB em inglês
   normalmente; o conteúdo desse UA não foi descartado — está preservado como
@@ -307,7 +307,7 @@ usuário).
   valores reais para classes em `SPELLCASTING_RULES`**
   (`constants/spellcasting.ts`: Bardo/Clérigo/Druida/Feiticeiro/Bruxo/
   Mago). Paladino e Patrulheiro (meio-conjuradores, `caster_progression =
-  '1/2'`) sempre mostram "—", mesmo que a partir do nível 2 eles tenham
+'1/2'`) sempre mostram "—", mesmo que a partir do nível 2 eles tenham
   magias reais pelo livro — a tabela de regras não os inclui (não têm
   truques/magias no nível 1, e o wizard já pula a etapa de seleção de
   magias pra eles, `app/wizard/spells.tsx`) e não há UI de progressão de
@@ -327,7 +327,7 @@ usuário).
   no wizard nem no modelo de dados do personagem) e os **Patronos do
   Bruxo** (Arquifada, Corruptor, Grande Antigo etc. — usam a chave
   `expanded`, não `prepared`: é uma lista extra de magias que podem ser
-  *escolhidas* como conhecidas, não uma concessão automática de "sempre
+  _escolhidas_ como conhecidas, não uma concessão automática de "sempre
   preparada", mecanismo diferente do que `getSubclassAdditionalSpellsByLevel`
   resolve hoje).
 - **Ancestralidade Dracônica do Draconato modelada fora do mecanismo de
@@ -337,20 +337,26 @@ usuário).
   vier outra raça com esse mesmo mecanismo, vale considerar expandir o
   template genericamente no import em vez de repetir esse padrão hardcoded
   por raça.
-- **⚠️ Inimigo Favorito/Explorador Natural do Patrulheiro (1º nível) fora do
-  wizard — GAP REAL, não mais bloqueio de tradução.** O Patrulheiro tem duas
-  escolhas obrigatórias de 1º nível (tipo de inimigo favorito + terreno
-  favorito), iguais em espírito ao Estilo de Luta do Guerreiro/Domínio
-  Divino do Clérigo, mas nenhuma tela de wizard existe pra elas ainda. Isso
-  era inofensivo enquanto a tradução do Patrulheiro estava bloqueada (a
-  classe não aparecia no wizard, `WHERE source = 'PHB'`) — mas agora que o
-  Patrulheiro foi traduzido e destravado, ele **já aparece na lista de
-  classes do wizard e é selecionável hoje**, sem nenhuma etapa pra essas
-  duas escolhas. Um jogador que criar um Patrulheiro agora termina com uma
-  ficha sem inimigo favorito nem terreno favorito definidos. Implementar:
-  telas de escolha (mesmo padrão de `SkillChoiceList`/similar), persistência
-  em `WizardDraft`/`CharacterSheet` (não existe campo pra isso hoje) e
-  exibição na aba Características.
+- **~~Inimigo Favorito/Explorador Natural do Patrulheiro (1º nível) fora do
+  wizard~~ Resolvido.** O Patrulheiro tem duas escolhas obrigatórias de 1º
+  nível (tipo de inimigo favorito + terreno favorito, esse último dentro da
+  característica "Explorador Natural"). Ao contrário do Estilo de Luta do
+  Guerreiro, essas opções não são linhas de `optional_features` no banco — no
+  5etools/PHB elas são só texto corrido embutido no parágrafo da
+  característica (`class_features`), sem catálogo próprio e sem flavor text
+  por opção, e o app não tem tabela de bestiário pra dar nome às raças
+  humanoides da alternativa "duas raças humanoides". Por isso a lista de
+  opções virou constante no app (`constants/favored-enemy.ts`,
+  `constants/favored-terrain.ts`), mesmo padrão já usado pra Linhagem
+  Dracônica do Draconato (`constants/draconic-ancestry.ts`), com flavor text
+  novo (não vindo do livro) escrito pra cada opção, incluindo exemplos de
+  monstros conhecidos. UI em `app/wizard/class.tsx` (combos + caixa de
+  descrição, mesmo estilo do Estilo de Luta), estado em
+  `context/wizard-context.tsx`, persistência em `CharacterSheet`
+  (`favoredEnemyType`/`favoredEnemyHumanoidRaces`/`favoredTerrainType`),
+  exibição na aba Características e no detalhe da característica
+  (`data/queries/character-features.ts`/`data/queries/feature-detail.ts`,
+  mesmo mecanismo de anotar o nome/entries já usado pro Estilo de Luta).
 - **Estilo de Luta do Paladino/Patrulheiro no 2º nível.** Ambos ganham a
   mesma escolha de Estilo de Luta do Guerreiro (implementada em
   `app/wizard/class.tsx`/`data/queries/optional-features.ts`/

@@ -240,7 +240,10 @@ runSection('classes', () => {
       // instead of always-prepared) - see docs/TODO.md.
       const rawAdditional = sc.additionalSpells;
       const additionalSpells =
-        Array.isArray(rawAdditional) && rawAdditional.length === 1 && !rawAdditional[0].name && rawAdditional[0].prepared
+        Array.isArray(rawAdditional) &&
+        rawAdditional.length === 1 &&
+        !rawAdditional[0].name &&
+        rawAdditional[0].prepared
           ? rawAdditional[0].prepared
           : null;
       const info = insertSubclass.run(classId, sc.name, sc.shortName, sc.source, bit(sc.srd), json(additionalSpells));
@@ -733,6 +736,20 @@ runSection('languages', () => {
     );
     bump('languages');
     addToFts('language', info.lastInsertRowid, l.name, flat);
+  }
+
+  // Languages with no row in the 5etools dataset at all (e.g. Monster Manual
+  // languages like Gnoll) - see db/overrides/custom-languages.json for why.
+  // Same override pattern as custom-items.json above.
+  const customLanguagesPath = path.join(repoRoot, 'db', 'overrides', 'custom-languages.json');
+  if (fs.existsSync(customLanguagesPath)) {
+    const customLanguages = JSON.parse(fs.readFileSync(customLanguagesPath, 'utf8'));
+    for (const l of customLanguages) {
+      ensureSource(l.source);
+      const info = insertLanguage.run(l.name, l.source, 0, 0, l.type ?? null, l.script ?? null, json(l.entries ?? []));
+      bump('languages');
+      addToFts('language', info.lastInsertRowid, l.name, l.entries ?? []);
+    }
   }
 });
 

@@ -6,6 +6,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { ABILITIES, SKILLS } from '@/constants/character';
+import { FAVORED_ENEMY_HUMANOID_KEY } from '@/constants/favored-enemy';
 import { SPELLCASTING_RULES } from '@/constants/spellcasting';
 import { getSubraceDisplayName } from '@/constants/subrace-names';
 import { getBackgroundById } from '@/data/queries/backgrounds';
@@ -162,8 +163,18 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   const fixedLanguageIds = fixedLanguageNames
     .map((name) => languageByEnglishName.get(name.toLowerCase())?.id)
     .filter((id): id is number => id != null);
+  // The Ranger's Favored Enemy language pick(s) (see constants/favored-
+  // enemy.ts) - one per favored enemy (up to two for the humanoid
+  // alternative) - only contribute a real id here; FAVORED_ENEMY_NO_LANGUAGE/
+  // null mean that particular favored enemy doesn't grant a language.
+  const favoredEnemyLanguageIds = draft.favoredEnemyLanguageIds.filter((id): id is number => typeof id === 'number');
   const languages = [
-    ...new Set([...fixedLanguageIds, ...draft.raceLanguageChoices, ...draft.backgroundLanguageChoices]),
+    ...new Set([
+      ...fixedLanguageIds,
+      ...draft.raceLanguageChoices,
+      ...draft.backgroundLanguageChoices,
+      ...favoredEnemyLanguageIds,
+    ]),
   ];
 
   // Inventory: resolved entirely by the equipment step. 'special' flavor
@@ -297,6 +308,15 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
     race: raceDisplayName,
     draconicAncestry: draft.draconicAncestry,
     fightingStyle: fightingStyle?.englishName ?? null,
+    favoredEnemyType: draft.favoredEnemyType,
+    favoredEnemyHumanoidRaces:
+      draft.favoredEnemyType === FAVORED_ENEMY_HUMANOID_KEY &&
+      draft.favoredEnemyHumanoidRaces[0] !== null &&
+      draft.favoredEnemyHumanoidRaces[1] !== null
+        ? [draft.favoredEnemyHumanoidRaces[0], draft.favoredEnemyHumanoidRaces[1]]
+        : null,
+    favoredTerrainType: draft.favoredTerrainType,
+    favoredEnemyLanguageIds: draft.favoredEnemyLanguageIds,
     backgroundId: background.id,
     classes: [characterClass],
     inspiration: false,

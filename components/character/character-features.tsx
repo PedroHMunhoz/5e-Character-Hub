@@ -45,11 +45,26 @@ export function CharacterFeatures() {
       backgroundId,
       level: getCharacterLevel(character.classes),
       draconicAncestry: character.draconicAncestry,
+      favoredEnemyType: character.favoredEnemyType,
+      favoredEnemyHumanoidRaces: character.favoredEnemyHumanoidRaces,
+      favoredTerrainType: character.favoredTerrainType,
     }).then((data) => {
       setFeatures(data);
       setLoading(false);
     });
-  }, [db, raceId, subraceId, classId, subclassId, backgroundId, character.classes, character.draconicAncestry]);
+  }, [
+    db,
+    raceId,
+    subraceId,
+    classId,
+    subclassId,
+    backgroundId,
+    character.classes,
+    character.draconicAncestry,
+    character.favoredEnemyType,
+    character.favoredEnemyHumanoidRaces,
+    character.favoredTerrainType,
+  ]);
 
   const sections = useMemo(
     () =>
@@ -97,7 +112,10 @@ export function CharacterFeatures() {
                 <Pressable
                   key={item.id}
                   onPress={() =>
-                    router.push({ pathname: '/sheet/[characterId]/feature/[id]', params: { characterId: character.id, id: item.id } })
+                    router.push({
+                      pathname: '/sheet/[characterId]/feature/[id]',
+                      params: { characterId: character.id, id: item.id },
+                    })
                   }
                 >
                   {card}

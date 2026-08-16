@@ -5,7 +5,11 @@ import { useSQLiteContext } from 'expo-sqlite';
 
 import { CheckboxToggle } from '@/components/character/checkbox-toggle';
 import { SelectField } from '@/components/character/select-field';
-import { LanguageChoiceList, type LanguageChoiceClause } from '@/components/wizard/language-choice-list';
+import {
+  LanguageChoiceList,
+  type DisabledLanguage,
+  type LanguageChoiceClause,
+} from '@/components/wizard/language-choice-list';
 import { SkillChoiceList } from '@/components/wizard/skill-choice-list';
 import { ToolChoiceList } from '@/components/wizard/tool-choice-list';
 import { WizardStepHeader } from '@/components/wizard/wizard-step-header';
@@ -323,23 +327,67 @@ export default function WizardBackgroundStep() {
     [standardLanguages, raceLanguagesFixed, raceLanguageSelected]
   );
 
+  // Languages already granted by the Ranger's Favored Enemy pick(s) - see
+  // constants/favored-enemy.ts/app/wizard/class.tsx. Only ever overlaps this
+  // screen's pool when the favored enemy's language happens to be one of the
+  // 7 "standard" ones shown here (e.g. Giant, Goblin, Orc) - most favored
+  // enemy languages are exotic (Draconic, Abyssal, ...) and never appear in
+  // this list at all.
+  const favoredEnemyLanguageIds = useMemo(
+    () => draft.favoredEnemyLanguageIds.filter((id): id is number => typeof id === 'number'),
+    [draft.favoredEnemyLanguageIds]
+  );
+  const favoredEnemyDisabledLanguages = useMemo(
+    () => standardLanguages.filter((l) => favoredEnemyLanguageIds.includes(l.id)),
+    [standardLanguages, favoredEnemyLanguageIds]
+  );
+
   const raceLanguageClause: LanguageChoiceClause | null = useMemo(() => {
     if (raceLanguageChoiceCount === null) return null;
     const pool = standardLanguages.filter(
-      (l) => !raceLanguagesFixed.some((f) => f.id === l.id) && !raceLanguageCrossDisabled.some((d) => d.id === l.id)
+      (l) =>
+        !raceLanguagesFixed.some((f) => f.id === l.id) &&
+        !raceLanguageCrossDisabled.some((d) => d.id === l.id) &&
+        !favoredEnemyDisabledLanguages.some((d) => d.id === l.id)
     );
     return { from: pool, count: raceLanguageChoiceCount };
-  }, [raceLanguageChoiceCount, standardLanguages, raceLanguagesFixed, raceLanguageCrossDisabled]);
+  }, [
+    raceLanguageChoiceCount,
+    standardLanguages,
+    raceLanguagesFixed,
+    raceLanguageCrossDisabled,
+    favoredEnemyDisabledLanguages,
+  ]);
 
   const backgroundLanguageClause: LanguageChoiceClause | null = useMemo(() => {
     if (backgroundLanguageChoiceCount === null) return null;
     const pool = standardLanguages.filter(
       (l) =>
         !backgroundLanguagesFixed.some((f) => f.id === l.id) &&
-        !backgroundLanguageCrossDisabled.some((d) => d.id === l.id)
+        !backgroundLanguageCrossDisabled.some((d) => d.id === l.id) &&
+        !favoredEnemyDisabledLanguages.some((d) => d.id === l.id)
     );
     return { from: pool, count: backgroundLanguageChoiceCount };
-  }, [backgroundLanguageChoiceCount, standardLanguages, backgroundLanguagesFixed, backgroundLanguageCrossDisabled]);
+  }, [
+    backgroundLanguageChoiceCount,
+    standardLanguages,
+    backgroundLanguagesFixed,
+    backgroundLanguageCrossDisabled,
+    favoredEnemyDisabledLanguages,
+  ]);
+
+  const favoredEnemyDisabledEntries: DisabledLanguage[] = useMemo(
+    () => favoredEnemyDisabledLanguages.map((language) => ({ language, note: 'Já selecionado pelo Inimigo Favorito' })),
+    [favoredEnemyDisabledLanguages]
+  );
+  const raceLanguageDisabledEntries: DisabledLanguage[] = useMemo(
+    () => [...raceLanguageCrossDisabled.map((language) => ({ language })), ...favoredEnemyDisabledEntries],
+    [raceLanguageCrossDisabled, favoredEnemyDisabledEntries]
+  );
+  const backgroundLanguageDisabledEntries: DisabledLanguage[] = useMemo(
+    () => [...backgroundLanguageCrossDisabled.map((language) => ({ language })), ...favoredEnemyDisabledEntries],
+    [backgroundLanguageCrossDisabled, favoredEnemyDisabledEntries]
+  );
 
   // Whether the character actually has thieves' tools proficiency (from
   // class and/or background) - only then can Expertise swap a skill pick for
@@ -530,7 +578,7 @@ export default function WizardBackgroundStep() {
               clause={raceLanguageClause}
               selected={raceLanguageSelected}
               onChange={setRaceLanguageSelected}
-              disabled={raceLanguageCrossDisabled}
+              disabled={raceLanguageDisabledEntries}
             />
           </View>
         ) : null}
@@ -544,7 +592,7 @@ export default function WizardBackgroundStep() {
               clause={backgroundLanguageClause}
               selected={backgroundLanguageSelected}
               onChange={setBackgroundLanguageSelected}
-              disabled={backgroundLanguageCrossDisabled}
+              disabled={backgroundLanguageDisabledEntries}
             />
           </View>
         ) : null}

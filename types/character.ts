@@ -147,6 +147,24 @@ export interface CharacterSheet {
   // class, weapon attack/damage bonuses) can key off it directly instead of
   // round-tripping through the database. See data/wizard/assemble-character.ts.
   fightingStyle?: string | null;
+  // Ranger-only at level 1 - see constants/favored-enemy.ts. A stable
+  // creature-type key (or FAVORED_ENEMY_HUMANOID_KEY), not a DB row id.
+  favoredEnemyType?: string | null;
+  // Only set when favoredEnemyType === FAVORED_ENEMY_HUMANOID_KEY - two
+  // distinct HumanoidRaceOption keys.
+  favoredEnemyHumanoidRaces?: [string, string] | null;
+  // Ranger-only at level 1 - see constants/favored-terrain.ts. Lives inside
+  // the "Natural Explorer" class feature, not a feature of its own.
+  favoredTerrainType?: string | null;
+  // Ranger-only at level 1 - the language(s) granted alongside
+  // favoredEnemyType (see constants/favored-enemy.ts). Slot 0 is the single
+  // creature type's language (or the first humanoid race's); slot 1 is only
+  // used for the second humanoid race, since each favored enemy grants its
+  // own language independently. Each slot is a languages.id, the string
+  // 'none' (FAVORED_ENEMY_NO_LANGUAGE - that type/race doesn't speak one),
+  // or null. Absent entirely for characters created before this field
+  // existed. Only merged into `languages` below when a slot is a real id.
+  favoredEnemyLanguageIds?: [number | 'none' | null, number | 'none' | null];
   backgroundId?: number;
   classes: CharacterClass[];
   inspiration: boolean;
