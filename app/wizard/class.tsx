@@ -16,6 +16,8 @@ import {
   getHumanoidRaceLanguages,
 } from '@/constants/favored-enemy';
 import { FAVORED_TERRAINS } from '@/constants/favored-terrain';
+import { CLASS_INFO, formatAbilitySlot, type ClassInfo } from '@/constants/class-info';
+import { SUBCLASS_INFO } from '@/constants/subclass-info';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { useWizardDraft } from '@/context/wizard-context';
 import {
@@ -24,6 +26,7 @@ import {
   classGrantsFightingStyleAtLevel1,
   classGrantsSubclassAtLevel1,
   getAllClasses,
+  getClassEnglishName,
   getSubclassesForClass,
 } from '@/data/queries/classes';
 import { getAllLanguages, type Language } from '@/data/queries/languages';
@@ -54,6 +57,7 @@ export default function WizardClassStep() {
   const [needsFavoredEnemy, setNeedsFavoredEnemy] = useState(false);
   const [needsFavoredTerrain, setNeedsFavoredTerrain] = useState(false);
   const [languages, setLanguages] = useState<Language[] | null>(null);
+  const [classEnglishName, setClassEnglishName] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,6 +68,20 @@ export default function WizardClassStep() {
       cancelled = true;
     };
   }, [db]);
+
+  useEffect(() => {
+    if (draft.classId === null) {
+      setClassEnglishName(null);
+      return;
+    }
+    let cancelled = false;
+    getClassEnglishName(db, draft.classId).then((name) => {
+      if (!cancelled) setClassEnglishName(name);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [db, draft.classId]);
 
   useEffect(() => {
     if (draft.classId === null) {
@@ -196,6 +214,15 @@ export default function WizardClassStep() {
     () => (classes ?? []).find((c) => c.id === draft.classId) ?? null,
     [classes, draft.classId]
   );
+  const classInfo = classEnglishName ? (CLASS_INFO[classEnglishName] ?? null) : null;
+  const selectedSubclass = useMemo(
+    () => (subclasses ?? []).find((s) => s.id === draft.subclassId) ?? null,
+    [subclasses, draft.subclassId]
+  );
+  const subclassInfo =
+    classEnglishName && selectedSubclass
+      ? (SUBCLASS_INFO[classEnglishName]?.[selectedSubclass.shortName] ?? null)
+      : null;
   const selectedFightingStyle = useMemo(
     () => (fightingStyles ?? []).find((f) => f.id === draft.fightingStyleId) ?? null,
     [fightingStyles, draft.fightingStyleId]
@@ -273,6 +300,13 @@ export default function WizardClassStep() {
           onChange={(value) => setClass(Number(value))}
         />
 
+        {classInfo ? (
+          <View style={[styles.field, { borderColor: goldColor }]}>
+            <ThemedText style={styles.descriptionParagraph}>{classInfo.description['pt-BR']}</ThemedText>
+            <ThemedText style={styles.descriptionParagraph}>{formatPrimaryAbilities(classInfo)}</ThemedText>
+          </View>
+        ) : null}
+
         {needsSubclassChoice && subclasses ? (
           <SelectField
             label={selectedClass?.subclassTitle ?? 'Subclasse'}
@@ -280,6 +314,12 @@ export default function WizardClassStep() {
             options={subclasses.map((s) => ({ value: String(s.id), label: s.name }))}
             onChange={(value) => setSubclass(Number(value))}
           />
+        ) : null}
+
+        {subclassInfo ? (
+          <View style={[styles.field, { borderColor: goldColor }]}>
+            <ThemedText style={styles.descriptionParagraph}>{subclassInfo['pt-BR']}</ThemedText>
+          </View>
         ) : null}
 
         {needsFavoredEnemy ? (
@@ -412,6 +452,12 @@ export default function WizardClassStep() {
       </View>
     </View>
   );
+}
+
+function formatPrimaryAbilities(classInfo: ClassInfo): string {
+  const primary = formatAbilitySlot(classInfo.primaryAbility);
+  const secondary = formatAbilitySlot(classInfo.secondaryAbility);
+  return `Atributos principais: ${primary}, depois ${secondary}.`;
 }
 
 function resolveLanguageMatches(englishNames: string[], languages: Language[]): Language[] {

@@ -8,7 +8,9 @@ import { WizardStepHeader } from '@/components/wizard/wizard-step-header';
 import { SelectField } from '@/components/character/select-field';
 import { ThemedText } from '@/components/themed-text';
 import { DRACONIC_ANCESTRIES } from '@/constants/draconic-ancestry';
+import { RACE_INFO } from '@/constants/race-info';
 import { getSubraceDisplayName } from '@/constants/subrace-names';
+import { SUBRACE_INFO } from '@/constants/subrace-info';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { useWizardDraft } from '@/context/wizard-context';
 import { getAllRaces } from '@/data/queries/races';
@@ -53,6 +55,8 @@ export default function WizardRaceStep() {
   );
 
   const isDragonborn = selectedRace?.englishName === 'Dragonborn';
+  const raceInfo = selectedRace ? (RACE_INFO[selectedRace.englishName] ?? null) : null;
+  const subraceInfo = selectedSubrace ? (SUBRACE_INFO[selectedSubrace.englishName] ?? null) : null;
 
   const combinedBonuses = useMemo(
     () => combineAbilityBonuses(selectedRace?.abilityBonuses ?? null, selectedSubrace?.abilityBonuses ?? null),
@@ -89,6 +93,12 @@ export default function WizardRaceStep() {
           onChange={(value) => setRace(Number(value))}
         />
 
+        {raceInfo ? (
+          <View style={[styles.field, { borderColor: goldColor }]}>
+            <ThemedText style={styles.descriptionParagraph}>{raceInfo['pt-BR']}</ThemedText>
+          </View>
+        ) : null}
+
         {subraces.length > 0 ? (
           <SelectField
             label="Sub-raça"
@@ -99,6 +109,12 @@ export default function WizardRaceStep() {
             }))}
             onChange={(value) => setSubrace(Number(value))}
           />
+        ) : null}
+
+        {subraceInfo ? (
+          <View style={[styles.field, { borderColor: goldColor }]}>
+            <ThemedText style={styles.descriptionParagraph}>{subraceInfo['pt-BR']}</ThemedText>
+          </View>
         ) : null}
 
         {isDragonborn ? (
@@ -168,6 +184,17 @@ const styles = StyleSheet.create({
   bonusSummary: {
     fontSize: 13,
     opacity: 0.7,
+  },
+  field: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    gap: 8,
+  },
+  descriptionParagraph: {
+    fontSize: 14,
+    lineHeight: 20,
+    opacity: 0.85,
   },
   footer: {
     padding: 16,

@@ -17,7 +17,9 @@ import { STANDARD_ARRAY, StandardArrayAssigner } from '@/components/wizard/stand
 import { resolveAssignedScores, type ValuePoolAssignments } from '@/components/wizard/value-pool-assigner';
 import { WizardStepHeader } from '@/components/wizard/wizard-step-header';
 import { ABILITIES } from '@/constants/character';
+import { CLASS_INFO, formatAbilitySlot } from '@/constants/class-info';
 import { useWizardDraft } from '@/context/wizard-context';
+import { getClassById, getClassEnglishName } from '@/data/queries/classes';
 import { getRaceById } from '@/data/queries/races';
 import { combineAbilityBonuses, getResolvedRacialBonus } from '@/data/wizard/race-ability-bonus';
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -33,6 +35,8 @@ export default function WizardAbilitiesStep() {
   const [race, setRace] = useState<Race | null>(null);
   const [subrace, setSubrace] = useState<Race | null>(null);
   const [racesLoaded, setRacesLoaded] = useState(false);
+  const [className, setClassName] = useState<string | null>(null);
+  const [classEnglishName, setClassEnglishName] = useState<string | null>(null);
 
   const [rolledPool, setRolledPool] = useState<number[] | null>(null);
   const [rollAssignments, setRollAssignments] = useState<ValuePoolAssignments>({});
@@ -54,6 +58,32 @@ export default function WizardAbilitiesStep() {
       cancelled = true;
     };
   }, [db, draft.raceId, draft.subraceId]);
+
+  useEffect(() => {
+    if (draft.classId === null) {
+      setClassName(null);
+      setClassEnglishName(null);
+      return;
+    }
+    let cancelled = false;
+    async function load() {
+      const loadedClass = await getClassById(db, draft.classId!);
+      const loadedEnglishName = await getClassEnglishName(db, draft.classId!);
+      if (cancelled) return;
+      setClassName(loadedClass?.name ?? null);
+      setClassEnglishName(loadedEnglishName);
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [db, draft.classId]);
+
+  const classInfo = classEnglishName ? (CLASS_INFO[classEnglishName] ?? null) : null;
+  const abilitiesSubtitle =
+    className && classInfo
+      ? `Escolha como determinar os valores de atributo. Sua classe escolhida foi ${className}, então distribua os pontos preferencialmente nesta ordem: ${formatAbilitySlot(classInfo.primaryAbility)}, depois ${formatAbilitySlot(classInfo.secondaryAbility)}.`
+      : 'Escolha como determinar os valores de atributo.';
 
   const combinedBonuses = useMemo(
     () => combineAbilityBonuses(race?.abilityBonuses ?? null, subrace?.abilityBonuses ?? null),
@@ -89,7 +119,7 @@ export default function WizardAbilitiesStep() {
   return (
     <View style={styles.screen}>
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
-        <WizardStepHeader step={3} title="Atributos" subtitle="Escolha como determinar os valores de atributo." />
+        <WizardStepHeader step={3} title="Atributos" subtitle={abilitiesSubtitle} />
 
         <AbilityMethodToggle value={draft.abilityMethod} onChange={setAbilityMethod} />
 
