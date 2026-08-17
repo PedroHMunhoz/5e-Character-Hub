@@ -11,11 +11,12 @@ import { PropertyPill } from '@/components/character/property-pill';
 import { SelectField, type SelectFieldOption } from '@/components/character/select-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { BREATH_WEAPON_ITEM_ID, getBreathWeaponStats } from '@/constants/draconic-ancestry';
 import { WEAPON_PROPERTY_LABELS, type WeaponHandedness } from '@/constants/item-codes';
 import { parseItemKey } from '@/data/queries/equipment-lookup';
 import { getItemPropertyDescriptions, type ItemPropertyDetail } from '@/data/queries/item-properties';
 import { getBaseItemDetailById, getItemDetailById, type ItemDetail } from '@/data/queries/item-detail';
-import { formatAbilityTotal, formatSignedModifier } from '@/utils/ability-modifier';
+import { formatAbilityTotal, formatSignedModifier, getAbilityModifierFromTotal } from '@/utils/ability-modifier';
 import { useCharacter } from '@/hooks/use-character';
 import { useCharacterClassInfo } from '@/hooks/use-character-class-info';
 import { useEquippedArmor } from '@/hooks/use-equipped-armor';
@@ -118,6 +119,36 @@ export default function ItemDetailScreen() {
 
   useEffect(() => {
     if (!inventoryState) return;
+
+    // The Breath Weapon is synthetic (see constants/draconic-ancestry.ts) -
+    // never resolved from base_items/items, built locally from the
+    // character's own level/CON/proficiency instead.
+    if (inventoryState.itemId === BREATH_WEAPON_ITEM_ID) {
+      const level = getCharacterLevel(character.classes);
+      const conModifier = getAbilityModifierFromTotal(character.abilities.con) ?? 0;
+      const proficiencyBonus = getProficiencyBonus(level) ?? 0;
+      const stats = character.draconicAncestry
+        ? getBreathWeaponStats(character.draconicAncestry, level, conModifier, proficiencyBonus)
+        : null;
+      setItem(
+        stats
+          ? {
+              category: 'naturalWeapon',
+              name: stats.name,
+              weight: '0',
+              categoryLabel: 'Arma Natural',
+              damageDice: stats.damageDice,
+              damageTypeLabel: stats.damageTypeLabel,
+              areaLabel: stats.areaLabel,
+              saveAbilityLabel: stats.saveAbilityLabel,
+              saveDC: stats.saveDC,
+            }
+          : null
+      );
+      setLoading(false);
+      return;
+    }
+
     const parsed = parseItemKey(inventoryState.itemId);
     let cancelled = false;
 
@@ -142,7 +173,7 @@ export default function ItemDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [db, inventoryState, ownedQuantity]);
+  }, [db, inventoryState, ownedQuantity, character.classes, character.abilities.con, character.draconicAncestry]);
 
   if (loading || !item || !inventoryState) {
     return (
@@ -249,6 +280,8 @@ export default function ItemDetailScreen() {
             onQuantityChange={(value) => setItemQuantity(itemId, value)}
           />
         ) : null}
+
+        {item.category === 'naturalWeapon' ? <NaturalWeaponSection item={item} /> : null}
 
         {(item.category === 'consumable' || item.category === 'general' || item.category === 'armor') && item.entries.length > 0 ? (
           <View style={[styles.field, styles.descriptionField, { borderColor: goldColor }]}>
@@ -381,6 +414,29 @@ function WeaponSection({
           </View>
         </View>
       ) : null}
+    </>
+  );
+}
+
+// Dragonborn's Breath Weapon: no attack roll (target saves instead) and no
+// equip slot (it isn't wielded, it's always on - see character-inventory.tsx/
+// InventoryItemState.locked), so unlike WeaponSection above there's no
+// "Equipado Em" selector or ability-modifier math, just the save DC and the
+// level-scaled damage.
+function NaturalWeaponSection({ item }: { item: Extract<ItemDetail, { category: 'naturalWeapon' }> }) {
+  return (
+    <>
+      <GridRow
+        left={<Field label="CD" value={`${item.saveDC} (${item.saveAbilityLabel})`} />}
+        right={<Field label="Área" value={item.areaLabel} />}
+      />
+
+      <GridRow
+        left={<Field label="Dano" value={item.damageDice} />}
+        right={<Field label="Tipo de Dano" value={item.damageTypeLabel} />}
+      />
+
+      <GridRow left={<Field label="Equipado" value="Sempre (racial)" />} right={<View />} />
     </>
   );
 }

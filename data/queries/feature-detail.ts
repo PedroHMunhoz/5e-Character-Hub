@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { getFeatureUsage, type RecoveryType } from '@/constants/feature-usage-overrides';
+import { getDraconicAncestryDetailEntries } from '@/constants/draconic-ancestry';
 import {
   FAVORED_ENEMY_HUMANOID_KEY,
   FAVORED_ENEMY_HUMANOID_RACES,
@@ -43,6 +44,8 @@ export interface FeatureDetailChoices {
   // enemy grants its own language independently, see
   // context/wizard-context.tsx's FavoredEnemyLanguageSlot.
   favoredEnemyLanguageIds?: [number | 'none' | null, number | 'none' | null];
+  // Dragonborn-only - see constants/draconic-ancestry.ts.
+  draconicAncestry?: string | null;
 }
 
 async function formatLanguageName(
@@ -144,7 +147,8 @@ async function getClassOrSubclassFeature(
 async function getRacialTrait(
   db: SQLiteDatabase,
   numericId: number,
-  compositeId: string
+  compositeId: string,
+  choices?: FeatureDetailChoices
 ): Promise<FeatureDetail | null> {
   const row = await db.getFirstAsync<{ id: number; name: string; entries: string }>(
     'SELECT id, name, entries FROM racial_traits WHERE id = ?',
@@ -154,7 +158,18 @@ async function getRacialTrait(
 
   const translations = await getTranslations(db, 'racial_trait');
   const name = localizedName(row.id, row.name, translations);
-  const entries = stripLeadingTitleEntry(name, localizedEntries(row.id, toEntries(row.entries), translations));
+  let entries = stripLeadingTitleEntry(name, localizedEntries(row.id, toEntries(row.entries), translations));
+
+  // Dragonborn's Draconic Ancestry/Breath Weapon/Damage Resistance traits
+  // just say "choose a dragon type, see the table" - they never name the
+  // player's actual pick, same reasoning as Fighting Style/Favored Enemy
+  // above. See constants/draconic-ancestry.ts.
+  if (
+    (row.name === 'Draconic Ancestry' || row.name === 'Breath Weapon' || row.name === 'Damage Resistance') &&
+    choices?.draconicAncestry
+  ) {
+    entries = [...entries, ...getDraconicAncestryDetailEntries(choices.draconicAncestry, row.name)];
+  }
 
   return {
     id: compositeId,
@@ -207,7 +222,7 @@ export async function getFeatureDetailById(
     return getClassOrSubclassFeature(db, kind, numericId, id, choices);
   }
   if (kind === 'racial_trait') {
-    return getRacialTrait(db, numericId, id);
+    return getRacialTrait(db, numericId, id, choices);
   }
   return getBackgroundFeature(db, numericId, id);
 }

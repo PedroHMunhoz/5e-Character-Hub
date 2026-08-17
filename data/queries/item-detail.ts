@@ -109,7 +109,31 @@ export interface GeneralItemDetail {
   entries: string[];
 }
 
-export type ItemDetail = WeaponItemDetail | ArmorItemDetail | ConsumableItemDetail | GeneralItemDetail;
+// Dragonborn's Breath Weapon (see constants/draconic-ancestry.ts's
+// getBreathWeaponStats) - never resolved from base_items/items (it isn't
+// catalog gear), so this variant is built entirely client-side by
+// app/sheet/[characterId]/item/[id].tsx instead of by a getXDetailById query
+// here. No attackAbility/handedness/propertyCodes like WeaponItemDetail: it
+// isn't wielded (no equip slot) and doesn't use an attack roll (target saves
+// instead), so it needs its own render branch (NaturalWeaponSection).
+export interface NaturalWeaponItemDetail {
+  category: 'naturalWeapon';
+  name: string;
+  weight: string;
+  categoryLabel: string;
+  damageDice: string;
+  damageTypeLabel: string;
+  areaLabel: string;
+  saveAbilityLabel: string;
+  saveDC: number;
+}
+
+export type ItemDetail =
+  | WeaponItemDetail
+  | ArmorItemDetail
+  | ConsumableItemDetail
+  | GeneralItemDetail
+  | NaturalWeaponItemDetail;
 
 function mapWeaponDetail(row: BaseItemDetailRow, name: string): WeaponItemDetail {
   const damage = parseJson<DamageInfo>(row.damage) ?? {};

@@ -96,6 +96,10 @@ export interface InventoryItemState {
   quantity: string;
   weaponSlot?: WeaponSlot;
   armorSlot?: ArmorSlot;
+  // Granted by a racial/class feature rather than owned gear - the UI must
+  // not let the player unequip or remove it (e.g. Dragonborn's Breath
+  // Weapon, see constants/draconic-ancestry.ts's BREATH_WEAPON_ITEM_ID).
+  locked?: boolean;
 }
 
 export interface FeatureItemState {

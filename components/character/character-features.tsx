@@ -44,7 +44,6 @@ export function CharacterFeatures() {
       subclassId,
       backgroundId,
       level: getCharacterLevel(character.classes),
-      draconicAncestry: character.draconicAncestry,
       favoredEnemyType: character.favoredEnemyType,
       favoredEnemyHumanoidRaces: character.favoredEnemyHumanoidRaces,
       favoredTerrainType: character.favoredTerrainType,
@@ -60,7 +59,6 @@ export function CharacterFeatures() {
     subclassId,
     backgroundId,
     character.classes,
-    character.draconicAncestry,
     character.favoredEnemyType,
     character.favoredEnemyHumanoidRaces,
     character.favoredTerrainType,
@@ -98,15 +96,6 @@ export function CharacterFeatures() {
                   recovery={item.recovery}
                 />
               );
-
-              // The Draconic Ancestry choice is synthetic (data/queries/
-              // character-features.ts, no class_feature/subclass_feature/
-              // racial_trait/background row behind it), so there's no
-              // detail screen to open - app/sheet/[characterId]/feature/[id].tsx
-              // only knows how to resolve those four prefixes.
-              if (item.id === 'draconic-ancestry') {
-                return <View key={item.id}>{card}</View>;
-              }
 
               return (
                 <Pressable

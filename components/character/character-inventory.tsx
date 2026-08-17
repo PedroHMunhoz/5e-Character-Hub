@@ -10,6 +10,7 @@ import { EquipmentItemCard } from '@/components/character/equipment-item-card';
 import { MessageModal } from '@/components/character/message-modal';
 import { StackableItemCard } from '@/components/character/stackable-item-card';
 import { VitalBar } from '@/components/character/vital-bar';
+import { BREATH_WEAPON_ITEM_ID, getBreathWeaponStats } from '@/constants/draconic-ancestry';
 import { CURRENCY_FIELDS, INVENTORY_CATEGORY_SECTIONS } from '@/constants/inventory';
 import { formatWeightKg, getBaseItemsByIds, getWeightKg, type CuratedBaseItem } from '@/data/queries/base-items';
 import { parseItemKey } from '@/data/queries/equipment-lookup';
@@ -17,7 +18,8 @@ import { getItemsByIds } from '@/data/queries/items';
 import { useCharacter } from '@/hooks/use-character';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import type { WeaponSlot } from '@/types/character';
-import { getAbilityTotal } from '@/utils/ability-modifier';
+import { getAbilityModifierFromTotal, getAbilityTotal } from '@/utils/ability-modifier';
+import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
 import { sortByLocalizedName } from '@/utils/sort-by-name';
 
 // Same flat "1 kg ~= 2 lb" rule used everywhere else in the app (see
@@ -61,6 +63,18 @@ export function CharacterInventory() {
   // this naturally yields one card per copy instead of collapsing duplicates.
   const inventoryEntries = useMemo(() => Object.entries(character.inventoryItems), [character.inventoryItems]);
 
+  // Dragonborn's Breath Weapon is a synthetic, non-catalog weapon (never has
+  // a base_items/items row - see constants/draconic-ancestry.ts) whose stats
+  // depend on level/CON/proficiency, so it's computed here instead of
+  // resolved from the database like every other inventory row below.
+  const breathWeaponStats = useMemo(() => {
+    if (!character.draconicAncestry) return null;
+    const level = getCharacterLevel(character.classes);
+    const conModifier = getAbilityModifierFromTotal(character.abilities.con) ?? 0;
+    const proficiencyBonus = getProficiencyBonus(level) ?? 0;
+    return getBreathWeaponStats(character.draconicAncestry, level, conModifier, proficiencyBonus);
+  }, [character.draconicAncestry, character.classes, character.abilities.con]);
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -69,6 +83,7 @@ export function CharacterInventory() {
       const quantityById = new Map<number, number>();
       const itemsQuantityById = new Map<number, number>();
       for (const [, state] of inventoryEntries) {
+        if (state.itemId === BREATH_WEAPON_ITEM_ID) continue;
         const parsed = parseItemKey(state.itemId);
         const quantity = Number(state.quantity ?? '1') || 1;
         if (parsed.source === 'base_items') {
@@ -92,6 +107,21 @@ export function CharacterInventory() {
 
       const display: DisplayItem[] = [];
       for (const [instanceId, state] of inventoryEntries) {
+        if (state.itemId === BREATH_WEAPON_ITEM_ID) {
+          if (!breathWeaponStats) continue;
+          display.push({
+            key: instanceId,
+            navigable: true,
+            id: -1,
+            category: 'weapon',
+            name: breathWeaponStats.name,
+            properties: `${breathWeaponStats.areaLabel} (CD ${breathWeaponStats.saveDC}, ${breathWeaponStats.saveAbilityLabel})`,
+            weight: '0',
+            weightKg: 0,
+            damageDice: breathWeaponStats.damageDice,
+          });
+          continue;
+        }
         const parsed = parseItemKey(state.itemId);
         if (parsed.source === 'base_items') {
           const def = baseItemById.get(parsed.id);
@@ -119,7 +149,7 @@ export function CharacterInventory() {
     return () => {
       cancelled = true;
     };
-  }, [db, inventoryEntries]);
+  }, [db, inventoryEntries, breathWeaponStats]);
 
   const sections = useMemo(
     () =>
@@ -182,6 +212,7 @@ export function CharacterInventory() {
               {section.items.map((item) => {
                 if (section.category === 'weapon' || section.category === 'armor') {
                   const isWeapon = section.category === 'weapon';
+                  const isLocked = character.inventoryItems[item.key]?.locked ?? false;
                   return (
                     <Pressable
                       key={item.key}
@@ -196,11 +227,17 @@ export function CharacterInventory() {
                         statValue={isWeapon ? item.damageDice : item.armorClassBonus}
                         statIcon={isWeapon ? 'sword' : 'shield'}
                         equipped={
-                          isWeapon
-                            ? character.inventoryItems[item.key]?.weaponSlot != null
-                            : character.inventoryItems[item.key]?.armorSlot != null
+                          isLocked
+                            ? true
+                            : isWeapon
+                              ? character.inventoryItems[item.key]?.weaponSlot != null
+                              : character.inventoryItems[item.key]?.armorSlot != null
                         }
                         onToggleEquipped={() => {
+                          // Granted by a racial/class feature - can't be
+                          // unequipped through the normal UI (see
+                          // InventoryItemState.locked).
+                          if (isLocked) return;
                           if (isWeapon) {
                             const outcome = toggleWeaponEquipped(item.key, item.handedness ?? 'oneHanded');
                             if (outcome.kind === 'blocked') setBlockedMessage(outcome.message);

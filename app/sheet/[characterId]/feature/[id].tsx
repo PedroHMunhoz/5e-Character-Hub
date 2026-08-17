@@ -83,6 +83,7 @@ export default function FeatureDetailScreen() {
         favoredEnemyHumanoidRaces: character.favoredEnemyHumanoidRaces,
         favoredTerrainType: character.favoredTerrainType,
         favoredEnemyLanguageIds: character.favoredEnemyLanguageIds,
+        draconicAncestry: character.draconicAncestry,
       });
       if (!cancelled) {
         setFeature(detail);
@@ -102,6 +103,7 @@ export default function FeatureDetailScreen() {
     character.favoredEnemyHumanoidRaces,
     character.favoredTerrainType,
     character.favoredEnemyLanguageIds,
+    character.draconicAncestry,
   ]);
 
   if (loading || !feature) {

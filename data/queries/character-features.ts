@@ -1,6 +1,5 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { formatDraconicAncestryFeatureName } from '@/constants/draconic-ancestry';
 import { formatFavoredEnemyFeatureName } from '@/constants/favored-enemy';
 import { formatFavoredTerrainFeatureName } from '@/constants/favored-terrain';
 import { getFeatureUsage, type RecoveryType } from '@/constants/feature-usage-overrides';
@@ -29,10 +28,6 @@ export interface CharacterFeatureQuery {
   subclassId: number | null;
   backgroundId: number;
   level: number;
-  // Dragonborn-only, set by the creation wizard - see
-  // constants/draconic-ancestry.ts for why this isn't just another racial
-  // trait row.
-  draconicAncestry?: string | null;
   // Ranger-only, set by the creation wizard - see constants/favored-enemy.ts
   // and constants/favored-terrain.ts. Unlike draconicAncestry, these annotate
   // real class_features rows ("Favored Enemy"/"Natural Explorer") that
@@ -104,11 +99,6 @@ export async function getCharacterFeatures(
   for (const row of racialRows) {
     const name = localizedName(row.id, row.name, racialTranslations);
     features.push(withUsage(`racial_trait-${row.id}`, 'racial', row.name, name));
-  }
-
-  if (query.draconicAncestry) {
-    const name = formatDraconicAncestryFeatureName(query.draconicAncestry);
-    if (name) features.push(withUsage('draconic-ancestry', 'racial', 'Draconic Ancestry (choice)', name));
   }
 
   if (backgroundRow) {

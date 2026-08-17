@@ -6,6 +6,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { ABILITIES, SKILLS } from '@/constants/character';
+import { BREATH_WEAPON_ITEM_ID } from '@/constants/draconic-ancestry';
 import { FAVORED_ENEMY_HUMANOID_KEY } from '@/constants/favored-enemy';
 import { SPELLCASTING_RULES } from '@/constants/spellcasting';
 import { getSubraceDisplayName } from '@/constants/subrace-names';
@@ -260,6 +261,13 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
     if (isNonStackable(entry.source, entry.itemId)) addNonStackable(key, entry.quantity);
     else addStackable(key, entry.quantity);
     if (entry.containsValueCp) goldFromEquipment += entry.containsValueCp / 100;
+  }
+
+  // Dragonborn's Breath Weapon: a natural weapon, not catalog gear - never
+  // goes through the equipment resolver above, granted directly here instead.
+  // See constants/draconic-ancestry.ts's BREATH_WEAPON_ITEM_ID.
+  if (draft.draconicAncestry) {
+    inventoryItems[randomId('item')] = { itemId: BREATH_WEAPON_ITEM_ID, quantity: '1', locked: true };
   }
 
   const currency: Currency = {
