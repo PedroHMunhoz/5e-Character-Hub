@@ -15,8 +15,8 @@ O app tem um assistente que te guia na criação do personagem, passo a passo, s
 ### Funcionalidades
 
 - **Assistente de criação de personagem**, passo a passo:
-  - Raça (com sub-raças e bônus de atributo)
-  - Atributos (rolagem 4d6, standard array ou point buy)
+  - Raça (com sub-raças, incluindo Humano Variante, e bônus de atributo)
+  - Atributos (rolagem 4d6, standard array ou point buy; escolha de talento quando aplicável, ex: Humano Variante, com filtro automático por pré-requisito)
   - Classe
   - Antecedente
   - Equipamento inicial
@@ -24,10 +24,10 @@ O app tem um assistente que te guia na criação do personagem, passo a passo, s
   - Detalhes finais (nome, aparência, biografia)
 - **Ficha de personagem** em abas:
   - **Resumo**: pontos de vida, testes de morte, inspiração, classe de armadura, bônus de proficiência, deslocamento e sentidos passivos
-  - **Atributos**: perícias, testes de resistência, proficiência em ferramentas
-  - **Inventário**: equipar/desequipar itens, gerenciar quantidade de itens empilháveis, gerenciar moedas, cálculo de capacidade de carga
+  - **Atributos**: perícias, testes de resistência, proficiências (armas, armaduras, ferramentas e idiomas)
+  - **Inventário**: equipar/desequipar itens, gerenciar quantidade de itens empilháveis, gerenciar moedas, cálculo de capacidade de carga, aviso ao equipar arma/armadura sem proficiência
   - **Magias**: espaços de magia, magias preparadas/conhecidas, detalhes de cada magia
-  - **Características**: características de classe, subclasse e traços raciais
+  - **Características**: características de classe, subclasse, traços raciais e talentos
 - **Conteúdo de regras completo e pesquisável**, disponível mesmo sem internet.
 - As **traduções para PT-BR** ficam separadas das regras originais, então não se perdem quando o conteúdo é atualizado.
 - Seus **personagens ficam salvos à parte** das regras do jogo, então uma atualização do conteúdo não afeta as fichas que você já criou.
@@ -137,8 +137,8 @@ The app includes a guided wizard that walks you through character creation step 
 ### Features
 
 - **Character creation wizard**, step by step:
-  - Race (with subraces and ability score bonuses)
-  - Ability scores (4d6 roll, standard array, or point buy)
+  - Race (with subraces, including Variant Human, and ability score bonuses)
+  - Ability scores (4d6 roll, standard array, or point buy; feat choice when applicable, e.g. Variant Human, automatically filtered by prerequisite)
   - Class
   - Background
   - Starting equipment
@@ -146,10 +146,10 @@ The app includes a guided wizard that walks you through character creation step 
   - Final details (name, appearance, biography)
 - **Tab-based character sheet**:
   - **Summary**: hit points, death saves, inspiration, armor class, proficiency bonus, speed, and passive senses
-  - **Attributes**: skills, saving throws, tool proficiencies
-  - **Inventory**: equip/unequip items, manage quantity of stackable items, manage currency, carrying capacity calculation
+  - **Attributes**: skills, saving throws, proficiencies (weapons, armor, tools, and languages)
+  - **Inventory**: equip/unequip items, manage quantity of stackable items, manage currency, carrying capacity calculation, warning when equipping a weapon/armor you're not proficient with
   - **Spells**: spell slots, prepared/known spells, spell details
-  - **Features**: class, subclass, and racial features
+  - **Features**: class, subclass, and racial features, and feats
 - **Full, searchable rules content**, available even without an internet connection.
 - **PT-BR translations** are kept separate from the original rules data, so they don't get lost when the content is updated.
 - Your **characters are stored separately** from the rules data, so updating the game content never affects characters you've already created.
