@@ -83,6 +83,15 @@ CREATE TABLE races (
   darkvision INTEGER,
   resistances TEXT, -- JSON array
   languages TEXT, -- JSON
+  -- JSON, {category: true} groups (e.g. Mountain Dwarf: [{"light":true,"medium":true}]) -
+  -- only Mountain Dwarf has this in the PHB. Confirmed live against
+  -- 5e-2014-data/races.json's armorProficiencies field.
+  armor_proficiencies TEXT,
+  -- JSON, {"name|source": true} groups (e.g. Dwarf: [{"battleaxe|phb":true,
+  -- "handaxe|phb":true,"light hammer|phb":true,"warhammer|phb":true}]) -
+  -- Dwarf, Drow, High Elf and Wood Elf have this in the PHB. Confirmed live
+  -- against 5e-2014-data/races.json's weaponProficiencies field.
+  weapon_proficiencies TEXT,
   -- parent_race_id is part of the key: a handful of subrace names (e.g.
   -- dragonmark variants) legitimately repeat across different base races.
   UNIQUE (parent_race_id, name, source)

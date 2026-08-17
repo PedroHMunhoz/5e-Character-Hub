@@ -10,25 +10,31 @@ import { BREATH_WEAPON_ITEM_ID } from '@/constants/draconic-ancestry';
 import { FAVORED_ENEMY_HUMANOID_KEY } from '@/constants/favored-enemy';
 import { SPELLCASTING_RULES } from '@/constants/spellcasting';
 import { getSubraceDisplayName } from '@/constants/subrace-names';
+import { parseClassArmorProficiencies, parseRaceArmorProficiencies } from '@/data/wizard/armor-proficiency-resolver';
 import { getBackgroundById } from '@/data/queries/backgrounds';
 import { getBaseItemCategoriesByIds } from '@/data/queries/base-items';
 import { getClassById, getClassEnglishName, getSubclassById } from '@/data/queries/classes';
 import { itemKey } from '@/data/queries/equipment-lookup';
+import { getFeatById } from '@/data/queries/feats';
 import { getAllLanguages } from '@/data/queries/languages';
 import { getOptionalFeatureById } from '@/data/queries/optional-features';
 import { getRaceById } from '@/data/queries/races';
+import { getFeatAbilityBonuses } from '@/data/wizard/feat-ability-bonus';
 import {
   getClassGrantedLanguageNames,
   parseFixedLanguageEnglishNames,
 } from '@/data/wizard/language-proficiency-resolver';
 import { combineAbilityBonuses, getResolvedRacialBonus } from '@/data/wizard/race-ability-bonus';
 import { parseBackgroundSkillProficiencies } from '@/data/wizard/skill-proficiency-resolver';
+import { resolveClassWeaponProficiencies, resolveRaceWeaponProficiencies } from '@/data/wizard/weapon-proficiency-resolver';
 import { feetToMeters } from '@/utils/speed';
 import type { WizardDraft } from '@/context/wizard-context';
 import type {
   AbilityKey,
+  ArmorCategory,
   Biography,
   CharacterClass,
+  CharacterFeatState,
   CharacterSheet,
   Currency,
   InventoryItemState,
@@ -36,6 +42,15 @@ import type {
   SkillKey,
   ToolState,
 } from '@/types/character';
+
+// The 3 PHB "Armored" feats each grant armor-category proficiency directly
+// (PHB p.165-172) - not modeled as a generic "proficiency" effect since
+// they're the only PHB feats that grant one.
+const FEAT_ARMOR_PROFICIENCY_GRANTS: Record<string, ArmorCategory[]> = {
+  'Lightly Armored': ['light'],
+  'Moderately Armored': ['medium', 'shield'],
+  'Heavily Armored': ['heavy'],
+};
 
 function randomId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
@@ -85,26 +100,44 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   const subclass = draft.subclassId !== null ? await getSubclassById(db, draft.subclassId) : null;
   const background = await getBackgroundById(db, draft.backgroundId);
   const fightingStyle = draft.fightingStyleId !== null ? await getOptionalFeatureById(db, draft.fightingStyleId) : null;
+  const feat = draft.featId !== null ? await getFeatById(db, draft.featId) : null;
 
   if (!race || !classDef || !background) {
     throw new Error('assembleCharacter: failed to load race/class/background from the reference database');
   }
 
   // Ability scores: base (from whichever method the player used) + racial
-  // bonus (fixed grants + whatever the player picked for a `choose` clause).
-  const combinedBonuses = combineAbilityBonuses(race.abilityBonuses, subrace?.abilityBonuses ?? null);
+  // bonus (fixed grants + whatever the player picked for a `choose` clause)
+  // + feat bonus (if the chosen feat has its own ability-bonus clause, e.g.
+  // Athlete). Variant Human REPLACES the standard Human's own fixed "+1 to
+  // all six" bonus with its own +1/+1 `choose` clause rather than adding to
+  // it - see the identical note in app/wizard/index.tsx and
+  // app/wizard/abilities.tsx.
+  const isVariantHuman = subrace?.englishName === 'Variant';
+  const combinedBonuses = combineAbilityBonuses(isVariantHuman ? null : race.abilityBonuses, subrace?.abilityBonuses ?? null);
+  // Fixed component (e.g. Heavily Armored's flat +1 Strength, Actor's flat
+  // +1 Charisma) applies unconditionally; the `choose` component (e.g.
+  // Athlete's Strength-or-Dexterity) only applies once the player has
+  // actually picked one in the Abilities step.
+  const featAbilityBonuses = feat ? getFeatAbilityBonuses(feat.ability) : { fixed: {}, choice: null };
+  const featAbilityChoice = featAbilityBonuses.choice ? draft.featAbilityChoice : null;
   const abilities = Object.fromEntries(
     ABILITIES.map((ability) => [
       ability.key,
       {
         base: String(draft.baseAbilityScores[ability.key] ?? 8),
         racialBonus: getResolvedRacialBonus(combinedBonuses, draft.abilityBonusChoices, ability.key),
+        featBonus: (featAbilityBonuses.fixed[ability.key] ?? 0) + (ability.key === featAbilityChoice ? 1 : 0),
       },
     ])
   ) as CharacterSheet['abilities'];
 
-  // Saving throws: fixed grant from the class definition.
+  // Saving throws: fixed grant from the class definition + Resilient's own
+  // grant (proficiency in saving throws using the chosen ability - PHB
+  // p.170, not modeled as a generic "ability choice" effect since it's the
+  // only PHB feat that grants a saving throw proficiency).
   const savingThrowKeys = new Set((classDef.savingThrowProficiencies ?? []).filter(isAbilityKey));
+  if (feat?.englishName === 'Resilient' && featAbilityChoice) savingThrowKeys.add(featAbilityChoice);
   const savingThrows = Object.fromEntries(
     ABILITIES.map((ability) => [ability.key, { proficient: savingThrowKeys.has(ability.key) }])
   ) as CharacterSheet['savingThrows'];
@@ -177,6 +210,34 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
       ...favoredEnemyLanguageIds,
     ]),
   ];
+
+  // Armor/weapon proficiency: class + race/subrace's fixed grants, no player
+  // choice involved (unlike languages/skills above) - always re-derived here
+  // rather than tracked in the wizard draft. See
+  // data/wizard/armor-proficiency-resolver.ts and
+  // data/wizard/weapon-proficiency-resolver.ts.
+  const classArmorField = (classDef.startingProficiencies as { armor?: unknown } | null)?.armor;
+  const armorProficiencies = [
+    ...new Set([
+      ...parseClassArmorProficiencies(classArmorField),
+      ...parseRaceArmorProficiencies(race.armorProficiencies),
+      ...parseRaceArmorProficiencies(subrace?.armorProficiencies),
+      ...(feat ? (FEAT_ARMOR_PROFICIENCY_GRANTS[feat.englishName] ?? []) : []),
+    ]),
+  ];
+
+  const classWeaponsField = (classDef.startingProficiencies as { weapons?: unknown } | null)?.weapons;
+  const classWeapons = await resolveClassWeaponProficiencies(db, classWeaponsField);
+  const raceWeaponItems = await resolveRaceWeaponProficiencies(db, race.weaponProficiencies);
+  const subraceWeaponItems = await resolveRaceWeaponProficiencies(db, subrace?.weaponProficiencies);
+  const weaponProficiencies = {
+    categories: [...new Set(classWeapons.categories)],
+    items: [
+      ...new Set(
+        [...classWeapons.items, ...raceWeaponItems, ...subraceWeaponItems].map((item) => itemKey(item.source, item.id))
+      ),
+    ],
+  };
 
   // Inventory: resolved entirely by the equipment step. 'special' flavor
   // entries with no `valueCp` (no db row) and any leftover
@@ -292,10 +353,15 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   // out of scope - the wizard only creates level 1) from Draconic
   // Resilience - `shortName` is the raw subclass identifier and unique
   // across the whole PHB, so no need to also check the class.
-  const conTotal = Number(abilities.con.base) + abilities.con.racialBonus;
+  const conTotal = Number(abilities.con.base) + abilities.con.racialBonus + (abilities.con.featBonus ?? 0);
   const conModifier = Math.floor((conTotal - 10) / 2);
   const isDraconicSorcerer = subclass?.shortName === 'Draconic';
-  const maxHp = Math.max(1, (classDef.hitDieFaces ?? 8) + conModifier + (isDraconicSorcerer ? 1 : 0));
+  // Tough (PHB p.171): "+2 hit points per character level" at the level it's
+  // taken, i.e. +2 at level 1 here (the wizard only creates level-1
+  // characters - a future level-up flow would need to add another +2 per
+  // level gained afterward).
+  const toughBonus = feat?.englishName === 'Tough' ? 2 : 0;
+  const maxHp = Math.max(1, (classDef.hitDieFaces ?? 8) + conModifier + (isDraconicSorcerer ? 1 : 0) + toughBonus);
 
   const raceDisplayName = subrace ? getSubraceDisplayName(subrace.englishName, subrace.name) : race.name;
   const classDisplayName = subclass ? `${classDef.name} (${subclass.name})` : classDef.name;
@@ -325,6 +391,9 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
         : null,
     favoredTerrainType: draft.favoredTerrainType,
     favoredEnemyLanguageIds: draft.favoredEnemyLanguageIds,
+    feats: feat
+      ? [{ featId: feat.id, englishName: feat.englishName, abilityChoice: featAbilityChoice } satisfies CharacterFeatState]
+      : [],
     backgroundId: background.id,
     classes: [characterClass],
     inspiration: false,
@@ -332,6 +401,8 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
     savingThrows,
     skills,
     languages,
+    armorProficiencies,
+    weaponProficiencies,
     speed: String(feetToMeters(subrace?.speed ?? race.speed ?? 30)),
     hitPoints: { max: String(maxHp), current: String(maxHp), temporary: '0' },
     hitDice: { current: '1', max: '1' },

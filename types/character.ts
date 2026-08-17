@@ -26,6 +26,10 @@ export interface AbilityScore {
   // "base + bônus racial" breakdown UI can be built without re-deriving it.
   base: string;
   racialBonus: number;
+  // Bonus from a chosen feat's own ability-bonus `choose` clause (e.g.
+  // Athlete's "Strength or Dexterity") - see data/wizard/feat-ability-bonus.ts.
+  // Optional - characters created before feats existed don't have this.
+  featBonus?: number;
 }
 
 export interface SavingThrow {
@@ -86,6 +90,12 @@ export interface Currency {
 export type WeaponSlot = 'main' | 'off' | 'twoHanded';
 export type ArmorSlot = 'body' | 'shield';
 
+// Proficiency categories (distinct from ArmorSlot/equip-slot kind above) -
+// see data/wizard/armor-proficiency-resolver.ts and
+// data/wizard/weapon-proficiency-resolver.ts.
+export type ArmorCategory = 'light' | 'medium' | 'heavy' | 'shield';
+export type WeaponCategory = 'simple' | 'martial';
+
 export interface InventoryItemState {
   // Catalog reference (itemKey() - see data/queries/equipment-lookup.ts).
   // The dictionary key this state lives under (CharacterSheet.inventoryItems)
@@ -104,6 +114,22 @@ export interface InventoryItemState {
 
 export interface FeatureItemState {
   usesCurrent: string;
+}
+
+export interface CharacterFeatState {
+  featId: number;
+  // Raw (English) feat name - stable across reimports/translation edits, the
+  // same purpose as CharacterSheet.fightingStyle. Rule logic that needs to
+  // check for a specific feat (e.g. Alert's +5 initiative, Observant's +5
+  // passive Perception/Investigation) keys off this directly instead of
+  // round-tripping through the feats table.
+  englishName: string;
+  // Ability chosen for this feat's own ability-bonus `choose` clause (see
+  // data/wizard/feat-ability-bonus.ts) - e.g. Athlete's "Strength or
+  // Dexterity". Null when the feat has no `choose` clause (either no ability
+  // bonus at all, or a fixed one with no player choice, e.g. Heavily
+  // Armored's flat +1 Strength).
+  abilityChoice: AbilityKey | null;
 }
 
 export interface SpellItemState {
@@ -169,6 +195,10 @@ export interface CharacterSheet {
   // or null. Absent entirely for characters created before this field
   // existed. Only merged into `languages` below when a slot is a real id.
   favoredEnemyLanguageIds?: [number | 'none' | null, number | 'none' | null];
+  // Talentos escolhidos (Humano Variante at creation, future level-up ASI-
+  // or-feat picks). Optional - absent entirely for characters created
+  // before feats existed. See data/wizard/assemble-character.ts.
+  feats?: CharacterFeatState[];
   backgroundId?: number;
   classes: CharacterClass[];
   inspiration: boolean;
@@ -181,6 +211,20 @@ export interface CharacterSheet {
   // proficient/expertise state like Skill/ToolState - a language is just
   // known or not. See data/wizard/assemble-character.ts.
   languages: number[];
+  // Armor/weapon proficiency granted by class + race/subrace (no player
+  // choice involved - always a fixed grant, so unlike languages/skills
+  // there's no wizard draft field for these, just re-derived at assembly.
+  // Optional - absent entirely for characters created before this existed.
+  // See data/wizard/armor-proficiency-resolver.ts and
+  // data/wizard/weapon-proficiency-resolver.ts.
+  armorProficiencies?: ArmorCategory[];
+  weaponProficiencies?: {
+    categories: WeaponCategory[];
+    // itemKey() values (data/queries/equipment-lookup.ts) - named-weapon
+    // grants not covered by a category (e.g. Elf's longsword/shortsword/
+    // shortbow/longbow, Rogue's hand crossbow/longsword/rapier/shortsword).
+    items: string[];
+  };
   speed: string;
   hitPoints: HitPoints;
   hitDice: HitDice;

@@ -2,12 +2,14 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import {
   ARMOR_TYPE_LABELS,
+  ARMOR_TYPE_TO_CATEGORY,
   DAMAGE_TYPE_LABELS,
   getArmorSlotKind,
   getWeaponHandedness,
   WEAPON_CATEGORY_LABELS,
   type WeaponHandedness,
 } from '@/constants/item-codes';
+import type { ArmorCategory } from '@/types/character';
 import { parseJson, toEntries } from '../rows';
 import {
   categorize,
@@ -87,6 +89,10 @@ export interface ArmorItemDetail {
   strengthRequirement?: number;
   stealthDisadvantage: boolean;
   armorSlotKind: 'body' | 'shield';
+  // Proficiency category this armor/shield requires - undefined for the rare
+  // row with an unrecognized `type` code. See constants/item-codes.ts's
+  // ARMOR_TYPE_TO_CATEGORY.
+  armorCategory?: ArmorCategory;
   entries: string[];
 }
 
@@ -185,6 +191,7 @@ function mapArmorDetail(row: BaseItemDetailRow, name: string, entries: string[])
     strengthRequirement: details.strength,
     stealthDisadvantage: details.stealth ?? false,
     armorSlotKind: getArmorSlotKind(row.type),
+    armorCategory: ARMOR_TYPE_TO_CATEGORY[row.type ?? ''],
     entries,
   };
 }

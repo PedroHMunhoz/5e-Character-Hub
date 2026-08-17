@@ -81,7 +81,13 @@ export function CharacterSheet() {
     ...armorClassBreakdown.items.map((item) => ({ label: item.name, value: formatSignedModifier(item.bonus) })),
   ];
 
-  const initiativeRows = [{ label: 'Modificador de Destreza', value: formatSignedModifier(dexModifier ?? 0) }];
+  // Alert (PHB p.165): "+5 bonus to initiative".
+  const alertBonus = character.feats?.some((f) => f.englishName === 'Alert') ? 5 : 0;
+  const initiativeTotal = (dexModifier ?? 0) + alertBonus;
+  const initiativeRows = [
+    { label: 'Modificador de Destreza', value: formatSignedModifier(dexModifier ?? 0) },
+    ...(alertBonus ? [{ label: 'Talento: Alerta', value: formatSignedModifier(alertBonus) }] : []),
+  ];
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
@@ -108,7 +114,7 @@ export function CharacterSheet() {
             <StatField label="CA" value={String(armorClassBreakdown.total)} onPress={() => setOpenStat('ac')} />
             <StatField
               label="Iniciativa"
-              value={formatSignedModifier(dexModifier ?? 0)}
+              value={formatSignedModifier(initiativeTotal)}
               onPress={() => setOpenStat('initiative')}
             />
             <StatField label="Deslocamento" value={formatSpeed(displaySpeed)} />
@@ -172,7 +178,7 @@ export function CharacterSheet() {
         title="Iniciativa"
         rows={initiativeRows}
         totalLabel="Total"
-        totalValue={formatSignedModifier(dexModifier ?? 0)}
+        totalValue={formatSignedModifier(initiativeTotal)}
         onClose={() => setOpenStat(null)}
       />
 

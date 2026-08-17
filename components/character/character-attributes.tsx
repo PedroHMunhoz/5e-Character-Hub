@@ -9,7 +9,9 @@ import { StatBreakdownModal, type StatBreakdownRow } from '@/components/characte
 import { ToolRow } from '@/components/character/tool-row';
 import { ThemedText } from '@/components/themed-text';
 import { ABILITIES, ABILITIES_BY_KEY, SKILLS } from '@/constants/character';
-import { itemKey } from '@/data/queries/equipment-lookup';
+import { ARMOR_CATEGORY_LABELS, WEAPON_CATEGORY_LABELS } from '@/constants/item-codes';
+import { getBaseItemsByIds, type CuratedBaseItem } from '@/data/queries/base-items';
+import { itemKey, parseItemKey } from '@/data/queries/equipment-lookup';
 import { getAllLanguages, type Language } from '@/data/queries/languages';
 import { getAllToolItems, type ToolItem } from '@/data/queries/tools';
 import { useCharacter } from '@/hooks/use-character';
@@ -49,6 +51,7 @@ export function CharacterAttributes() {
   const goldColor = useThemeColor({}, 'gold');
   const [toolItems, setToolItems] = useState<ToolItem[] | null>(null);
   const [languages, setLanguages] = useState<Language[] | null>(null);
+  const [weaponItems, setWeaponItems] = useState<CuratedBaseItem[] | null>(null);
   const [openField, setOpenField] = useState<OpenField>(null);
 
   useEffect(() => {
@@ -71,6 +74,19 @@ export function CharacterAttributes() {
     };
   }, [db]);
 
+  const weaponProficiencyItemKeys = character.weaponProficiencies?.items ?? [];
+  useEffect(() => {
+    let cancelled = false;
+    const ids = weaponProficiencyItemKeys.map(parseItemKey).filter((k) => k.source === 'base_items').map((k) => k.id);
+    getBaseItemsByIds(db, ids).then((items) => {
+      if (!cancelled) setWeaponItems(items);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [db, weaponProficiencyItemKeys.join(',')]);
+
   const proficiencyBonus = getProficiencyBonus(getCharacterLevel(character.classes));
 
   function getBreakdown(field: OpenField): Breakdown | null {
@@ -84,6 +100,9 @@ export function CharacterAttributes() {
         rows: [
           { label: 'Base', value: abilityScore.base },
           { label: 'Bônus Racial', value: formatSignedModifier(abilityScore.racialBonus) },
+          ...(abilityScore.featBonus
+            ? [{ label: 'Bônus de Talento', value: formatSignedModifier(abilityScore.featBonus) }]
+            : []),
         ],
         totalLabel: 'Pontuação Total',
         totalValue: String(total ?? '—'),
@@ -183,6 +202,19 @@ export function CharacterAttributes() {
   const knownToolItems = (toolItems ?? []).filter((item) => character.tools[itemKey(item.source, item.id)] != null);
   const knownLanguages = (languages ?? []).filter((language) => character.languages.includes(language.id));
 
+  const weaponCategories = character.weaponProficiencies?.categories ?? [];
+  const weaponCategoryLabels = weaponCategories.map((category) => WEAPON_CATEGORY_LABELS[category] ?? category);
+  // Named-weapon grants already covered by a broader category (e.g. a Dwarf
+  // Fighter has "Marcial" from the class AND the racial battleaxe/handaxe/
+  // light hammer/warhammer grant, all of which are martial weapons) aren't
+  // listed again - the category alone already implies proficiency with them.
+  const namedWeaponItems = (weaponItems ?? []).filter(
+    (item) => !item.weaponCategory || !weaponCategories.includes(item.weaponCategory)
+  );
+  const weaponLabels = [...weaponCategoryLabels, ...namedWeaponItems.map((item) => item.name)];
+
+  const armorCategoryLabels = (character.armorProficiencies ?? []).map((category) => ARMOR_CATEGORY_LABELS[category]);
+
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
       <View style={styles.section}>
@@ -243,40 +275,65 @@ export function CharacterAttributes() {
       </View>
 
       <View style={styles.section}>
-        <ThemedText type="subtitle">Ferramentas</ThemedText>
-        {toolItems === null ? (
-          <ActivityIndicator color={goldColor} />
-        ) : knownToolItems.length === 0 ? (
-          <ThemedText style={styles.emptyToolsText}>Nenhuma proficiência em ferramentas.</ThemedText>
-        ) : (
-          knownToolItems.map((item) => {
-            const key = itemKey(item.source, item.id);
-            return (
-              <Pressable key={key} onPress={() => setOpenField({ type: 'tool', key, label: item.name })}>
-                <ToolRow
-                  label={item.name}
-                  proficient={character.tools[key]?.proficient ?? false}
-                  expertise={character.tools[key]?.expertise ?? false}
-                />
-              </Pressable>
-            );
-          })
-        )}
-      </View>
+        <ThemedText type="subtitle">Proficiências</ThemedText>
+        <View style={[styles.divider, { borderColor: dividerColor }]} />
 
-      <View style={styles.section}>
-        <ThemedText type="subtitle">Idiomas</ThemedText>
-        {languages === null ? (
-          <ActivityIndicator color={goldColor} />
-        ) : knownLanguages.length === 0 ? (
-          <ThemedText style={styles.emptyToolsText}>Nenhum idioma conhecido.</ThemedText>
-        ) : (
-          knownLanguages.map((language) => (
-            <ThemedText key={language.id} style={styles.languageEntry}>
-              • {language.name}
-            </ThemedText>
-          ))
-        )}
+        <View style={styles.subSection}>
+          <ThemedText style={styles.subSectionTitle}>Armas</ThemedText>
+          {weaponItems === null ? (
+            <ActivityIndicator color={goldColor} />
+          ) : weaponLabels.length === 0 ? (
+            <ThemedText style={styles.emptyToolsText}>Nenhuma proficiência em armas.</ThemedText>
+          ) : (
+            <ThemedText style={styles.proficiencyListText}>{weaponLabels.join(', ')}</ThemedText>
+          )}
+        </View>
+
+        <View style={styles.subSection}>
+          <ThemedText style={styles.subSectionTitle}>Armaduras</ThemedText>
+          {armorCategoryLabels.length === 0 ? (
+            <ThemedText style={styles.emptyToolsText}>Nenhuma proficiência em armaduras.</ThemedText>
+          ) : (
+            <ThemedText style={styles.proficiencyListText}>{armorCategoryLabels.join(', ')}</ThemedText>
+          )}
+        </View>
+
+        <View style={styles.subSection}>
+          <ThemedText style={styles.subSectionTitle}>Ferramentas</ThemedText>
+          {toolItems === null ? (
+            <ActivityIndicator color={goldColor} />
+          ) : knownToolItems.length === 0 ? (
+            <ThemedText style={styles.emptyToolsText}>Nenhuma proficiência em ferramentas.</ThemedText>
+          ) : (
+            knownToolItems.map((item) => {
+              const key = itemKey(item.source, item.id);
+              return (
+                <Pressable key={key} onPress={() => setOpenField({ type: 'tool', key, label: item.name })}>
+                  <ToolRow
+                    label={item.name}
+                    proficient={character.tools[key]?.proficient ?? false}
+                    expertise={character.tools[key]?.expertise ?? false}
+                  />
+                </Pressable>
+              );
+            })
+          )}
+        </View>
+
+        <View style={styles.subSection}>
+          <ThemedText style={styles.subSectionTitle}>Idiomas</ThemedText>
+          {languages === null ? (
+            <ActivityIndicator color={goldColor} />
+          ) : knownLanguages.length === 0 ? (
+            <ThemedText style={styles.emptyToolsText}>Nenhum idioma conhecido.</ThemedText>
+          ) : (
+            knownLanguages.map((language) => (
+              <ThemedText key={language.id} style={styles.languageEntry}>
+                • {language.name}
+              </ThemedText>
+            ))
+          )}
+        </View>
       </View>
 
       <StatBreakdownModal
@@ -334,6 +391,17 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   languageEntry: {
+    fontSize: 15,
+  },
+  subSection: {
+    gap: 6,
+  },
+  subSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    opacity: 0.8,
+  },
+  proficiencyListText: {
     fontSize: 15,
   },
 });

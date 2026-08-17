@@ -33,6 +33,7 @@ export interface CuratedBaseItem {
   weightKg: number;
   damageDice?: string;
   handedness?: WeaponHandedness;
+  weaponCategory?: 'simple' | 'martial';
   armorClassBonus?: string;
   armorSlotKind?: 'body' | 'shield';
   armorWeightClass?: 'light' | 'medium' | 'heavy';
@@ -274,6 +275,7 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict, quantity
 
   if (category === 'weapon') {
     const propCodes = parseJson<string[]>(row.properties) ?? [];
+    const details = parseJson<WeaponDetails>(row.details) ?? {};
     return {
       id: row.id,
       category,
@@ -283,6 +285,8 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict, quantity
       weightKg: getWeightKg(row.name, row.weight_lb),
       damageDice: formatDamageDice(row.damage),
       handedness: getWeaponHandedness(propCodes),
+      weaponCategory:
+        details.weaponCategory === 'simple' || details.weaponCategory === 'martial' ? details.weaponCategory : undefined,
     };
   }
 

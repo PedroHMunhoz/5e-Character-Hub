@@ -1,11 +1,13 @@
-# TODO — Fonte única de pendências do projeto
+# TODO — Log de decisões do projeto
 
-Registro central de decisões de simplificação/adiamento e pendências em
-aberto, para consulta futura em vez de depender de memória de conversa.
-Substitui o antigo `docs/wizard-todo.md` (conteúdo migrado abaixo, sem
-perdas). Itens já resolvidos ficam marcados com `~~riscado~~` + nota,
-mesmo padrão usado anteriormente — não são apagados, pois documentam o
-porquê de decisões que continuam valendo.
+**Pendências abertas (o que falta fazer) agora vivem só no Trello —
+board "5e Character Hub", lista "A fazer".** Este arquivo deixou de ser
+lista de tarefas; guarda apenas o histórico de decisões de
+simplificação/adiamento já tomadas, marcadas com `~~riscado~~` + nota,
+para consulta futura em vez de depender de memória de conversa (o
+porquê de uma decisão passada continua valendo mesmo depois que a
+pendência em si vira card). Substitui o antigo `docs/wizard-todo.md`
+(conteúdo migrado abaixo, sem perdas).
 
 ## Tradução PHB (pt-BR)
 
@@ -38,19 +40,11 @@ conteúdo do UA foi preservado à parte como classe oculta (`source = 'UARR'`,
 ver item "Patrulheiro (Revisado UA)" mais abaixo). Detalhes completos da
 investigação em `translations/pt-BR/DUVIDAS.md`.
 
-### Pendente (decisão de escopo/schema, não é bloqueio de conteúdo)
+### Pendente
 
-- **Bens de comércio e bugigangas** ("Comércio de Bens" p.159, "Bugigangas"
-  d100 p.161) — não existe tabela no schema para isso ainda.
-- **Conteúdo de multiclasse dos talentos** (p.165 em diante) — não existe
-  entidade no banco para representar isso.
-- **Sourcebooks além do PHB** (Xanathar's, Tasha's, SCAG etc.) — não
-  iniciado; todo o wizard está hard-filtrado para `source = 'PHB'` até
-  esses livros serem traduzidos (ver item "Fontes além do PHB" abaixo).
-- **Arreios/acessórios de montaria** (Alforje, Armadura de Montaria,
-  Estábulo, Freio e rédea, variantes de Sela — mesma seção do livro que
-  montarias/veículos, p.157, mas não são tipo `MNT`/`VEH`) — não
-  traduzidos ainda, ficaram de fora da rodada de montarias/veículos.
+Ver board Trello "5e Character Hub", lista "A fazer" (bens de comércio/
+bugigangas, multiclasse de talentos, sourcebooks além do PHB, arreios/
+acessórios de montaria, 2 itens gerais do PHB ainda sem nome em pt-BR).
 
 ## Wizard de criação de personagem
 
@@ -58,13 +52,6 @@ Decisões de simplificação/adiamento tomadas durante a implementação do
 wizard de criação de personagens (ver plano original em conversa com o
 usuário).
 
-- **Perícia duplicada entre antecedente, raça e classe.** O pool de escolha
-  de perícias da classe remove a(s) perícia(s) já concedida(s) pelo
-  antecedente e pela raça (Elfo/Meio-Orc fixas, Meio-Elfo à escolha); o pool
-  de escolha racial do Meio-Elfo por sua vez remove as já concedidas por
-  antecedente/raça-fixa/classe-já-escolhida. O RAW diz que, nesse caso, o
-  jogador ganha um talento ou proficiência em idioma à escolha em vez da
-  perícia repetida — não implementado.
 - ~~Bloqueio dos campos de atributo após a criação do personagem + modal
   de detalhamento "base + bônus racial" ao tocar no campo~~ —
   **implementado**: na ficha, `CharacterAttributes`
@@ -92,9 +79,6 @@ expertiseToolChoice`, guarda a `itemKey()` da ferramenta escolhida);
   `SkillProficiencyToggle` (mesmo componente 3-estados de perícia) em vez de
   um checkbox simples, e o modal de detalhamento em
   `character-attributes.tsx` dobra o bônus de proficiência quando aplicável.
-- **Compra efetiva de itens com o PO** da opção B do passo de Equipamento —
-  pedido explícito do usuário para ficar para depois ("posteriormente
-  comprar os itens").
 - ~~Distinção fina entre "magia conhecida" e "magia preparada hoje"~~ —
   **corrigido**: achado ao vivo num Mago nível 1 com INT +1, que mostrava
   "6/2" preparadas (grimório de 6 marcado todo como preparado, contra um
@@ -192,13 +176,12 @@ equipment-lookup.ts`, `data/wizard/equipment-resolver.ts`) agora carregam
   `equipment-lookup.ts` ainda buscava `name IN ('Sinete', 'Sino')` — ficou
   quebrado (silenciosamente) depois do rename Sinete→Signet da rodada de
   tradução; corrigido junto.
-- **Fluxo de multiclasse** (adicionar uma segunda classe depois de criado o
-  personagem) — o wizard só cria o 1º nível de uma única classe.
-- **Editar raça/classe/antecedente depois de criado** — decisão do
-  usuário: não será permitido fazer isso; não é lacuna a implementar.
 - ~~Deletar personagem~~ — **implementado**: via longpress na lista de
   Personagens.
-- **Duplicar personagem** — decisão do usuário: não existirá.
+- ~~Editar raça/classe/antecedente depois de criado~~ — **decisão de
+  design do app**: não será permitido fazer isso; não é lacuna a
+  implementar.
+- ~~Duplicar personagem~~ — **decisão de design do app**: não existirá.
 - ~~Itens "special" do equipamento resolvido não entram no inventário
   persistido.~~ — **resolvido**: as 19 entradas `{special: "...", quantity?:
 N}` sem linha correspondente em `base_items`/`items` (9 antecedentes do
@@ -257,39 +240,6 @@ InventoryItemState>` — cada registro é uma unidade física, com
   (`data/queries/item-detail.ts`) dependendo da origem (`base_items` vs
   `items`) — itens de `items` (kits, sacos de aventureiro, instrumentos
   mágicos etc.) já abrem tela de detalhe normalmente.
-- **Fontes além do PHB.** Depois que o teste no celular mostrou todas as
-  raças/subraças/classes/antecedentes/magias de TODOS os sourcebooks
-  misturados no wizard (sem hierarquia clara, +200 opções sem tradução),
-  restringi toda consulta usada pelo wizard a `source = 'PHB'`:
-  `getAllRaces`, `getAllClasses`, `getSubclassesForClass`,
-  `getClassFeatures`, `getSubclassFeatures`, `classGrantsSubclassAtLevel1`,
-  `classGrantsExpertiseAtLevel1`, `getAllBackgrounds`, `getAllSpells`,
-  `getSpellsForClass`, `getBaseItemsByNames`, `getItemsByNames` (e
-  `data/queries/character-features.ts`'s `class_features`/
-  `subclass_features` internas). Quando outros sourcebooks (Xanathar's,
-  Tasha's, etc.) forem traduzidos para pt-BR, tirar esse filtro (ou trocar
-  por uma lista configurável de fontes habilitadas) nesses mesmos pontos.
-- **Patrulheiro (Revisado UA), oculto no banco (`source = 'UARR'`).** Ao
-  resolver o bloqueio do Patrulheiro (ver `translations/pt-BR/DUVIDAS.md`),
-  descobri que o texto usado como fonte de tradução (`books/Livro do
-Jogador.pdf`, capítulo do Patrulheiro) não era o PHB, e sim uma tradução
-  fanmade do Unearthed Arcana "Ranger, Revised" (2016) formatada pra imitar
-  o livro oficial. O Patrulheiro oficial foi traduzido do PHB em inglês
-  normalmente; o conteúdo desse UA não foi descartado — está preservado como
-  uma classe própria (`5e-2014-data/class/class-ranger-ua-revised.json`,
-  `translations/pt-BR/UARR/`), automaticamente fora do wizard hoje porque
-  toda consulta acima já filtra `source = 'PHB'` (mesmo mecanismo que já
-  mantém a `Mystic` da UA e as pseudo-classes Sidekick da TCE fora da
-  criação de personagem). Quando existir um backoffice de mestre pra
-  habilitar/desabilitar conteúdo opcional por mesa, `UARR` é candidata a
-  entrar na lista configurável de fontes mencionada no item acima.
-- **Humano (Variante).** Fica de fora do wizard (`getAllRaces` exclui a raça
-  `name = 'Variant'` explicitamente) até o app ter talentos implementados —
-  ela dá +1/+1 em dois atributos à escolha, uma perícia à escolha e um
-  talento à escolha. Quando implementar talentos: tirar o filtro
-  `name != 'Variant'` de `data/queries/races.ts`, construir a tela de
-  escolha (2 atributos + 1 perícia + 1 talento) e religar
-  `data/wizard/assemble-character.ts`.
 - **Achado ao investigar o bug de raças/sub-raças "soltas":** o import
   (`scripts/import-5e-data.mjs`) tinha um bug de verdade — `insertRaceRow`
   registrava QUALQUER linha inserida em `raceMap` (inclusive sub-raças), e
@@ -303,40 +253,6 @@ Jogador.pdf`, capítulo do Patrulheiro) não era o PHB, e sim uma tradução
   padrão direto na raça-base em vez de virar uma sub-raça homônima
   confusa. Se `npm run db:import` for alterado de novo, vale reler esse
   trecho antes de mexer na seção `races`.
-- **CD de Magia/Bônus de Ataque/Preparadas na aba Magias só mostram
-  valores reais para classes em `SPELLCASTING_RULES`**
-  (`constants/spellcasting.ts`: Bardo/Clérigo/Druida/Feiticeiro/Bruxo/
-  Mago). Paladino e Patrulheiro (meio-conjuradores, `caster_progression =
-'1/2'`) sempre mostram "—", mesmo que a partir do nível 2 eles tenham
-  magias reais pelo livro — a tabela de regras não os inclui (não têm
-  truques/magias no nível 1, e o wizard já pula a etapa de seleção de
-  magias pra eles, `app/wizard/spells.tsx`) e não há UI de progressão de
-  nível no app ainda (`components/character/class-levels.tsx` é somente
-  leitura), então isso é hoje inatingível na prática. Quando o app
-  ganhar level-up, vale expandir `SPELLCASTING_RULES` (ou um mecanismo
-  equivalente) pra cobrir a progressão de magias conhecidas dos
-  meio-conjuradores.
-- **Magias sempre-preparadas de subclasse (`subclasses.additional_spells`)
-  só cobrem o caso sem escolha adicional.** O import
-  (`scripts/import-5e-data.mjs`) só extrai `additionalSpells[].prepared`
-  quando há exatamente uma entrada sem campo `name` — cobre os 7 Domínios
-  do Clérigo do PHB core e Círculo dos Esporos/Fogo Selvagem do Druida.
-  Ficam de fora (coluna fica `null`): **Círculo da Terra** do Druida (o
-  `additionalSpells` bruto é um array com 8 sub-opções nomeadas, uma por
-  bioma — precisaria de um passo de escolha "qual bioma" que não existe
-  no wizard nem no modelo de dados do personagem) e os **Patronos do
-  Bruxo** (Arquifada, Corruptor, Grande Antigo etc. — usam a chave
-  `expanded`, não `prepared`: é uma lista extra de magias que podem ser
-  _escolhidas_ como conhecidas, não uma concessão automática de "sempre
-  preparada", mecanismo diferente do que `getSubclassAdditionalSpellsByLevel`
-  resolve hoje).
-- **Ancestralidade Dracônica do Draconato modelada fora do mecanismo de
-  sub-raça.** A tabela de 10 linhagens (`constants/draconic-ancestry.ts`) é
-  na verdade um template `_versions`/`_implementations` do 5etools que o
-  import não expande (decisão já documentada: fora de escopo). Se algum dia
-  vier outra raça com esse mesmo mecanismo, vale considerar expandir o
-  template genericamente no import em vez de repetir esse padrão hardcoded
-  por raça.
 - **~~Inimigo Favorito/Explorador Natural do Patrulheiro (1º nível) fora do
   wizard~~ Resolvido.** O Patrulheiro tem duas escolhas obrigatórias de 1º
   nível (tipo de inimigo favorito + terreno favorito, esse último dentro da
@@ -357,47 +273,6 @@ Jogador.pdf`, capítulo do Patrulheiro) não era o PHB, e sim uma tradução
   exibição na aba Características e no detalhe da característica
   (`data/queries/character-features.ts`/`data/queries/feature-detail.ts`,
   mesmo mecanismo de anotar o nome/entries já usado pro Estilo de Luta).
-- **Estilo de Luta do Paladino/Patrulheiro no 2º nível.** Ambos ganham a
-  mesma escolha de Estilo de Luta do Guerreiro (implementada em
-  `app/wizard/class.tsx`/`data/queries/optional-features.ts`/
-  `utils/armor-class.ts`), só que no 2º nível em vez do 1º — fora de escopo
-  hoje porque o wizard só cria personagens de nível 1. Quando o app ganhar
-  level-up, reaproveitar o mecanismo inteiro (mesma tabela
-  `optional_features`, mesmo componente de escolha+descrição, mesma
-  aplicação de bônus) em vez de reconstruir algo novo.
-- **Ataque Furtivo do Ladino não aparece somado no Acerto/Dano da arma.** A
-  característica (`app/sheet/[characterId]/feature/[id].tsx`) já traz a
-  progressão completa por nível no texto, mas a tela de detalhe de arma
-  (`app/sheet/[characterId]/item/[id].tsx`) não soma esse dano extra em
-  lugar nenhum — o jogador precisa calcular de cabeça. Daria pra mostrar
-  o dano extra (ou uma nota separada) no campo "Dano" quando o personagem
-  for Ladino, usando o nível dele pra calcular o número de d6
-  (`Math.ceil(nível / 2)`), condicionado à arma ser de acuidade ou à
-  distância. Não implementado ainda porque é condicionado por vantagem no
-  ataque (não um bônus estático como os Estilos de Luta/Defesa sem
-  Armadura), então precisa de decisão de design sobre como representar isso
-  numa ficha sem simulador de rolagem de dados.
-- **Levantamento de bônus passivos de classe (CA/PV/acerto/dano) restrito
-  ao PHB, nível 1-2.** `utils/armor-class.ts`'s `UnarmoredDefenseRule` cobre
-  Defesa sem Armadura (Bárbaro/Monge) e Resiliência Dracônica (Feiticeiro),
-  e `utils/monk-weapons.ts`/`isMonkWeapon` cobre Artes Marciais do Monge —
-  nenhuma outra característica de classe/subclasse do PHB em nível 1-2 tem
-  esse tipo de bônus numérico sempre-ativo (levantamento completo feito ao
-  implementar essas mudanças). Se o app ganhar outros sourcebooks
-  (Xanathar's, Tasha's) ou level-up, vale refazer esse levantamento para as
-  classes/features/níveis que entrarem.
-- **Proficiências "livres" (sem item de catálogo) nunca são persistidas na
-  ficha final do personagem.** Achado ao corrigir a exibição em inglês de
-  "vehicles (land)"/"vehicles (water)" (proficiência de veículo do Herói
-  do Povo/Soldado/Marinheiro): `assemble-character.ts` só grava na ficha
-  as entradas de proficiência `kind === 'item'` — qualquer coisa que
-  resolva pra `kind: 'special'` ou `kind: 'unresolved'` (sem um id de
-  catálogo pra apontar) é descartada silenciosamente. Não é um problema
-  exclusivo de veículo: afeta qualquer proficiência desse formato, hoje e
-  no futuro. Corrigir de verdade exigiria um novo conceito no modelo do
-  personagem (algo como `freeformProficiencies`) — decisão de escopo maior
-  que ficou combinada de adiar (só corrigimos a exibição em português por
-  enquanto, não a persistência).
 - ~~Quantidade de itens "special" do equipamento inicial nunca aparece pro
   jogador.~~ — **resolvido como efeito colateral**: junto com o item acima
   ("itens 'special' não entram no inventário persistido"), as 19 entradas
@@ -430,12 +305,10 @@ Jogador.pdf`, capítulo do Patrulheiro) não era o PHB, e sim uma tradução
   genérico à parte. `Book\|PHB` ganhou nome ("Livro") e descrição próprios,
   traduzidos do texto em inglês real do item, em vez de reaproveitar o
   texto do Grimório.
-- **Regra opcional de sobrecarga (encumbrance) não implementada.** A barra
-  "Capacidade de Carga" da aba Inventário (`character-inventory.tsx`)
-  implementa só a regra RAW básica do PHB: capacidade máxima = Força × 15
-  lb (convertido para × 7,5 kg pela mesma regra de arredondamento usada em
-  todo o resto do app, `getWeightKg`/`formatWeightKg` em
-  `data/queries/base-items.ts`), sem a variante opcional de sobrecarga
-  (que reduz o deslocamento em faixas de Força×5/Força×10, e tem uma
-  segunda faixa de "arrastar/levantar" em Força×30). Adiado por
-  simplicidade — decidir no futuro se vale a pena implementar.
+
+Pendências restantes (multiclasse, sourcebooks além do PHB, Patrulheiro UA,
+Humano Variante/talentos, magias de subclasse com escolha adicional,
+template de ancestralidade, Ataque Furtivo no dano da arma, proficiências
+livres, encumbrance opcional, e as pós-level-up no checklist do card
+"Implementar o Lvl Up de personagem"): ver board Trello "5e Character Hub",
+lista "A fazer".

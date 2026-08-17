@@ -24,7 +24,7 @@ export function getAbilityTotal(ability: AbilityScore): number | null {
   if (!Number.isFinite(parsed)) {
     return null;
   }
-  return parsed + ability.racialBonus;
+  return parsed + ability.racialBonus + (ability.featBonus ?? 0);
 }
 
 export function formatAbilityTotal(ability: AbilityScore): string {

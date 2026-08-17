@@ -13,7 +13,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BREATH_WEAPON_ITEM_ID, getBreathWeaponStats } from '@/constants/draconic-ancestry';
 import { WEAPON_PROPERTY_LABELS, type WeaponHandedness } from '@/constants/item-codes';
-import { parseItemKey } from '@/data/queries/equipment-lookup';
+import { itemKey, parseItemKey } from '@/data/queries/equipment-lookup';
 import { getItemPropertyDescriptions, type ItemPropertyDetail } from '@/data/queries/item-properties';
 import { getBaseItemDetailById, getItemDetailById, type ItemDetail } from '@/data/queries/item-detail';
 import { formatAbilityTotal, formatSignedModifier, getAbilityModifierFromTotal } from '@/utils/ability-modifier';
@@ -24,7 +24,7 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
 import { isMonkWeapon } from '@/utils/monk-weapons';
 import { formatSpacedModifier, getWeaponAbilityModifier, type WeaponAttackAbility } from '@/utils/weapon-combat';
-import type { WeaponSlot } from '@/types/character';
+import type { WeaponCategory, WeaponSlot } from '@/types/character';
 
 type WeaponSlotValue = WeaponSlot | 'none';
 
@@ -237,6 +237,7 @@ export default function ItemDetailScreen() {
             hasMainHandCompanion={hasMainHandCompanion}
             useMonkDex={useMonkDex}
             onPropertyPress={setSelectedPropertyCode}
+            weaponProficiencies={character.weaponProficiencies ?? { categories: [], items: [] }}
           />
         ) : null}
 
@@ -269,6 +270,18 @@ export default function ItemDetailScreen() {
                 {item.stealthDisadvantage ? (
                   <ThemedText style={styles.bulletItem}>{'•  Desvantagem em Furtividade'}</ThemedText>
                 ) : null}
+              </View>
+            ) : null}
+
+            {inventoryState?.armorSlot != null &&
+            item.armorCategory &&
+            !(character.armorProficiencies ?? []).includes(item.armorCategory) ? (
+              <View style={[styles.field, styles.observationsField, { borderColor: goldColor }]}>
+                <ThemedText style={styles.bulletItem}>
+                  {
+                    '•  Você não é proficiente com esta armadura - RAW: desvantagem em testes de habilidade, salvaguardas e ataques de Força ou Destreza, e você não pode conjurar magias enquanto estiver com ela equipada.'
+                  }
+                </ThemedText>
               </View>
             ) : null}
           </>
@@ -335,6 +348,7 @@ interface WeaponSectionProps {
   hasMainHandCompanion: boolean;
   useMonkDex: boolean;
   onPropertyPress: (code: string) => void;
+  weaponProficiencies: { categories: WeaponCategory[]; items: string[] };
 }
 
 function WeaponSection({
@@ -349,6 +363,7 @@ function WeaponSection({
   hasMainHandCompanion,
   useMonkDex,
   onPropertyPress,
+  weaponProficiencies,
 }: WeaponSectionProps) {
   const goldColor = useThemeColor({}, 'gold');
   // Martial Arts (Monk) lets DEX stand in for STR on unarmed/monk-weapon
@@ -358,9 +373,18 @@ function WeaponSection({
   const abilityMod = getWeaponAbilityModifier(attackAbility, strScore, dexScore);
   const isTwoHanded = slot === 'twoHanded';
 
+  // RAW: no proficiency bonus on an attack with a weapon you're not
+  // proficient with. Monk unarmed/monk-weapon strikes always count as
+  // proficient (useMonkDex already gates on isMonkWeapon), independent of
+  // the weapon's own category/name grant.
+  const isProficient =
+    useMonkDex ||
+    (item.weaponCategory != null && weaponProficiencies.categories.includes(item.weaponCategory)) ||
+    weaponProficiencies.items.includes(itemKey('base_items', item.id));
+
   // Fighting Style's "Archery": +2 to attack rolls with ranged weapons.
   const archeryBonus = fightingStyle === 'Archery' && item.isRanged ? 2 : 0;
-  const attackBonus = abilityMod + proficiencyBonus + archeryBonus;
+  const attackBonus = abilityMod + (isProficient ? proficiencyBonus : 0) + archeryBonus;
 
   // RAW: the off-hand (bonus action) attack only adds the ability modifier
   // to damage if it's negative, unless the character has Two-Weapon
@@ -400,6 +424,14 @@ function WeaponSection({
         left={<Field label="Dano" value={`${damageDice} ${formatSpacedModifier(damageMod)}`} />}
         right={<Field label="Tipo de Dano" value={damageTypeLabel} />}
       />
+
+      {!isProficient ? (
+        <View style={[styles.field, styles.observationsField, { borderColor: goldColor }]}>
+          <ThemedText style={styles.bulletItem}>
+            {'•  Você não é proficiente com esta arma - o bônus de proficiência não foi somado ao ataque.'}
+          </ThemedText>
+        </View>
+      ) : null}
 
       {item.propertyCodes.length > 0 ? (
         <View style={[styles.field, styles.propertiesField, { borderColor: goldColor }]}>

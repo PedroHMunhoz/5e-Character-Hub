@@ -2,6 +2,8 @@
 // weapon properties, armor weight class). These are fixed rules terms, not
 // book prose, so they don't need to come from the `translations` table.
 
+import type { ArmorCategory } from '@/types/character';
+
 export const WEAPON_CATEGORY_LABELS: Record<string, string> = {
   simple: 'Simples',
   martial: 'Marcial',
@@ -25,6 +27,27 @@ export const ARMOR_TYPE_LABELS: Record<string, string> = {
   MA: 'Média',
   HA: 'Pesada',
   S: 'Escudo',
+};
+
+// pt-BR labels for the proficiency category keys used by
+// CharacterSheet.armorProficiencies (data/wizard/armor-proficiency-resolver.ts)
+// - distinct from ARMOR_TYPE_LABELS above, which is keyed by the base_items/
+// items `type` column code ("LA"/"MA"/"HA"/"S"), not the category key.
+export const ARMOR_CATEGORY_LABELS: Record<ArmorCategory, string> = {
+  light: 'Leve',
+  medium: 'Média',
+  heavy: 'Pesada',
+  shield: 'Escudo',
+};
+
+// Maps a base_items/items `type` column code to the proficiency category it
+// requires, so an equipped armor/shield can be checked against
+// CharacterSheet.armorProficiencies.
+export const ARMOR_TYPE_TO_CATEGORY: Record<string, ArmorCategory> = {
+  LA: 'light',
+  MA: 'medium',
+  HA: 'heavy',
+  S: 'shield',
 };
 
 // dmgType codes from base_items.damage JSON (5etools convention).

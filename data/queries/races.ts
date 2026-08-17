@@ -17,6 +17,8 @@ interface RaceRow {
   ability_bonuses: string | null;
   skill_proficiencies: string | null;
   languages: string | null;
+  armor_proficiencies: string | null;
+  weapon_proficiencies: string | null;
 }
 
 interface RacialTraitRow {
@@ -41,6 +43,8 @@ function mapRaceRow(row: RaceRow, translations: TranslationDict): Race {
     abilityBonuses: parseJson<RaceAbilityBonus[]>(row.ability_bonuses),
     skillProficiencies: parseJson(row.skill_proficiencies),
     languages: parseJson(row.languages),
+    armorProficiencies: parseJson(row.armor_proficiencies),
+    weaponProficiencies: parseJson(row.weapon_proficiencies),
   };
 }
 
@@ -48,15 +52,8 @@ function mapRaceRow(row: RaceRow, translations: TranslationDict): Race {
 // reference db but aren't translated yet, and mixing them in overwhelmed
 // the wizard's race picker with ~220 entries with no clear PHB grouping.
 // See docs/TODO.md for the note to add other sources once translated.
-//
-// Also excludes "Variant" (Variant Human) - it's a real PHB subrace, but its
-// +1/+1 ability choice + bonus skill + feat needs a feat-picker the wizard
-// doesn't have yet. See docs/TODO.md for the note to drop this filter
-// once feats are implemented.
 export async function getAllRaces(db: SQLiteDatabase): Promise<Race[]> {
-  const rows = await db.getAllAsync<RaceRow>(
-    "SELECT * FROM races WHERE source = 'PHB' AND name != 'Variant' ORDER BY name"
-  );
+  const rows = await db.getAllAsync<RaceRow>("SELECT * FROM races WHERE source = 'PHB' ORDER BY name");
   const translations = await getTranslations(db, 'race');
   return rows.map((row) => mapRaceRow(row, translations));
 }

@@ -35,6 +35,7 @@ export default function SheetLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="item/[id]" />
         <Stack.Screen name="feature/[id]" />
+        <Stack.Screen name="feat/[id]" />
         <Stack.Screen name="spell/[id]" />
       </Stack>
     </CharacterProvider>

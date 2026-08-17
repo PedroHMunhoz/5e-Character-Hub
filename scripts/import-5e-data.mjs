@@ -271,8 +271,8 @@ const raceMap = new Map(); // `${name}|${source}` -> id
 
 runSection('races', () => {
   const insertRace = db.prepare(
-    `INSERT INTO races (parent_race_id, name, source, srd, basic_rules, size, speed, ability_bonuses, skill_proficiencies, darkvision, resistances, languages)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO races (parent_race_id, name, source, srd, basic_rules, size, speed, ability_bonuses, skill_proficiencies, darkvision, resistances, languages, armor_proficiencies, weapon_proficiencies)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   );
   const insertRacialTrait = db.prepare(
     'INSERT INTO racial_traits (race_id, name, entries, sort_order) VALUES (?,?,?,?)'
@@ -296,7 +296,9 @@ runSection('races', () => {
       json(r.skillProficiencies ?? null),
       r.darkvision ?? null,
       json(r.resist ?? null),
-      json(r.languageProficiencies ?? null)
+      json(r.languageProficiencies ?? null),
+      json(r.armorProficiencies ?? null),
+      json(r.weaponProficiencies ?? null)
     );
     const id = info.lastInsertRowid;
     // Only base races register themselves for subrace lookup. Subraces used

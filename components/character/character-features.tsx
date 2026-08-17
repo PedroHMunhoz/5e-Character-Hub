@@ -6,10 +6,12 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { CollapsibleSection } from '@/components/character/collapsible-section';
 import { FeatureItemCard } from '@/components/character/feature-item-card';
 import { getCharacterFeatures, type CuratedFeature, type FeatureSectionKey } from '@/data/queries/character-features';
+import { getFeatsByIds } from '@/data/queries/feats';
 import { useCharacter } from '@/hooks/use-character';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { getCharacterLevel } from '@/utils/proficiency';
 import { sortByLocalizedName } from '@/utils/sort-by-name';
+import type { Feat } from '@/types/reference';
 
 const FEATURE_SECTION_LABELS: { key: FeatureSectionKey | 'outras'; label: string }[] = [
   { key: 'classe', label: 'Características de Classe' },
@@ -24,7 +26,14 @@ export function CharacterFeatures() {
   const { character } = useCharacter();
   const [features, setFeatures] = useState<CuratedFeature[]>([]);
   const [loading, setLoading] = useState(true);
+  const [feats, setFeats] = useState<Feat[]>([]);
   const goldColor = useThemeColor({}, 'gold');
+
+  const featIds = character.feats ?? [];
+  useEffect(() => {
+    getFeatsByIds(db, featIds.map((f) => f.featId)).then(setFeats);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [db, featIds.map((f) => f.featId).join(',')]);
 
   const { raceId, subraceId, backgroundId } = character;
   const classId = character.classes[0]?.classId;
@@ -114,6 +123,26 @@ export function CharacterFeatures() {
           </View>
         </CollapsibleSection>
       ))}
+
+      {feats.length > 0 ? (
+        <CollapsibleSection title="Talentos">
+          <View style={styles.cardList}>
+            {sortByLocalizedName(feats).map((feat) => (
+              <Pressable
+                key={feat.id}
+                onPress={() =>
+                  router.push({
+                    pathname: '/sheet/[characterId]/feat/[id]',
+                    params: { characterId: character.id, id: String(feat.id) },
+                  })
+                }
+              >
+                <FeatureItemCard name={feat.name} usageType="passiva" />
+              </Pressable>
+            ))}
+          </View>
+        </CollapsibleSection>
+      ) : null}
     </ScrollView>
   );
 }

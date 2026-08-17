@@ -132,6 +132,12 @@ export interface Race {
   // adds to the parent race's grant. Resolved by
   // data/wizard/language-proficiency-resolver.ts.
   languages: unknown;
+  // Raw JSON, {category: true} groups - only Mountain Dwarf in the PHB.
+  // Resolved by data/wizard/armor-proficiency-resolver.ts.
+  armorProficiencies: unknown;
+  // Raw JSON, {"name|source": true} groups - Dwarf, Drow, High Elf and Wood
+  // Elf in the PHB. Resolved by data/wizard/weapon-proficiency-resolver.ts.
+  weaponProficiencies: unknown;
 }
 
 export interface RacialTrait {
@@ -169,10 +175,24 @@ export interface Background {
 export interface Feat {
   id: number;
   name: string;
+  // Raw (unlocalized) name - stable across reimports/translation edits,
+  // used by rule logic that needs to key off a specific feat directly (e.g.
+  // Alert's +5 initiative) without round-tripping through the database. Same
+  // englishName pattern as Race.englishName. See
+  // CharacterFeatState.englishName (types/character.ts).
+  englishName: string;
   source: string;
   srd: boolean;
   basicRules: boolean;
   entries: Entries;
+  // Raw 5etools ability-bonus DSL (same `choose` shape as
+  // RaceAbilityBonus, but keyed `amount` instead of `count`) - resolved by
+  // data/wizard/feat-ability-bonus.ts. Null when the feat grants no
+  // ability-score choice.
+  ability: unknown;
+  // Raw 5etools prerequisite DSL - resolved by
+  // data/wizard/feat-prerequisites.ts. Null when the feat has no prerequisite.
+  prerequisite: unknown;
 }
 
 export interface Item {

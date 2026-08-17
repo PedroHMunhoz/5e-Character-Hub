@@ -18,21 +18,26 @@ export function PassiveScores({ proficiencyBonus }: PassiveScoresProps) {
     getProficiencyMultiplier(character.skills.arcanismo.proficient, character.skills.arcanismo.expertise),
     proficiencyBonus
   );
-  const passivePerception = getPassiveScore(
-    formatAbilityTotal(character.abilities.wis),
-    getProficiencyMultiplier(character.skills.percepcao.proficient, character.skills.percepcao.expertise),
-    proficiencyBonus
-  );
+  // Observant (PHB p.170): "+5 bonus to your passive Wisdom (Perception)
+  // and passive Intelligence (Investigation) scores".
+  const hasObservant = character.feats?.some((f) => f.englishName === 'Observant') ?? false;
+  const passivePerception =
+    getPassiveScore(
+      formatAbilityTotal(character.abilities.wis),
+      getProficiencyMultiplier(character.skills.percepcao.proficient, character.skills.percepcao.expertise),
+      proficiencyBonus
+    ) + (hasObservant ? 5 : 0);
   const passiveInsight = getPassiveScore(
     formatAbilityTotal(character.abilities.wis),
     getProficiencyMultiplier(character.skills.intuicao.proficient, character.skills.intuicao.expertise),
     proficiencyBonus
   );
-  const passiveInvestigation = getPassiveScore(
-    formatAbilityTotal(character.abilities.int),
-    getProficiencyMultiplier(character.skills.investigacao.proficient, character.skills.investigacao.expertise),
-    proficiencyBonus
-  );
+  const passiveInvestigation =
+    getPassiveScore(
+      formatAbilityTotal(character.abilities.int),
+      getProficiencyMultiplier(character.skills.investigacao.proficient, character.skills.investigacao.expertise),
+      proficiencyBonus
+    ) + (hasObservant ? 5 : 0);
 
   return (
     <View style={styles.container}>

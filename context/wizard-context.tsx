@@ -36,6 +36,17 @@ export interface WizardDraft {
   // subrace at all, since the PHB's 10 lineages come from an unexpanded
   // 5etools templating mechanism rather than real subrace rows.
   draconicAncestry: string | null;
+  // Only meaningful when the chosen race/subrace is in
+  // constants/race-feat-grants.ts (Variant Human in the PHB) - resolved and
+  // validated in the Abilities step (Passo 3), not here, since eligibility
+  // depends on final ability scores/class. See
+  // components/wizard/feat-choice.tsx.
+  featId: number | null;
+  // Only meaningful when the chosen `featId` has its own ability-bonus
+  // `choose` clause (see data/wizard/feat-ability-bonus.ts, e.g. Athlete's
+  // "Strength or Dexterity") - separate from the race's own
+  // abilityBonusChoices above.
+  featAbilityChoice: AbilityKey | null;
 
   // Passo 2: Classe
   classId: number | null;
@@ -119,6 +130,8 @@ const initialDraft: WizardDraft = {
   subraceId: null,
   abilityBonusChoices: {},
   draconicAncestry: null,
+  featId: null,
+  featAbilityChoice: null,
   classId: null,
   subclassId: null,
   fightingStyleId: null,
@@ -152,6 +165,8 @@ type Action =
   | { type: 'SET_SUBRACE'; subraceId: number | null }
   | { type: 'SET_ABILITY_BONUS_CHOICES'; choices: Partial<Record<AbilityKey, number>> }
   | { type: 'SET_DRACONIC_ANCESTRY'; ancestry: string | null }
+  | { type: 'SET_FEAT'; featId: number | null }
+  | { type: 'SET_FEAT_ABILITY_CHOICE'; ability: AbilityKey | null }
   | { type: 'SET_CLASS'; classId: number | null }
   | { type: 'SET_SUBCLASS'; subclassId: number | null }
   | { type: 'SET_FIGHTING_STYLE'; fightingStyleId: number | null }
@@ -179,8 +194,8 @@ type Action =
 function wizardReducer(state: WizardDraft, action: Action): WizardDraft {
   switch (action.type) {
     case 'SET_RACE':
-      // Changing race invalidates whatever subrace/ability-bonus/ancestry
-      // choices were made for the previous race.
+      // Changing race invalidates whatever subrace/ability-bonus/ancestry/
+      // feat choices were made for the previous race.
       return {
         ...state,
         raceId: action.raceId,
@@ -189,13 +204,26 @@ function wizardReducer(state: WizardDraft, action: Action): WizardDraft {
         draconicAncestry: null,
         raceSkillChoices: [],
         raceLanguageChoices: [],
+        featId: null,
+        featAbilityChoice: null,
       };
     case 'SET_SUBRACE':
-      return { ...state, subraceId: action.subraceId, abilityBonusChoices: {}, raceLanguageChoices: [] };
+      return {
+        ...state,
+        subraceId: action.subraceId,
+        abilityBonusChoices: {},
+        raceLanguageChoices: [],
+        featId: null,
+        featAbilityChoice: null,
+      };
     case 'SET_ABILITY_BONUS_CHOICES':
       return { ...state, abilityBonusChoices: action.choices };
     case 'SET_DRACONIC_ANCESTRY':
       return { ...state, draconicAncestry: action.ancestry };
+    case 'SET_FEAT':
+      return { ...state, featId: action.featId, featAbilityChoice: null };
+    case 'SET_FEAT_ABILITY_CHOICE':
+      return { ...state, featAbilityChoice: action.ability };
     case 'SET_CLASS':
       return {
         ...state,
@@ -287,6 +315,8 @@ export interface WizardContextValue {
   setSubrace: (subraceId: number | null) => void;
   setAbilityBonusChoices: (choices: Partial<Record<AbilityKey, number>>) => void;
   setDraconicAncestry: (ancestry: string | null) => void;
+  setFeat: (featId: number | null) => void;
+  setFeatAbilityChoice: (ability: AbilityKey | null) => void;
   setClass: (classId: number | null) => void;
   setSubclass: (subclassId: number | null) => void;
   setFightingStyle: (fightingStyleId: number | null) => void;
@@ -324,6 +354,8 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       setSubrace: (subraceId) => dispatch({ type: 'SET_SUBRACE', subraceId }),
       setAbilityBonusChoices: (choices) => dispatch({ type: 'SET_ABILITY_BONUS_CHOICES', choices }),
       setDraconicAncestry: (ancestry) => dispatch({ type: 'SET_DRACONIC_ANCESTRY', ancestry }),
+      setFeat: (featId) => dispatch({ type: 'SET_FEAT', featId }),
+      setFeatAbilityChoice: (ability) => dispatch({ type: 'SET_FEAT_ABILITY_CHOICE', ability }),
       setClass: (classId) => dispatch({ type: 'SET_CLASS', classId }),
       setSubclass: (subclassId) => dispatch({ type: 'SET_SUBCLASS', subclassId }),
       setFightingStyle: (fightingStyleId) => dispatch({ type: 'SET_FIGHTING_STYLE', fightingStyleId }),
