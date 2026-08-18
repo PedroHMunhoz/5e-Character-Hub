@@ -18,10 +18,10 @@ import { useCharacter } from '@/hooks/use-character';
 import { useCharacterClassInfo } from '@/hooks/use-character-class-info';
 import { useEquippedArmor } from '@/hooks/use-equipped-armor';
 import { VitalBar } from '@/components/character/vital-bar';
-import { formatAbilityTotal, formatSignedModifier, getAbilityModifier } from '@/utils/ability-modifier';
+import { formatAbilityTotal, formatSignedModifier, getAbilityModifier, getAbilityTotal } from '@/utils/ability-modifier';
 import { getArmorClassBreakdown, type UnarmoredDefenseRule } from '@/utils/armor-class';
 import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
-import { formatSpeed, getMonkUnarmoredMovementBonusMeters } from '@/utils/speed';
+import { ARMOR_STRENGTH_SPEED_PENALTY_FEET, feetToMeters, formatSpeed, getMonkUnarmoredMovementBonusMeters } from '@/utils/speed';
 
 export function CharacterSheet() {
   const { character, toggleInspiration, setExhaustion, setDeathSaves, setHitPointsField } = useCharacter();
@@ -69,7 +69,16 @@ export function CharacterSheet() {
     classEnglishName === 'Monk' && equippedArmor.length === 0
       ? getMonkUnarmoredMovementBonusMeters(characterLevel)
       : 0;
-  const displaySpeed = String(Number(character.speed) + unarmoredMovementBonus);
+
+  // PHB: wearing armor below its Strength requirement reduces speed by 10ft.
+  const strTotal = getAbilityTotal(character.abilities.str) ?? 0;
+  const bodyArmor = equippedArmor.find((item) => item.weightClass != null);
+  const strengthPenaltyActive = bodyArmor?.strengthRequirement != null && strTotal < bodyArmor.strengthRequirement;
+  const strengthSpeedPenalty = strengthPenaltyActive ? feetToMeters(ARMOR_STRENGTH_SPEED_PENALTY_FEET) : 0;
+
+  const displaySpeed = String(
+    Math.max(0, Number(character.speed) + unarmoredMovementBonus - strengthSpeedPenalty)
+  );
 
   const acRows = [
     { label: 'CA Base', value: String(armorClassBreakdown.base) },

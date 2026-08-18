@@ -10,6 +10,13 @@ export function feetToMeters(feet: number): number {
   return (feet / FEET_PER_SQUARE) * METERS_PER_SQUARE;
 }
 
+export function feetToSquares(feet: number): number {
+  return feet / FEET_PER_SQUARE;
+}
+
+// PHB: wearing armor below its Strength requirement reduces speed by 10 feet.
+export const ARMOR_STRENGTH_SPEED_PENALTY_FEET = 10;
+
 export function getSpeedInSquares(speed: string): number | null {
   const trimmed = speed.trim();
   if (trimmed === '') {

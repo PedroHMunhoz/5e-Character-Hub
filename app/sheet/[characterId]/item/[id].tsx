@@ -16,13 +16,19 @@ import { WEAPON_PROPERTY_LABELS, type WeaponHandedness } from '@/constants/item-
 import { itemKey, parseItemKey } from '@/data/queries/equipment-lookup';
 import { getItemPropertyDescriptions, type ItemPropertyDetail } from '@/data/queries/item-properties';
 import { getBaseItemDetailById, getItemDetailById, type ItemDetail } from '@/data/queries/item-detail';
-import { formatAbilityTotal, formatSignedModifier, getAbilityModifierFromTotal } from '@/utils/ability-modifier';
+import {
+  formatAbilityTotal,
+  formatSignedModifier,
+  getAbilityModifierFromTotal,
+  getAbilityTotal,
+} from '@/utils/ability-modifier';
 import { useCharacter } from '@/hooks/use-character';
 import { useCharacterClassInfo } from '@/hooks/use-character-class-info';
 import { useEquippedArmor } from '@/hooks/use-equipped-armor';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
 import { isMonkWeapon } from '@/utils/monk-weapons';
+import { ARMOR_STRENGTH_SPEED_PENALTY_FEET, feetToMeters, feetToSquares } from '@/utils/speed';
 import { formatSpacedModifier, getWeaponAbilityModifier, type WeaponAttackAbility } from '@/utils/weapon-combat';
 import type { WeaponCategory, WeaponSlot } from '@/types/character';
 
@@ -251,8 +257,21 @@ export default function ItemDetailScreen() {
                   <CheckboxToggle
                     checked={inventoryState?.armorSlot != null}
                     onToggle={() => {
+                      const wasEquipped = inventoryState?.armorSlot != null;
                       const message = toggleArmorEquipped(itemId, item.armorSlotKind);
-                      if (message) setBlockedMessage(message);
+                      if (message) {
+                        setBlockedMessage(message);
+                        return;
+                      }
+                      if (
+                        !wasEquipped &&
+                        item.strengthRequirement != null &&
+                        (getAbilityTotal(character.abilities.str) ?? 0) < item.strengthRequirement
+                      ) {
+                        setBlockedMessage(
+                          `Você não atende ao requisito de Força mínima desta armadura (${item.strengthRequirement}). Seu deslocamento é reduzido em ${feetToMeters(ARMOR_STRENGTH_SPEED_PENALTY_FEET)}m / ${feetToSquares(ARMOR_STRENGTH_SPEED_PENALTY_FEET)}q.`
+                        );
+                      }
                     }}
                   />
                 </View>

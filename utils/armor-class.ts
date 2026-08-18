@@ -4,6 +4,7 @@ export interface EquippedArmorItem {
   name: string;
   bonus: number;
   weightClass?: 'light' | 'medium' | 'heavy';
+  strengthRequirement?: number;
 }
 
 // Barbarian's/Monk's "Unarmored Defense" and Draconic Bloodline sorcerers'

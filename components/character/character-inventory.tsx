@@ -21,6 +21,7 @@ import type { WeaponSlot } from '@/types/character';
 import { getAbilityModifierFromTotal, getAbilityTotal } from '@/utils/ability-modifier';
 import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
 import { sortByLocalizedName } from '@/utils/sort-by-name';
+import { ARMOR_STRENGTH_SPEED_PENALTY_FEET, feetToMeters, feetToSquares } from '@/utils/speed';
 
 // Same flat "1 kg ~= 2 lb" rule used everywhere else in the app (see
 // getWeightKg/formatWeightKg in data/queries/base-items.ts).
@@ -246,8 +247,21 @@ export function CharacterInventory() {
                             }
                             return;
                           }
+                          const wasEquipped = character.inventoryItems[item.key]?.armorSlot != null;
                           const message = toggleArmorEquipped(item.key, item.armorSlotKind ?? 'body');
-                          if (message) setBlockedMessage(message);
+                          if (message) {
+                            setBlockedMessage(message);
+                            return;
+                          }
+                          if (
+                            !wasEquipped &&
+                            item.strengthRequirement != null &&
+                            (getAbilityTotal(character.abilities.str) ?? 0) < item.strengthRequirement
+                          ) {
+                            setBlockedMessage(
+                              `Você não atende ao requisito de Força mínima desta armadura (${item.strengthRequirement}). Seu deslocamento é reduzido em ${feetToMeters(ARMOR_STRENGTH_SPEED_PENALTY_FEET)}m / ${feetToSquares(ARMOR_STRENGTH_SPEED_PENALTY_FEET)}q.`
+                            );
+                          }
                         }}
                       />
                     </Pressable>

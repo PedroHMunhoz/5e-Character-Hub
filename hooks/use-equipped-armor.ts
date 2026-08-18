@@ -32,6 +32,7 @@ export function useEquippedArmor(): EquippedArmorItem[] {
           name: item.name,
           bonus: Number(item.armorClassBonus ?? '0'),
           weightClass: item.armorWeightClass,
+          strengthRequirement: item.strengthRequirement,
         }));
       setEquippedArmor(equipped);
     });

@@ -37,6 +37,7 @@ export interface CuratedBaseItem {
   armorClassBonus?: string;
   armorSlotKind?: 'body' | 'shield';
   armorWeightClass?: 'light' | 'medium' | 'heavy';
+  strengthRequirement?: number;
   defaultQuantity?: string;
 }
 
@@ -61,6 +62,7 @@ interface WeaponDetails {
 
 interface ArmorDetails {
   ac?: number;
+  strength?: number;
 }
 
 interface PackContentsEntry {
@@ -304,6 +306,7 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict, quantity
       armorClassBonus: String(armorClassBonus),
       armorSlotKind: getArmorSlotKind(row.type),
       armorWeightClass: ARMOR_WEIGHT_CLASSES[row.type ?? ''],
+      strengthRequirement: details.strength,
     };
   }
 
