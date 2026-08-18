@@ -25,6 +25,7 @@ import {
   parseFixedLanguageEnglishNames,
 } from '@/data/wizard/language-proficiency-resolver';
 import { combineAbilityBonuses, getResolvedRacialBonus } from '@/data/wizard/race-ability-bonus';
+import { getRaceGrantedSpellIds } from '@/data/wizard/race-granted-spells';
 import { parseBackgroundSkillProficiencies } from '@/data/wizard/skill-proficiency-resolver';
 import { resolveClassWeaponProficiencies, resolveRaceWeaponProficiencies } from '@/data/wizard/weapon-proficiency-resolver';
 import { feetToMeters } from '@/utils/speed';
@@ -345,7 +346,18 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   // pick to the prepared cap) starts with everything prepared.
   const spellcastingRule = classEnglishName ? SPELLCASTING_RULES[classEnglishName] : undefined;
   const startsPrepared = !(spellcastingRule?.spellsKnownFixed && spellcastingRule?.maxPreparedFormula);
-  const spells = Object.fromEntries(draft.spellIds.map((id) => [String(id), { prepared: startsPrepared }]));
+  // Racial cantrips (e.g. Tiefling's Infernal Legacy) are granted outright,
+  // independent of the class spellcasting step above - runs unconditionally
+  // even for a non-caster (same "doesn't depend on any wizard step having
+  // run" shape as the Breath Weapon grant above). Skipped if the player
+  // already picked the same cantrip through their class, so it isn't
+  // double-listed or has its prepared state clobbered.
+  const raceGrantedSpellIds = await getRaceGrantedSpellIds(db, race.englishName);
+  const classSpellEntries = draft.spellIds.map((id) => [String(id), { prepared: startsPrepared }] as const);
+  const racialSpellEntries = raceGrantedSpellIds
+    .filter((id) => !draft.spellIds.includes(id))
+    .map((id) => [String(id), { prepared: true }] as const);
+  const spells = Object.fromEntries([...classSpellEntries, ...racialSpellEntries]);
 
   // Hit points: level-1 max HP is always the hit die's full face value +
   // CON modifier (PHB p.12), never rolled at level 1. Draconic Bloodline

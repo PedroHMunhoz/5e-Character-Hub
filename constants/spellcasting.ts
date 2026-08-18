@@ -39,3 +39,12 @@ export const SPELLCASTING_RULES: Record<string, SpellcastingRule> = {
   Warlock: { cantripsKnown: 2, spellsKnownFixed: 2 },
   Wizard: { cantripsKnown: 3, spellsKnownFixed: 6, maxPreparedFormula: true },
 };
+
+// PHB races that grant a cantrip outright at 1st level, outside any class
+// spellcasting flow (Tiefling's Infernal Legacy, PHB p.43) - keyed by the
+// race's raw English name (see data/queries/races.ts's Race.englishName).
+// Hellish Rebuke (3rd level) and Darkness (5th level) are intentionally
+// absent - the wizard only creates level-1 characters.
+export const RACE_GRANTED_CANTRIPS: Record<string, string> = {
+  Tiefling: 'Thaumaturgy',
+};

@@ -75,8 +75,20 @@ export function CharacterSpells() {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const start = Date.now();
 
+    // Full-list casters (Cleric/Druid) see their class's whole spell list
+    // rather than character.spells - but a racial/off-list spell recorded in
+    // character.spells (e.g. a Tiefling Druid's granted Thaumaturgy, not on
+    // Druid's own list) still needs to be merged in, or it'd never render.
     const spellsPromise =
-      isFullListCaster && englishName ? getSpellsForClass(db, englishName) : getSpellsByIds(db, spellIds);
+      isFullListCaster && englishName
+        ? getSpellsForClass(db, englishName).then(async (classSpells) => {
+            const classSpellIds = new Set(classSpells.map((spell) => spell.id));
+            const extraIds = spellIds.filter((id) => !classSpellIds.has(id));
+            if (extraIds.length === 0) return classSpells;
+            const extraSpells = await getSpellsByIds(db, extraIds);
+            return [...classSpells, ...extraSpells];
+          })
+        : getSpellsByIds(db, spellIds);
 
     spellsPromise.then((data) => {
       if (cancelled) return;
