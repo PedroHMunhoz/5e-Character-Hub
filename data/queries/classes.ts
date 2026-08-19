@@ -172,6 +172,19 @@ export async function getClassEnglishName(db: SQLiteDatabase, classId: number): 
   return row?.name ?? null;
 }
 
+type SubclassAdditionalSpells = { kind: 'prepared' | 'expanded'; byLevel: Record<string, string[]> };
+
+async function getSubclassAdditionalSpells(
+  db: SQLiteDatabase,
+  subclassId: number
+): Promise<SubclassAdditionalSpells | null> {
+  const row = await db.getFirstAsync<{ additional_spells: string | null }>(
+    'SELECT additional_spells FROM subclasses WHERE id = ?',
+    subclassId
+  );
+  return parseJson(row?.additional_spells ?? null);
+}
+
 // Reads a subclass's always-prepared bonus spells (Cleric domain spells,
 // Circle of Spores/Wildfire, etc.) - see subclasses.additional_spells in
 // db/schema.sql. Only populated for the unambiguous case (no sub-choice
@@ -181,11 +194,23 @@ export async function getSubclassAdditionalSpellsByLevel(
   db: SQLiteDatabase,
   subclassId: number
 ): Promise<Record<string, string[]> | null> {
-  const row = await db.getFirstAsync<{ additional_spells: string | null }>(
-    'SELECT additional_spells FROM subclasses WHERE id = ?',
-    subclassId
-  );
-  return parseJson(row?.additional_spells ?? null);
+  const data = await getSubclassAdditionalSpells(db, subclassId);
+  return data?.kind === 'prepared' ? data.byLevel : null;
+}
+
+// Reads a subclass's expanded spell list (Warlock patron bonus spells,
+// e.g. The Archfey's Faerie Fire/Sleep) - spells added to the pool the
+// character can choose to learn as a known spell, NOT always-prepared (see
+// getSubclassAdditionalSpellsByLevel for that mechanic). `byLevel` is keyed
+// "s1".."s5" (spell slot level), matching the raw 5etools data. Only
+// populated for the unambiguous case (no sub-choice like the Genie
+// patron's vessel needed), so this is `null` for most subclasses.
+export async function getSubclassExpandedSpellsByLevel(
+  db: SQLiteDatabase,
+  subclassId: number
+): Promise<Record<string, string[]> | null> {
+  const data = await getSubclassAdditionalSpells(db, subclassId);
+  return data?.kind === 'expanded' ? data.byLevel : null;
 }
 
 // Whether this class grants the "Expertise" feature (doubled proficiency

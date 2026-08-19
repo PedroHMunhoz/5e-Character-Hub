@@ -143,9 +143,9 @@ expertiseToolChoice`, guarda a `itemKey()` da ferramenta escolhida);
   (Clérigo/Druida) só mesclava ids extras vindos de `character.spells`
   (usado pro caso de magia racial fora da lista, ex. Taumaturgia de
   Tiefling); passou a mesclar também `domainSpellIds`. Afeta os 7
-  Domínios do Clérigo do PHB core - ver card Trello "Cobrir magias de
-  subclasse com escolha adicional" pro que ainda falta (Círculo da Terra
-  do Druida, patronos do Bruxo).
+  Domínios do Clérigo do PHB core - na época, ainda faltavam Círculo da
+  Terra do Druida e patronos do Bruxo (ver entrada mais abaixo - patronos
+  do Bruxo corrigidos depois; Círculo da Terra virou card à parte).
 - ~~Distinção fina entre "magia conhecida" e "magia preparada hoje"~~ —
   **corrigido**: achado ao vivo num Mago nível 1 com INT +1, que mostrava
   "6/2" preparadas (grimório de 6 marcado todo como preparado, contra um
@@ -372,6 +372,27 @@ InventoryItemState>` — cada registro é uma unidade física, com
   genérico à parte. `Book\|PHB` ganhou nome ("Livro") e descrição próprios,
   traduzidos do texto em inglês real do item, em vez de reaproveitar o
   texto do Grimório.
+- ~~Lista expandida de magias dos Patronos do Bruxo (Arquifada, Corruptor,
+  Grande Antigo) não aparecia como opção na criação~~ — **corrigido**: PHB
+  concede a esses 3 patronos (os únicos com `source='PHB'`) uma "expanded
+  spell list" — magias de OUTRAS classes que o Bruxo pode escolher como
+  conhecida, mecânica distinta da "sempre-preparada" dos Domínios do
+  Clérigo (essa usa a chave `prepared`; a do Bruxo usa `expanded`, ambas em
+  `additionalSpells` no dado bruto). O filtro de import só aceitava
+  `prepared`, então `subclasses.additional_spells` ficava `null` pros 3
+  patronos e `app/wizard/spells.tsx` nunca oferecia essas magias (ex.:
+  Sono/Fogo das Fadas da Arquifada) entre as 2 conhecidas de 1º nível.
+  `additional_spells` passou a guardar `{kind: 'prepared'|'expanded',
+  byLevel: {...}}` (`scripts/import-5e-data.mjs`,
+  `data/queries/classes.ts` ganhou `getSubclassExpandedSpellsByLevel` ao
+  lado da já existente `getSubclassAdditionalSpellsByLevel`, sem mudar o
+  comportamento dela), e a tela de magias da wizard mescla as opções `s1`
+  do patrono na lista de magias de 1º nível selecionáveis. Círculo da
+  Terra do Druida continua de fora (sub-escolha de bioma nomeada, mesmo
+  caso do patrono Genie) — não bloqueia criação nível 1 porque Círculo é
+  concedido só no nível 2 e o wizard nem pergunta subclasse de Druida
+  hoje; ver card Trello "Círculo da Terra do Druida: magia bônus por
+  bioma".
 
 Pendências restantes (multiclasse, sourcebooks além do PHB, Patrulheiro UA,
 Humano Variante/talentos, magias de subclasse com escolha adicional,

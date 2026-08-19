@@ -8,10 +8,10 @@ import { SpellPicker } from '@/components/wizard/spell-picker';
 import { WizardStepHeader } from '@/components/wizard/wizard-step-header';
 import { SPELLCASTING_RULES } from '@/constants/spellcasting';
 import { useWizardDraft } from '@/context/wizard-context';
-import { getClassById, getClassEnglishName } from '@/data/queries/classes';
+import { getClassById, getClassEnglishName, getSubclassExpandedSpellsByLevel } from '@/data/queries/classes';
 import { getRaceById } from '@/data/queries/races';
 import { combineAbilityBonuses, getResolvedRacialBonus } from '@/data/wizard/race-ability-bonus';
-import { getSpellsForClass } from '@/data/queries/spells';
+import { getSpellsByNames, getSpellsForClass } from '@/data/queries/spells';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { sortByLocalizedName } from '@/utils/sort-by-name';
 import { getPreparedSpellCount } from '@/utils/spellcasting';
@@ -52,7 +52,25 @@ export default function WizardSpellsStep() {
 
       const classSpells = await getSpellsForClass(db, englishName);
       if (cancelled) return;
-      setSpells(classSpells);
+
+      // Warlock patrons (The Archfey, The Fiend, The Great Old One) grant an
+      // "expanded" spell list - spells from OTHER classes' lists the
+      // character can choose to learn as one of their known spells, on top
+      // of Warlock's own list. Only the "s1" (1st-level slot) tier matters
+      // at level-1 creation. See getSubclassExpandedSpellsByLevel.
+      let allSpells = classSpells;
+      if (draft.subclassId !== null) {
+        const expandedByLevel = await getSubclassExpandedSpellsByLevel(db, draft.subclassId);
+        if (cancelled) return;
+        const expandedNames = expandedByLevel?.s1 ?? [];
+        if (expandedNames.length > 0) {
+          const expandedSpells = await getSpellsByNames(db, expandedNames);
+          if (cancelled) return;
+          const classSpellIds = new Set(classSpells.map((spell) => spell.id));
+          allSpells = [...classSpells, ...expandedSpells.filter((spell) => !classSpellIds.has(spell.id))];
+        }
+      }
+      setSpells(allSpells);
 
       if (rule.preparedFromFullList && classDef.spellcastingAbility) {
         const abilityKey = classDef.spellcastingAbility as AbilityKey;

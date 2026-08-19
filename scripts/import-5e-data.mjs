@@ -236,15 +236,20 @@ runSection('classes', () => {
       ensureSource(sc.source);
       // Only extract the unambiguous case: exactly one additionalSpells
       // entry, no `name` (meaning no further sub-choice like Circle of the
-      // Land's biome, or Warlock's `expanded` extra-known-spells mechanic
-      // instead of always-prepared) - see docs/TODO.md.
+      // Land's biome, or the Genie patron's vessel) - see docs/TODO.md.
+      // Two mechanisms share this shape: `prepared` (always-prepared bonus
+      // spells, e.g. Cleric domains) and `expanded` (Warlock patron spells
+      // added to the pool the character can choose to learn) - stored with
+      // a `kind` discriminator so consumers can tell them apart.
       const rawAdditional = sc.additionalSpells;
-      const additionalSpells =
-        Array.isArray(rawAdditional) &&
-        rawAdditional.length === 1 &&
-        !rawAdditional[0].name &&
-        rawAdditional[0].prepared
-          ? rawAdditional[0].prepared
+      const singleEntry =
+        Array.isArray(rawAdditional) && rawAdditional.length === 1 && !rawAdditional[0].name
+          ? rawAdditional[0]
+          : null;
+      const additionalSpells = singleEntry?.prepared
+        ? { kind: 'prepared', byLevel: singleEntry.prepared }
+        : singleEntry?.expanded
+          ? { kind: 'expanded', byLevel: singleEntry.expanded }
           : null;
       const info = insertSubclass.run(classId, sc.name, sc.shortName, sc.source, bit(sc.srd), json(additionalSpells));
       subclassMap.set(`${sc.className}|${sc.classSource}|${sc.shortName}|${sc.source}`, info.lastInsertRowid);
