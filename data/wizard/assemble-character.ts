@@ -42,6 +42,7 @@ import type {
   Skill,
   SkillKey,
   ToolState,
+  WeaponCategory,
 } from '@/types/character';
 
 // The 3 PHB "Armored" feats each grant armor-category proficiency directly
@@ -51,6 +52,25 @@ const FEAT_ARMOR_PROFICIENCY_GRANTS: Record<string, ArmorCategory[]> = {
   'Lightly Armored': ['light'],
   'Moderately Armored': ['medium', 'shield'],
   'Heavily Armored': ['heavy'],
+};
+
+// Some Cleric Divine Domains grant bonus armor/weapon proficiency at 1st
+// level via their "Bonus Proficiencies" feature (PHB): unstructured prose in
+// subclass_features.entries, not parsed elsewhere - same reasoning as
+// FEAT_ARMOR_PROFICIENCY_GRANTS above, just hardcoded for the 4 PHB domains
+// that grant one instead of added as generic schema data. Keyed by
+// subclass.shortName, same stable identifier used at `subclass?.shortName
+// === 'Draconic'` below and in constants/subclass-info.ts.
+const DOMAIN_ARMOR_PROFICIENCY_GRANTS: Record<string, ArmorCategory[]> = {
+  Life: ['heavy'],
+  Nature: ['heavy'],
+  Tempest: ['heavy'],
+  War: ['heavy'],
+};
+
+const DOMAIN_WEAPON_PROFICIENCY_GRANTS: Record<string, WeaponCategory[]> = {
+  Tempest: ['martial'],
+  War: ['martial'],
 };
 
 function randomId(prefix: string): string {
@@ -224,6 +244,7 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
       ...parseRaceArmorProficiencies(race.armorProficiencies),
       ...parseRaceArmorProficiencies(subrace?.armorProficiencies),
       ...(feat ? (FEAT_ARMOR_PROFICIENCY_GRANTS[feat.englishName] ?? []) : []),
+      ...(subclass ? (DOMAIN_ARMOR_PROFICIENCY_GRANTS[subclass.shortName] ?? []) : []),
     ]),
   ];
 
@@ -232,7 +253,12 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   const raceWeaponItems = await resolveRaceWeaponProficiencies(db, race.weaponProficiencies);
   const subraceWeaponItems = await resolveRaceWeaponProficiencies(db, subrace?.weaponProficiencies);
   const weaponProficiencies = {
-    categories: [...new Set(classWeapons.categories)],
+    categories: [
+      ...new Set([
+        ...classWeapons.categories,
+        ...(subclass ? (DOMAIN_WEAPON_PROFICIENCY_GRANTS[subclass.shortName] ?? []) : []),
+      ]),
+    ],
     items: [
       ...new Set(
         [...classWeapons.items, ...raceWeaponItems, ...subraceWeaponItems].map((item) => itemKey(item.source, item.id))
