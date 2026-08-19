@@ -301,6 +301,67 @@
     "_note": "Equipamento inicial do Órfão (PHB) - grant `{special: \"pet mouse\"}`, texto solto sem linha de catálogo em 5e-2014-data/backgrounds.json (sem stat block de criatura - é só um objeto de flavor no inventário, igual aos demais deste grupo). Nome em inglês é o próprio texto original; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Pet Mouse|PHB`), pipeline normal igual a qualquer outro item. Peso 0. Ver docs/TODO.md."
   },
   {
+    "name": "10 Feet of String",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "3 metros de barbante"
+    ],
+    "_note": "Conteúdo do Pacote de Ladrão (PHB) - packContents `{special: \"10 feet of string\", quantity?: undefined}`, texto solto sem linha de catálogo em 5e-2014-data/items.json (dentro do pack, não do equipamento de antecedente - achado ao investigar o card 'Persistir proficiências livres...', mesma classe de bug do grupo de 19 itens abaixo, só que um nível mais fundo: data/queries/base-items.ts's getMultiItemPackContents). Nome em inglês é o próprio texto original; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `10 Feet of String|PHB`), pipeline normal igual a qualquer outro item. Comprimento convertido pela mesma regra ×0.3 usada no resto do app (10 ft ≈ 3 m). Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Alms Box",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Uma caixa de esmolas"
+    ],
+    "_note": "Conteúdo do Pacote de Sacerdote (PHB) - packContents `{special: \"alms box\"}`, texto solto sem linha de catálogo em 5e-2014-data/items.json (mesma classe de bug do grupo de 19 itens abaixo, um nível mais fundo - ver nota de '10 Feet of String' acima). Nome em inglês é o próprio texto original; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Alms Box|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Block of Incense",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Um bloco de incenso"
+    ],
+    "details": { "miscTags": ["CNS"] },
+    "_note": "Conteúdo do Pacote de Sacerdote (PHB) - packContents `{special: \"block of incense\", quantity: 2}`, texto solto sem linha de catálogo em 5e-2014-data/items.json (mesma classe de bug do grupo de 19 itens abaixo, um nível mais fundo - ver nota de '10 Feet of String' acima). A quantidade (2) vem do packContents, não deste item (representa 1 unidade, igual a qualquer outro item empilhável). `miscTags: [\"CNS\"]` marca como consumível (categorizeItem, data/queries/items.ts) - igual a 'Sticks of Incense' acima, precisa disso pra badge de quantidade aparecer na Mochila (ver components/character/character-inventory.tsx). Nome em inglês é o próprio texto original; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Block of Incense|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Censer",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Um defumador"
+    ],
+    "_note": "Conteúdo do Pacote de Sacerdote (PHB) - packContents `{special: \"censer\"}`, texto solto sem linha de catálogo em 5e-2014-data/items.json (mesma classe de bug do grupo de 19 itens abaixo, um nível mais fundo - ver nota de '10 Feet of String' acima). Nome em inglês é o próprio texto original; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Censer|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
+    "name": "Little Bag of Sand",
+    "source": "PHB",
+    "type": "G",
+    "rarity": "none",
+    "value": null,
+    "weight": 0,
+    "entries": [
+      "Um pequeno saco de areia"
+    ],
+    "_note": "Conteúdo do Pacote de Estudioso (PHB) - packContents `{special: \"little bag of sand\"}`, texto solto sem linha de catálogo em 5e-2014-data/items.json (mesma classe de bug do grupo de 19 itens abaixo, um nível mais fundo - ver nota de '10 Feet of String' acima). Nome em inglês é tradução livre baseada nesse texto; tradução pt-BR vive em translations/pt-BR/PHB/items.json (chave `Little Bag of Sand|PHB`), pipeline normal igual a qualquer outro item. Peso 0 (sem peso canônico no livro). Ver docs/TODO.md."
+  },
+  {
     "name": "Token to Remember Your Parents By",
     "source": "PHB",
     "type": "G",

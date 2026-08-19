@@ -131,7 +131,14 @@ export function CharacterInventory() {
         } else {
           const def = generalItemById.get(parsed.id);
           if (!def) continue;
-          const quantity = def.category === 'consumable' ? (itemsQuantityById.get(def.id) ?? 1) : 1;
+          // Real stored quantity, not gated on category - a non-consumable
+          // `items`-table row can legitimately stack past 1 too (e.g. a
+          // multi-item pack's "Block of Incense" x2, "Parchment (One
+          // Sheet)" x10 - see data/wizard/assemble-character.ts's
+          // addStackable), so capping this at 1 for anything but
+          // 'consumable' understated both the shown weight and the
+          // quantity badge below for those rows.
+          const quantity = itemsQuantityById.get(def.id) ?? 1;
           display.push({
             key: instanceId,
             navigable: true,
@@ -268,17 +275,17 @@ export function CharacterInventory() {
                   );
                 }
 
-                const isConsumable = section.category === 'consumable';
+                // Badge only when there's actually more than one (not
+                // gated on category - see the loading effect's comment on
+                // `quantity` above) so the common case (one backpack, one
+                // crowbar, ...) stays uncluttered.
+                const storedQuantity = character.inventoryItems[item.key]?.quantity ?? item.defaultQuantity ?? '1';
                 const card = (
                   <StackableItemCard
                     name={item.name}
                     properties={item.properties}
                     weight={item.weight}
-                    quantity={
-                      isConsumable
-                        ? (character.inventoryItems[item.key]?.quantity ?? item.defaultQuantity ?? '1')
-                        : undefined
-                    }
+                    quantity={storedQuantity !== '1' ? storedQuantity : undefined}
                   />
                 );
 

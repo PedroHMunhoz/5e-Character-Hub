@@ -107,21 +107,35 @@ export function isMultiItemPack(detailsJson: string | null): boolean {
   return Array.isArray(packContents) && packContents.length > 1;
 }
 
+// Scholar's Pack's structured `packContents` lists "parchment (one sheet)|
+// phb" as a bare string (quantity implied 1), but the pack's own prose
+// `entries` says "10 sheets of parchment" - a data omission, confirmed live
+// as the ONLY such mismatch across all 7 PHB multi-item packs (diffed every
+// pack's entries prose against its packContents array). Keyed by (pack
+// name, item ref) rather than by item ref alone, since the same
+// "parchment (one sheet)|phb" ref legitimately means qty 5 elsewhere (Case,
+// Map or Scroll's own capacity note - an unrelated item, not a pack).
+const PACK_CONTENT_QUANTITY_OVERRIDES: Record<string, Record<string, number>> = {
+  "Scholar's Pack": { 'parchment (one sheet)|phb': 10 },
+};
+
 // Structured form of a multi-item pack's contents (Explorer's Pack, Burglar's
 // Pack, ...), for actually exploding the pack into its component items
 // instead of just showing prose (see isMultiItemPack's preview-only use).
 // Each raw packContents entry is one of three shapes, confirmed live against
 // every multi-item pack in the bundled PHB dataset: a bare string ref
-// (quantity implied 1), an `{item, quantity}` ref, or an `{special, quantity?}`
+// (quantity implied 1, see PACK_CONTENT_QUANTITY_OVERRIDES above for the one
+// exception), an `{item, quantity}` ref, or an `{special, quantity?}`
 // flavor-only entry with no catalog item at all (e.g. "10 feet of string",
 // "alms box") - those become `kind: 'special'` and are never resolvable to an
 // inventory item, same as how a bare `special`-kind DSL grant elsewhere in
 // the wizard has no db row to attach to.
-export function getMultiItemPackContents(detailsJson: string | null): MultiItemPackEntry[] | undefined {
+export function getMultiItemPackContents(detailsJson: string | null, packName?: string): MultiItemPackEntry[] | undefined {
   const packContents = parseJson<PackDetails>(detailsJson)?.packContents;
   if (!Array.isArray(packContents) || packContents.length <= 1) return undefined;
+  const overrides = packName ? PACK_CONTENT_QUANTITY_OVERRIDES[packName] : undefined;
   return packContents.map((entry): MultiItemPackEntry => {
-    if (typeof entry === 'string') return { kind: 'item', itemRef: entry, quantity: 1 };
+    if (typeof entry === 'string') return { kind: 'item', itemRef: entry, quantity: overrides?.[entry.toLowerCase()] ?? 1 };
     if (entry.item) return { kind: 'item', itemRef: entry.item, quantity: entry.quantity ?? 1 };
     return { kind: 'special', text: entry.special ?? '', quantity: entry.quantity ?? 1 };
   });

@@ -28,6 +28,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { getBaseItemsByEquipmentType, getBaseItemsByNames, getItemsByNames, refName } from '@/data/queries/equipment-lookup';
 import type { EquipmentLookupItem } from '@/data/queries/equipment-lookup';
+import type { MultiItemPackEntry } from '@/data/queries/base-items';
 import { EQUIPMENT_TYPE_LABELS } from '@/constants/equipment-types';
 
 export type EquipmentChoiceOptionKey = 'a' | 'b' | 'c' | 'd';
@@ -177,6 +178,13 @@ function translateFlavorText(text: string): string {
 // Nobre's "purse" is handled separately below (redirects to the real
 // `Pouch|PHB` item, not a synthetic one, since it's the same physical
 // object every other background's pouch already uses).
+//
+// The last 5 entries (10 Feet of String/Alms Box/Block of Incense/Censer/
+// Little Bag of Sand) aren't top-level background grants - they're
+// `kind: 'special'` entries nested inside a multi-item pack's packContents
+// (Burglar's/Priest's/Scholar's Pack - see getMultiItemPackContents, data/
+// queries/base-items.ts), reached via packContentEntryRef below instead of
+// parseRawEntry. Same redirect mechanism, one level deeper.
 const EQUIPMENT_SPECIAL_ITEM_REFS: Record<string, string> = {
   'sticks of incense': 'Sticks of Incense|PHB',
   vestments: 'Vestments|PHB',
@@ -199,6 +207,11 @@ const EQUIPMENT_SPECIAL_ITEM_REFS: Record<string, string> = {
   'map of the city you grew up in': 'Map of the City You Grew Up In|PHB',
   'pet mouse': 'Pet Mouse|PHB',
   'token to remember your parents by': 'Token to Remember Your Parents By|PHB',
+  '10 feet of string': '10 Feet of String|PHB',
+  'alms box': 'Alms Box|PHB',
+  'block of incense': 'Block of Incense|PHB',
+  censer: 'Censer|PHB',
+  'little bag of sand': 'Little Bag of Sand|PHB',
 };
 
 // PHB's "5 gp" is in copper pieces here (same unit as containsValue/
@@ -354,11 +367,23 @@ function substituteSingleItemPack(
   return component ? { resolved: component, quantityMultiplier: pack!.quantity } : { resolved: match, quantityMultiplier: 1 };
 }
 
+// A pack-content entry's own ref: either its `itemRef` directly (kind
+// 'item'), or - for a `kind: 'special'` entry like Priest's Pack's "alms
+// box" - the same EQUIPMENT_SPECIAL_ITEM_REFS redirect already used for
+// top-level `special` grants (see parseRawEntry above), so these resolve
+// through the identical synthetic-catalog-row mechanism instead of being
+// dropped. Undefined when there's no catalog row and no redirect for it.
+function packContentEntryRef(pc: MultiItemPackEntry): string | undefined {
+  return pc.kind === 'item' ? pc.itemRef : EQUIPMENT_SPECIAL_ITEM_REFS[pc.text.toLowerCase()];
+}
+
 function resolvePackContentRef(
-  pc: { itemRef: string; quantity: number },
+  pc: MultiItemPackEntry,
   index: Map<string, EquipmentLookupItem>
 ): { itemId: number; source: 'base_items' | 'items'; quantity: number } | undefined {
-  const innerMatch = index.get(refName(pc.itemRef).toLowerCase());
+  const ref = packContentEntryRef(pc);
+  if (!ref) return undefined;
+  const innerMatch = index.get(refName(ref).toLowerCase());
   if (!innerMatch) return undefined;
   const { resolved, quantityMultiplier } = substituteSingleItemPack(innerMatch, index);
   return { itemId: resolved.id, source: resolved.source, quantity: pc.quantity * quantityMultiplier };
@@ -426,7 +451,7 @@ export async function resolveEquipmentItemRefs(
     const nextRefs = allMatched
       .flatMap((matchedItem) => [
         matchedItem.singleItemPack?.itemRef,
-        ...(matchedItem.packContents?.map((pc) => pc.itemRef) ?? []),
+        ...(matchedItem.packContents?.map(packContentEntryRef) ?? []),
       ])
       .filter((ref): ref is string => ref !== undefined && !index.has(refName(ref).toLowerCase()));
     const uniqueNextRefs = [...new Set(nextRefs)];

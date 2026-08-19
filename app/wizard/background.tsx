@@ -430,8 +430,14 @@ export default function WizardBackgroundStep() {
 
   const requiredExpertiseSkillCount = EXPERTISE_CHOICE_COUNT - (expertiseUsesTool ? 1 : 0);
 
-  const allCategoryChoicesResolved = (toolEntries ?? []).every(
-    (entry, index) => entry.kind !== 'categoryChoice' || toolCategoryChoices[String(index)] != null
+  // 'unresolved' (DSL text the resolver didn't recognize) has no picker to
+  // recover through - unlike categoryChoice, it isn't a player choice, it's
+  // a data gap - so it blocks proceeding too. 'special' (e.g. vehicle
+  // proficiency) does NOT block: those are intentionally persisted as
+  // freeform text (CharacterSheet.freeformToolProficiencies), not dropped.
+  const allToolEntriesResolved = (toolEntries ?? []).every(
+    (entry, index) =>
+      entry.kind !== 'unresolved' && (entry.kind !== 'categoryChoice' || toolCategoryChoices[String(index)] != null)
   );
 
   const canProceed =
@@ -442,7 +448,7 @@ export default function WizardBackgroundStep() {
     (backgroundLanguageClause === null || backgroundLanguageSelected.length === backgroundLanguageClause.count) &&
     (!expertiseAllowed || expertiseSelected.length === requiredExpertiseSkillCount) &&
     toolEntries !== null &&
-    allCategoryChoicesResolved;
+    allToolEntriesResolved;
 
   function toggleExpertiseTool() {
     const next = !expertiseUsesTool;

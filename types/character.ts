@@ -233,6 +233,16 @@ export interface CharacterSheet {
   currency: Currency;
   inventoryItems: Record<string, InventoryItemState>;
   tools: Record<string, ToolState>;
+  // Proficiências de ferramenta "livres", concedidas por texto sem item de
+  // catálogo correspondente (ex.: "Veículos (terrestres/aquáticos)" dos
+  // antecedentes Herói do Povo/Soldado/Marinheiro) - produzidas por
+  // data/wizard/tool-proficiency-resolver.ts quando a entrada da DSL de
+  // tool_proficiencies não é nem uma ferramenta de catálogo nem uma escolha
+  // de categoria (kind: 'special'/'unresolved'). Sem estado de proficiente/
+  // especialização como ToolState - só a existência importa, já que não há
+  // bônus de ataque/perícia associado. Optional - absent for characters
+  // created before this existed.
+  freeformToolProficiencies?: string[];
   features: Record<string, FeatureItemState>;
   spells: Record<string, SpellItemState>;
   spellSlotsUsed: Record<string, number>;

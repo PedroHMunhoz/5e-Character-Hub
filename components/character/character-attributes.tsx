@@ -200,6 +200,7 @@ export function CharacterAttributes() {
   }
 
   const knownToolItems = (toolItems ?? []).filter((item) => character.tools[itemKey(item.source, item.id)] != null);
+  const freeformToolProficiencies = character.freeformToolProficiencies ?? [];
   const knownLanguages = (languages ?? []).filter((language) => character.languages.includes(language.id));
 
   const weaponCategories = character.weaponProficiencies?.categories ?? [];
@@ -302,21 +303,28 @@ export function CharacterAttributes() {
           <ThemedText style={styles.subSectionTitle}>Ferramentas</ThemedText>
           {toolItems === null ? (
             <ActivityIndicator color={goldColor} />
-          ) : knownToolItems.length === 0 ? (
+          ) : knownToolItems.length === 0 && freeformToolProficiencies.length === 0 ? (
             <ThemedText style={styles.emptyToolsText}>Nenhuma proficiência em ferramentas.</ThemedText>
           ) : (
-            knownToolItems.map((item) => {
-              const key = itemKey(item.source, item.id);
-              return (
-                <Pressable key={key} onPress={() => setOpenField({ type: 'tool', key, label: item.name })}>
-                  <ToolRow
-                    label={item.name}
-                    proficient={character.tools[key]?.proficient ?? false}
-                    expertise={character.tools[key]?.expertise ?? false}
-                  />
-                </Pressable>
-              );
-            })
+            <>
+              {knownToolItems.map((item) => {
+                const key = itemKey(item.source, item.id);
+                return (
+                  <Pressable key={key} onPress={() => setOpenField({ type: 'tool', key, label: item.name })}>
+                    <ToolRow
+                      label={item.name}
+                      proficient={character.tools[key]?.proficient ?? false}
+                      expertise={character.tools[key]?.expertise ?? false}
+                    />
+                  </Pressable>
+                );
+              })}
+              {freeformToolProficiencies.map((text, i) => (
+                <ThemedText key={`freeform-${i}`} style={styles.languageEntry}>
+                  • {text}
+                </ThemedText>
+              ))}
+            </>
           )}
         </View>
 

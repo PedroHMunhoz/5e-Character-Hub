@@ -29,6 +29,18 @@ function resolveEntry(entry: ResolvedEquipmentEntry, entryKey: string, categoryC
   return { kind: 'item', itemId: chosen.id, source: chosen.source, name: chosen.name, quantity: entry.quantity };
 }
 
+// A `kind: 'unresolved'` entry (DSL text the resolver didn't recognize)
+// has no picker to recover through - unlike categoryChoice, it isn't a
+// player choice, it's a data gap. Blocking canProceed on it turns what
+// would otherwise be a silently dropped grant (see assemble-character.ts's
+// `if (entry.kind !== 'item') continue`) into a visible stop, so it surfaces
+// immediately if a future non-PHB source ever produces one instead of
+// shipping a character missing gear nobody noticed was missing.
+function isEntryResolved(entry: ResolvedEquipmentEntry, entryKey: string, categoryChoices: Record<string, EquipmentLookupItem>): boolean {
+  if (entry.kind === 'unresolved') return false;
+  return entry.kind !== 'categoryChoice' || categoryChoices[entryKey] != null;
+}
+
 function isGroupResolved(
   group: EquipmentChoiceGroup,
   groupKey: string,
@@ -36,13 +48,13 @@ function isGroupResolved(
   categoryChoices: Record<string, EquipmentLookupItem>
 ): boolean {
   if (group.kind === 'fixed') {
-    return group.entries.every((entry, i) => entry.kind !== 'categoryChoice' || categoryChoices[`${groupKey}-fixed-${i}`] != null);
+    return group.entries.every((entry, i) => isEntryResolved(entry, `${groupKey}-fixed-${i}`, categoryChoices));
   }
   const optionKey = selectedOptionKeys[groupKey];
   if (!optionKey) return false;
   const option = group.options.find((o) => o.key === optionKey);
   if (!option) return false;
-  return option.entries.every((entry, i) => entry.kind !== 'categoryChoice' || categoryChoices[`${groupKey}-${optionKey}-${i}`] != null);
+  return option.entries.every((entry, i) => isEntryResolved(entry, `${groupKey}-${optionKey}-${i}`, categoryChoices));
 }
 
 function resolveGroupEntries(

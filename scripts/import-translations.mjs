@@ -162,6 +162,12 @@ const bookDirs = fs
   .readdirSync(translationsDir, { withFileTypes: true })
   .filter((e) => e.isDirectory() && !e.name.startsWith('_'));
 
+// One transaction for the whole run instead of an implicit auto-commit per
+// insertTranslation.run() call - each auto-commit was its own rollback-
+// journal create/fsync/delete cycle (~1000 of them across every book),
+// which is catastrophically slow on Windows (observed: 20+ minutes, vs.
+// under a second batched).
+db.exec('BEGIN');
 for (const book of bookDirs) {
   const bookDir = path.join(translationsDir, book.name);
   const files = fs.readdirSync(bookDir).filter((f) => f.endsWith('.json'));
@@ -190,6 +196,7 @@ for (const book of bookDirs) {
     }
   }
 }
+db.exec('COMMIT');
 
 db.close();
 console.log(`[translate] Inserted/updated ${inserted} translation rows (${args.locale}).`);

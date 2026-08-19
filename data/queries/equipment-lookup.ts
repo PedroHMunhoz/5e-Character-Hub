@@ -32,12 +32,15 @@ export interface EquipmentLookupItem {
   // populated by getItemsByNames; base_items never carries this (packs
   // only live in `items`).
   entries?: string[];
-  // Structured contents for a multi-item pack - the `kind: 'item'` entries
-  // from getMultiItemPackContents, still carrying unresolved refs (resolved
-  // to concrete ids by equipment-resolver.ts, same second pass that already
-  // resolves singleItemPack). `special`-kind entries (no catalog item) are
-  // dropped here - they can never become an inventory row.
-  packContents?: { itemRef: string; quantity: number }[];
+  // Structured contents for a multi-item pack - the full MultiItemPackEntry
+  // list from getMultiItemPackContents, still carrying unresolved refs
+  // (resolved to concrete ids by equipment-resolver.ts, same second pass
+  // that already resolves singleItemPack). `kind: 'special'` entries (no
+  // catalog item, e.g. "10 feet of string") are redirected through
+  // EQUIPMENT_SPECIAL_ITEM_REFS by equipment-resolver.ts's
+  // resolvePackContentRef, same mechanism already used for top-level
+  // `special` grants - not dropped here anymore (see docs/TODO.md).
+  packContents?: MultiItemPackEntry[];
 }
 
 // A 5etools item ref like "chain mail|phb" or bare "thieves' tools" (no
@@ -101,9 +104,7 @@ export async function getItemsByNames(db: SQLiteDatabase, refs: string[]): Promi
     englishName: row.name,
     singleItemPack: getSingleItemPackContents(row.details),
     entries: isMultiItemPack(row.details) ? localizedEntries(row.id, toEntries(row.entries), translations) : undefined,
-    packContents: getMultiItemPackContents(row.details)
-      ?.filter((entry): entry is Extract<MultiItemPackEntry, { kind: 'item' }> => entry.kind === 'item')
-      .map((entry) => ({ itemRef: entry.itemRef, quantity: entry.quantity })),
+    packContents: getMultiItemPackContents(row.details, row.name),
   }));
 }
 

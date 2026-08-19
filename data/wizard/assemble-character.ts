@@ -190,14 +190,22 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   ) as CharacterSheet['skills'];
 
   // Tools: resolved entirely by the background step (fixed grants +
-  // player-picked category choices) - only 'item' entries map to a
-  // concrete tool id; 'special'/'unresolved' entries have no db row to
-  // track proficiency against (see docs/TODO.md).
+  // player-picked category choices). 'item' entries map to a concrete tool
+  // id; 'special'/'unresolved' entries have no catalog row to track
+  // proficiency against, so they're persisted as freeform text instead
+  // (CharacterSheet.freeformToolProficiencies) rather than silently
+  // dropped - e.g. Folk Hero/Soldier/Sailor's vehicle proficiency.
   const tools: Record<string, ToolState> = {};
+  const freeformToolProficiencies: string[] = [];
   for (const entry of draft.toolProficiencies) {
-    if (entry.kind !== 'item') continue;
-    const key = itemKey(entry.source, entry.itemId);
-    tools[key] = { proficient: true, expertise: key === draft.expertiseToolChoice };
+    if (entry.kind === 'item') {
+      const key = itemKey(entry.source, entry.itemId);
+      tools[key] = { proficient: true, expertise: key === draft.expertiseToolChoice };
+    } else if (entry.kind === 'special') {
+      freeformToolProficiencies.push(entry.text);
+    } else if (entry.kind === 'unresolved') {
+      freeformToolProficiencies.push(String(entry.raw));
+    }
   }
 
   // Languages: race's fixed grant (Common + own language; a subrace's own
@@ -449,6 +457,7 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
     currency,
     inventoryItems,
     tools,
+    freeformToolProficiencies,
     features: {},
     spells,
     spellSlotsUsed: {},

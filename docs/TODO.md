@@ -393,10 +393,63 @@ InventoryItemState>` — cada registro é uma unidade física, com
   concedido só no nível 2 e o wizard nem pergunta subclasse de Druida
   hoje; ver card Trello "Círculo da Terra do Druida: magia bônus por
   bioma".
+- ~~Persistir proficiências "livres" (sem item de catálogo) na ficha~~ —
+  **resolvido**: proficiências de ferramenta que resolvem pra `kind:
+  'special'`/`'unresolved'` em vez de um item de catálogo (ex.: "Veículos
+  (terrestres/aquáticos)" do Herói do Povo/Soldado/Marinheiro, ver
+  `data/wizard/tool-proficiency-resolver.ts`) eram descartadas
+  silenciosamente em `assemble-character.ts` (`if (entry.kind !== 'item')
+  continue`). Novo campo `CharacterSheet.freeformToolProficiencies?:
+  string[]` (`types/character.ts`) guarda esses textos; exibidos como linhas
+  simples no fim da seção "Ferramentas" da aba Atributos
+  (`character-attributes.tsx`), sem toggle de proficiente/especialização
+  (não faz sentido pra esse tipo de entrada).
+
+  Investigando a mesma classe de bug, achei duas lacunas irmãs, corrigidas
+  junto:
+  - Conteúdo `special` de pacote multi-item também era descartado um nível
+    mais fundo (`getMultiItemPackContents`, `data/queries/base-items.ts`,
+    filtrado fora em `data/queries/equipment-lookup.ts`) — afetava Pacote de
+    Ladrão ("10 feet of string"), Pacote de Sacerdote ("alms box"/"block of
+    incense" x2/"censer"/"vestments") e Pacote de Estudioso ("little bag of
+    sand"/"small knife"). Mesmo mecanismo já usado pros 19 itens `special`
+    de antecedente (ver item acima): 5 linhas sintéticas novas em
+    `db/overrides/custom-items.json` + entrada em
+    `EQUIPMENT_SPECIAL_ITEM_REFS` (`data/wizard/equipment-resolver.ts`),
+    agora também consultada por `resolvePackContentRef` (que passou a
+    aceitar o `MultiItemPackEntry` completo, não só entradas `kind: 'item'`).
+  - `app/wizard/equipment.tsx` e `app/wizard/background.tsx`: o gate
+    `canProceed` só bloqueava avanço em `categoryChoice` não resolvido;
+    passou a bloquear também em `kind: 'unresolved'` (DSL não reconhecido,
+    sem picker de recuperação) — não em `'special'`, que agora é persistido
+    de propósito.
+
+  Achados durante a validação manual (não são regressão da mudança acima,
+  mas bugs adjacentes que ela expôs):
+  - `character-inventory.tsx` só respeitava a quantidade real armazenada
+    (badge + peso exibido) quando `def.category === 'consumable'`; qualquer
+    outro item da tabela `items` sempre mostrava quantidade "1", mesmo com
+    mais unidades guardadas. Corrigido pra usar a quantidade real sempre (a
+    badge só aparece quando > 1, pra não poluir os itens comuns de
+    quantidade única). "Block of Incense" também ganhou
+    `details.miscTags: ["CNS"]` (igual a "Sticks of Incense") pra virar
+    `consumable` de verdade.
+  - Pacote de Estudioso: o `packContents` bruto lista "parchment (one
+    sheet)|phb" como referência solta (quantidade implícita 1), mas o texto
+    do próprio pacote diz "10 sheets of parchment" — conferido nos 7 pacotes
+    multi-item da PHB, é a única inconsistência desse tipo. Corrigido com
+    uma tabela de correção pontual por pacote+item
+    (`PACK_CONTENT_QUANTITY_OVERRIDES`, `data/queries/base-items.ts`), não
+    global por referência (o mesmo item significa quantidade 5 em outro
+    contexto, a capacidade do item "Case, Map or Scroll").
+  - `scripts/import-translations.mjs` fazia ~900 inserções sem transação,
+    o que no Windows criava/apagava o journal file do SQLite a cada linha —
+    demorava 20+ minutos (ou travava de vez, dependendo do antivírus/outros
+    processos com o arquivo aberto). Envolvido em `BEGIN`/`COMMIT`; roda em
+    menos de 1 segundo agora.
 
 Pendências restantes (multiclasse, sourcebooks além do PHB, Patrulheiro UA,
 Humano Variante/talentos, magias de subclasse com escolha adicional,
-template de ancestralidade, Ataque Furtivo no dano da arma, proficiências
-livres, encumbrance opcional, e as pós-level-up no checklist do card
-"Implementar o Lvl Up de personagem"): ver board Trello "5e Character Hub",
-lista "A fazer".
+template de ancestralidade, Ataque Furtivo no dano da arma, encumbrance
+opcional, e as pós-level-up no checklist do card "Implementar o Lvl Up de
+personagem"): ver board Trello "5e Character Hub", lista "A fazer".
