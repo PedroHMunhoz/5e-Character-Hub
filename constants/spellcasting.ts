@@ -40,11 +40,16 @@ export const SPELLCASTING_RULES: Record<string, SpellcastingRule> = {
   Wizard: { cantripsKnown: 3, spellsKnownFixed: 6, maxPreparedFormula: true },
 };
 
-// PHB races that grant a cantrip outright at 1st level, outside any class
-// spellcasting flow (Tiefling's Infernal Legacy, PHB p.43) - keyed by the
-// race's raw English name (see data/queries/races.ts's Race.englishName).
-// Hellish Rebuke (3rd level) and Darkness (5th level) are intentionally
-// absent - the wizard only creates level-1 characters.
+// PHB races/subraces that grant a cantrip outright at 1st level, outside any
+// class spellcasting flow - keyed by the raw English name of either the base
+// race (Tiefling's Infernal Legacy, PHB p.43 - Tiefling has no subrace) or a
+// subrace (Drow's Drow Magic, PHB p.24; Forest Gnome's Natural Illusionist,
+// PHB p.37), matching Race.englishName (data/queries/races.ts) either way -
+// see getRaceGrantedSpellIds, which checks both. Hellish Rebuke (3rd level)
+// and Darkness (5th level) from Infernal Legacy are intentionally absent -
+// the wizard only creates level-1 characters.
 export const RACE_GRANTED_CANTRIPS: Record<string, string> = {
   Tiefling: 'Thaumaturgy',
+  Drow: 'Dancing Lights',
+  Forest: 'Minor Illusion',
 };

@@ -11,7 +11,7 @@ import {
   type LanguageChoiceClause,
 } from '@/components/wizard/language-choice-list';
 import { SkillChoiceList } from '@/components/wizard/skill-choice-list';
-import { ToolChoiceList } from '@/components/wizard/tool-choice-list';
+import { ToolChoiceList, type ChosenTool } from '@/components/wizard/tool-choice-list';
 import { WizardStepHeader } from '@/components/wizard/wizard-step-header';
 import { ThemedText } from '@/components/themed-text';
 import { SKILLS } from '@/constants/character';
@@ -83,6 +83,7 @@ export default function WizardBackgroundStep() {
     setExpertiseSkillChoices,
     setExpertiseToolChoice,
     setToolProficiencies,
+    setRaceToolProficiencies,
   } = useWizardDraft();
   const goldColor = useThemeColor({}, 'gold');
 
@@ -91,7 +92,13 @@ export default function WizardBackgroundStep() {
   const [race, setRace] = useState<Race | null>(null);
   const [subrace, setSubrace] = useState<Race | null>(null);
   const [expertiseAllowed, setExpertiseAllowed] = useState(false);
+  // Class + background tool grants only - kept apart from raceToolEntries
+  // below (merged only for display, see allToolEntries) so the Equipamento
+  // step's own "same type as your tool proficiency" reconciliation
+  // (data/wizard/tool-equipment-overlap.ts) never sees a race-granted tool
+  // and mistakes it for the class/background one it's meant to match.
   const [toolEntries, setToolEntries] = useState<ResolvedEquipmentEntry[] | null>(null);
+  const [raceToolEntries, setRaceToolEntries] = useState<ResolvedEquipmentEntry[] | null>(null);
   const [expertiseToolItem, setExpertiseToolItem] = useState<ToolItem | null>(null);
   const [allLanguages, setAllLanguages] = useState<Language[] | null>(null);
 
@@ -108,7 +115,7 @@ export default function WizardBackgroundStep() {
   );
   const [expertiseSelected, setExpertiseSelected] = useState<SkillKey[]>(draft.expertiseSkillChoices);
   const [expertiseUsesTool, setExpertiseUsesTool] = useState<boolean>(draft.expertiseToolChoice !== null);
-  const [toolCategoryChoices, setToolCategoryChoices] = useState<Record<string, ToolItem>>({});
+  const [toolCategoryChoices, setToolCategoryChoices] = useState<Record<string, ChosenTool>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -212,10 +219,11 @@ export default function WizardBackgroundStep() {
 
   const raceSkillCollisionClause: SkillChoiceClause | null = useMemo(() => {
     if (raceSkillChoiceCollisions.length === 0) return null;
-    return resolveSkillChoicePool(
-      { from: ALL_SKILL_KEYS, count: raceSkillChoiceCollisions.length },
-      [...backgroundSkills, ...raceSkillsFixed, ...draft.raceSkillChoices]
-    );
+    return resolveSkillChoicePool({ from: ALL_SKILL_KEYS, count: raceSkillChoiceCollisions.length }, [
+      ...backgroundSkills,
+      ...raceSkillsFixed,
+      ...draft.raceSkillChoices,
+    ]);
   }, [raceSkillChoiceCollisions, backgroundSkills, raceSkillsFixed, draft.raceSkillChoices]);
 
   // Effective race-granted skills used everywhere else on this screen
@@ -247,7 +255,9 @@ export default function WizardBackgroundStep() {
   }, [classDef, backgroundSkills, raceSkills]);
 
   // Resolve tool proficiencies (class + background combined) once both are
-  // known - re-runs whenever either changes.
+  // known - re-runs whenever either changes. Kept apart from race/subrace's
+  // own grant (see raceToolEntries below) - see the note on
+  // raceToolProficiencies in context/wizard-context.tsx for why.
   useEffect(() => {
     if (!classDef || !selectedBackground) {
       setToolEntries(null);
@@ -267,6 +277,30 @@ export default function WizardBackgroundStep() {
       cancelled = true;
     };
   }, [db, classDef, selectedBackground]);
+
+  // Race + subrace's own tool grant (Dwarf/Rock Gnome in the PHB) - resolved
+  // independently of class+background above (see toolEntries) so the
+  // Equipamento step's reconciliation never sees it. Doesn't depend on
+  // classDef/selectedBackground, so it can resolve as soon as race loads.
+  useEffect(() => {
+    if (!race) {
+      setRaceToolEntries(null);
+      return;
+    }
+    let cancelled = false;
+    const raceToolProfs = race.toolProficiencies;
+    const subraceToolProfs = subrace?.toolProficiencies;
+    const combined = [...((raceToolProfs as unknown[]) ?? []), ...((subraceToolProfs as unknown[]) ?? [])];
+    resolveToolProficiencies(db, combined).then((entries) => {
+      if (!cancelled) {
+        setRaceToolEntries(entries);
+        setToolCategoryChoices({});
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [db, race, subrace]);
 
   const proficientSkillPool = useMemo(
     () => [...new Set([...backgroundSkills, ...raceSkills, ...classSkillSelected])],
@@ -406,6 +440,15 @@ export default function WizardBackgroundStep() {
     [backgroundLanguageCrossDisabled, favoredEnemyDisabledEntries]
   );
 
+  // Combined only for display/interaction (one "Ferramentas" section, one
+  // picker list) - toolEntries/raceToolEntries stay separate arrays so
+  // handleNext below can save them back to the draft separately. Index
+  // positions here are what toolCategoryChoices is keyed by.
+  const allToolEntries = useMemo(
+    () => [...(toolEntries ?? []), ...(raceToolEntries ?? [])],
+    [toolEntries, raceToolEntries]
+  );
+
   // Whether the character actually has thieves' tools proficiency (from
   // class and/or background) - only then can Expertise swap a skill pick for
   // it. Checked against `toolEntries` (fixed grants, already resolved
@@ -435,9 +478,11 @@ export default function WizardBackgroundStep() {
   // a data gap - so it blocks proceeding too. 'special' (e.g. vehicle
   // proficiency) does NOT block: those are intentionally persisted as
   // freeform text (CharacterSheet.freeformToolProficiencies), not dropped.
-  const allToolEntriesResolved = (toolEntries ?? []).every(
+  const allToolEntriesResolved = allToolEntries.every(
     (entry, index) =>
-      entry.kind !== 'unresolved' && (entry.kind !== 'categoryChoice' || toolCategoryChoices[String(index)] != null)
+      entry.kind !== 'unresolved' &&
+      (entry.kind !== 'categoryChoice' || toolCategoryChoices[String(index)] != null) &&
+      (entry.kind !== 'namedChoice' || toolCategoryChoices[String(index)] != null)
   );
 
   const canProceed =
@@ -448,6 +493,7 @@ export default function WizardBackgroundStep() {
     (backgroundLanguageClause === null || backgroundLanguageSelected.length === backgroundLanguageClause.count) &&
     (!expertiseAllowed || expertiseSelected.length === requiredExpertiseSkillCount) &&
     toolEntries !== null &&
+    raceToolEntries !== null &&
     allToolEntriesResolved;
 
   function toggleExpertiseTool() {
@@ -459,14 +505,20 @@ export default function WizardBackgroundStep() {
   }
 
   function handleNext() {
-    if (!canProceed || !toolEntries) return;
+    if (!canProceed || !toolEntries || !raceToolEntries) return;
 
-    const finalToolEntries: ResolvedEquipmentEntry[] = toolEntries.map((entry, index) => {
-      if (entry.kind !== 'categoryChoice') return entry;
+    // Resolved over the combined display array (matching how
+    // toolCategoryChoices is keyed - see allToolEntries above), then split
+    // back into its two source arrays by position, so class+background and
+    // race+subrace grants land in their own separate draft fields.
+    const finalAllToolEntries: ResolvedEquipmentEntry[] = allToolEntries.map((entry, index) => {
+      if (entry.kind !== 'categoryChoice' && entry.kind !== 'namedChoice') return entry;
       const chosen = toolCategoryChoices[String(index)];
       if (!chosen) return entry;
       return { kind: 'item', itemId: chosen.id, source: chosen.source, name: chosen.name, quantity: 1 };
     });
+    const finalToolEntries = finalAllToolEntries.slice(0, toolEntries.length);
+    const finalRaceToolEntries = finalAllToolEntries.slice(toolEntries.length);
 
     setClassSkillChoices(classSkillSelected);
     if (raceSkillChoiceCollisions.length > 0) {
@@ -482,6 +534,7 @@ export default function WizardBackgroundStep() {
       expertiseUsesTool && expertiseToolItem ? itemKey(expertiseToolItem.source, expertiseToolItem.id) : null
     );
     setToolProficiencies(finalToolEntries);
+    setRaceToolProficiencies(finalRaceToolEntries);
     router.push('/wizard/equipment');
   }
 
@@ -653,11 +706,11 @@ export default function WizardBackgroundStep() {
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             Ferramentas
           </ThemedText>
-          {toolEntries === null ? (
+          {toolEntries === null || raceToolEntries === null ? (
             <ActivityIndicator color={goldColor} />
           ) : (
             <ToolChoiceList
-              entries={toolEntries}
+              entries={allToolEntries}
               categoryChoices={toolCategoryChoices}
               onChangeCategoryChoice={(entryKey, item) =>
                 setToolCategoryChoices((prev) => ({ ...prev, [entryKey]: item }))

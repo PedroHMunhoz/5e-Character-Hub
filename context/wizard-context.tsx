@@ -107,9 +107,20 @@ export interface WizardDraft {
   // picks (RAW: "one skill proficiency and your proficiency with thieves'
   // tools" - Rogue only). Null when both picks are ordinary skills.
   expertiseToolChoice: string | null;
-  // Resolved tool grants (fixed + player-picked category choices), see
-  // data/wizard/tool-proficiency-resolver.ts.
+  // Resolved tool grants from class + background (fixed + player-picked
+  // category choices), see data/wizard/tool-proficiency-resolver.ts.
   toolProficiencies: ResolvedEquipmentEntry[];
+  // Resolved tool grants from race + subrace (Dwarf/Rock Gnome in the PHB),
+  // kept separate from toolProficiencies above even though the Antecedente
+  // step (Passo 4) shows both in one combined "Ferramentas" list - the
+  // Equipamento step (Passo 5) reconciles its own "same type as your tool
+  // proficiency" categoryChoice entries (e.g. Guild Artisan's artisan's
+  // tools) against toolProficiencies only, and a race-granted tool of the
+  // same broad category (e.g. Dwarf's smith's tools, also "artisan") would
+  // wrongly make that reconciliation ambiguous if merged in - PHB's "same
+  // type" phrasing always refers back to that same background/class trait,
+  // never an unrelated racial one. See data/wizard/tool-equipment-overlap.ts.
+  raceToolProficiencies: ResolvedEquipmentEntry[];
 
   // Passo 5: Equipamento
   equipmentMode: EquipmentMode | null;
@@ -152,6 +163,7 @@ const initialDraft: WizardDraft = {
   expertiseSkillChoices: [],
   expertiseToolChoice: null,
   toolProficiencies: [],
+  raceToolProficiencies: [],
   // Defaults to 'starting' (not null) - the equipment step already renders
   // the class/background equipment section by default (the "gold" tab only
   // shows once explicitly picked), so the "Equipamento inicial" pill should
@@ -187,6 +199,7 @@ type Action =
   | { type: 'SET_EXPERTISE_SKILL_CHOICES'; keys: SkillKey[] }
   | { type: 'SET_EXPERTISE_TOOL_CHOICE'; key: string | null }
   | { type: 'SET_TOOL_PROFICIENCIES'; entries: ResolvedEquipmentEntry[] }
+  | { type: 'SET_RACE_TOOL_PROFICIENCIES'; entries: ResolvedEquipmentEntry[] }
   | { type: 'SET_EQUIPMENT_MODE'; mode: EquipmentMode | null }
   | { type: 'SET_CHOSEN_EQUIPMENT'; entries: ResolvedEquipmentEntry[] }
   | { type: 'SET_GOLD_ROLLED'; value: number | null }
@@ -296,6 +309,8 @@ function wizardReducer(state: WizardDraft, action: Action): WizardDraft {
       return { ...state, expertiseToolChoice: action.key };
     case 'SET_TOOL_PROFICIENCIES':
       return { ...state, toolProficiencies: action.entries };
+    case 'SET_RACE_TOOL_PROFICIENCIES':
+      return { ...state, raceToolProficiencies: action.entries };
     case 'SET_EQUIPMENT_MODE':
       return { ...state, equipmentMode: action.mode };
     case 'SET_CHOSEN_EQUIPMENT':
@@ -338,6 +353,7 @@ export interface WizardContextValue {
   setExpertiseSkillChoices: (keys: SkillKey[]) => void;
   setExpertiseToolChoice: (key: string | null) => void;
   setToolProficiencies: (entries: ResolvedEquipmentEntry[]) => void;
+  setRaceToolProficiencies: (entries: ResolvedEquipmentEntry[]) => void;
   setEquipmentMode: (mode: EquipmentMode | null) => void;
   setChosenEquipment: (entries: ResolvedEquipmentEntry[]) => void;
   setGoldRolled: (value: number | null) => void;
@@ -377,6 +393,7 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       setExpertiseSkillChoices: (keys) => dispatch({ type: 'SET_EXPERTISE_SKILL_CHOICES', keys }),
       setExpertiseToolChoice: (key) => dispatch({ type: 'SET_EXPERTISE_TOOL_CHOICE', key }),
       setToolProficiencies: (entries) => dispatch({ type: 'SET_TOOL_PROFICIENCIES', entries }),
+      setRaceToolProficiencies: (entries) => dispatch({ type: 'SET_RACE_TOOL_PROFICIENCIES', entries }),
       setEquipmentMode: (mode) => dispatch({ type: 'SET_EQUIPMENT_MODE', mode }),
       setChosenEquipment: (entries) => dispatch({ type: 'SET_CHOSEN_EQUIPMENT', entries }),
       setGoldRolled: (value) => dispatch({ type: 'SET_GOLD_ROLLED', value }),

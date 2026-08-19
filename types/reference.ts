@@ -138,6 +138,14 @@ export interface Race {
   // Raw JSON, {"name|source": true} groups - Dwarf, Drow, High Elf and Wood
   // Elf in the PHB. Resolved by data/wizard/weapon-proficiency-resolver.ts.
   weaponProficiencies: unknown;
+  // Raw JSON, same {name: true}/{anyX: count}/{choose: {from, count}} shape
+  // as Background.toolProficiencies / classes.starting_proficiencies.
+  // toolProficiencies - only Dwarf (choose 1 of smith's/brewer's/mason's
+  // tools, PHB "Tool Proficiency") and Rock Gnome (fixed tinker's tools,
+  // PHB "Tinker") have this in the PHB. Resolved by
+  // data/wizard/tool-proficiency-resolver.ts, reusing the same parsers as
+  // backgrounds/classes.
+  toolProficiencies: unknown;
 }
 
 export interface RacialTrait {

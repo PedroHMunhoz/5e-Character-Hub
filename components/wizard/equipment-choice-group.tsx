@@ -29,6 +29,11 @@ function describeEntry(entry: ResolvedEquipmentEntry): string {
   }
   if (entry.kind === 'special') return entry.text;
   if (entry.kind === 'categoryChoice') return entry.label;
+  // 'namedChoice' never actually reaches the equipment step in practice -
+  // only data/wizard/tool-proficiency-resolver.ts produces it, rendered by
+  // components/wizard/tool-choice-list.tsx instead - but ResolvedEquipmentEntry
+  // is a shared union, so this branch exists for exhaustiveness/type-safety.
+  if (entry.kind === 'namedChoice') return entry.label;
   return String(entry.raw);
 }
 

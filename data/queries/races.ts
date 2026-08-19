@@ -19,6 +19,7 @@ interface RaceRow {
   languages: string | null;
   armor_proficiencies: string | null;
   weapon_proficiencies: string | null;
+  tool_proficiencies: string | null;
 }
 
 interface RacialTraitRow {
@@ -45,6 +46,7 @@ function mapRaceRow(row: RaceRow, translations: TranslationDict): Race {
     languages: parseJson(row.languages),
     armorProficiencies: parseJson(row.armor_proficiencies),
     weaponProficiencies: parseJson(row.weapon_proficiencies),
+    toolProficiencies: parseJson(row.tool_proficiencies),
   };
 }
 

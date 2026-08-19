@@ -18,7 +18,19 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import { getAllToolItems, normalizeToolCategoryKey } from '@/data/queries/tools';
 import type { ResolvedEquipmentEntry } from './equipment-resolver';
 
-type RawToolProficiencyGroup = Record<string, boolean | number>;
+// The Dwarf's "Tool Proficiency" trait (PHB p.20) is the only PHB use of
+// this shape in tool_proficiencies - `{choose: {from: [...]}}`, an explicit
+// named list rather than a fixed grant (`true`) or a category count
+// (number). Resolved as `kind: 'namedChoice'`, not `categoryChoice` - the
+// PHB list (3 of the ~17 artisan's tools) is narrower than the "any
+// artisan's tool" category. Present in non-PHB backgrounds too (e.g. Tomb
+// of Annihilation's Archaeologist), but the wizard only reads source='PHB'
+// data, where it's exclusive to this one race trait.
+interface RawToolChooseValue {
+  from: string[];
+}
+
+type RawToolProficiencyGroup = Record<string, boolean | number | RawToolChooseValue>;
 
 // Vehicle proficiency isn't a tool at all (no catalog row, not a
 // artisan/instrument/gamingSet category) - PHB backgrounds (Folk Hero,
@@ -31,10 +43,7 @@ const VEHICLE_PROFICIENCY_LABELS: Record<string, string> = {
   'vehicles (water)': 'Veículos (aquáticos)',
 };
 
-export async function resolveToolProficiencies(
-  db: SQLiteDatabase,
-  raw: unknown
-): Promise<ResolvedEquipmentEntry[]> {
+export async function resolveToolProficiencies(db: SQLiteDatabase, raw: unknown): Promise<ResolvedEquipmentEntry[]> {
   const groups = (raw as RawToolProficiencyGroup[] | null) ?? [];
   const allTools = await getAllToolItems(db);
   // The DSL keys being matched below (e.g. "thieves' tools") are always
@@ -45,6 +54,19 @@ export async function resolveToolProficiencies(
   const entries: ResolvedEquipmentEntry[] = [];
   for (const group of groups) {
     for (const [key, value] of Object.entries(group)) {
+      if (key === 'choose' && typeof value === 'object' && value !== null && 'from' in value) {
+        const options = (value as RawToolChooseValue).from
+          .map((name) => byName.get(name.toLowerCase()))
+          .filter((tool): tool is (typeof allTools)[number] => tool != null)
+          .map((tool) => ({ itemId: tool.id, source: tool.source, name: tool.name }));
+        entries.push(
+          options.length > 0
+            ? { kind: 'namedChoice', label: 'ferramenta (à escolha)', quantity: 1, options }
+            : { kind: 'unresolved', raw: value }
+        );
+        continue;
+      }
+
       const category = normalizeToolCategoryKey(key);
       if (category) {
         entries.push({

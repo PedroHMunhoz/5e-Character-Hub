@@ -9,12 +9,17 @@ import type { ResolvedEquipmentEntry } from '@/data/wizard/equipment-resolver';
 import { orderEntriesForDisplay } from '@/utils/order-entries-for-display';
 import { sortByLocalizedName } from '@/utils/sort-by-name';
 
+// Minimal shape both a categoryChoice's DB-fetched ToolItem and a
+// namedChoice's already-resolved option satisfy - only `.id`/`.source`/
+// `.name` are ever read back out (see background.tsx's finalToolEntries).
+export type ChosenTool = { id: number; source: 'base_items' | 'items'; name: string };
+
 interface ToolChoiceListProps {
   entries: ResolvedEquipmentEntry[];
   // Keyed by entry index (as string) - only set once the player has picked
-  // a concrete tool for that entry's categoryChoice.
-  categoryChoices: Record<string, ToolItem>;
-  onChangeCategoryChoice: (entryKey: string, item: ToolItem) => void;
+  // a concrete tool for that entry's categoryChoice/namedChoice.
+  categoryChoices: Record<string, ChosenTool>;
+  onChangeCategoryChoice: (entryKey: string, item: ChosenTool) => void;
 }
 
 export function ToolChoiceList({ entries, categoryChoices, onChangeCategoryChoice }: ToolChoiceListProps) {
@@ -38,6 +43,16 @@ export function ToolChoiceList({ entries, categoryChoices, onChangeCategoryChoic
             <CategoryChoicePicker
               key={entryKey}
               equipmentType={entry.equipmentType}
+              selectedItemId={categoryChoices[entryKey]?.id ?? null}
+              onChange={(item) => onChangeCategoryChoice(entryKey, item)}
+            />
+          );
+        }
+        if (entry.kind === 'namedChoice') {
+          return (
+            <NamedChoicePicker
+              key={entryKey}
+              options={entry.options}
               selectedItemId={categoryChoices[entryKey]?.id ?? null}
               onChange={(item) => onChangeCategoryChoice(entryKey, item)}
             />
@@ -90,6 +105,32 @@ function CategoryChoicePicker({
       onChange={(value) => {
         const item = options.find((option) => option.id === Number(value));
         if (item) onChange(item);
+      }}
+    />
+  );
+}
+
+// Same picker UI as CategoryChoicePicker, but the options are already
+// resolved catalog rows (see ResolvedEquipmentEntry's `namedChoice` variant)
+// - no DB fetch needed, unlike a categoryChoice's whole-category lookup.
+function NamedChoicePicker({
+  options,
+  selectedItemId,
+  onChange,
+}: {
+  options: { itemId: number; source: 'base_items' | 'items'; name: string }[];
+  selectedItemId: number | null;
+  onChange: (item: ChosenTool) => void;
+}) {
+  const sorted = [...options].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  return (
+    <SelectField
+      label="Escolha a ferramenta"
+      value={selectedItemId !== null ? String(selectedItemId) : ''}
+      options={sorted.map((option) => ({ value: String(option.itemId), label: option.name }))}
+      onChange={(value) => {
+        const option = options.find((o) => o.itemId === Number(value));
+        if (option) onChange({ id: option.itemId, source: option.source, name: option.name });
       }}
     />
   );

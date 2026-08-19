@@ -243,9 +243,7 @@ runSection('classes', () => {
       // a `kind` discriminator so consumers can tell them apart.
       const rawAdditional = sc.additionalSpells;
       const singleEntry =
-        Array.isArray(rawAdditional) && rawAdditional.length === 1 && !rawAdditional[0].name
-          ? rawAdditional[0]
-          : null;
+        Array.isArray(rawAdditional) && rawAdditional.length === 1 && !rawAdditional[0].name ? rawAdditional[0] : null;
       const additionalSpells = singleEntry?.prepared
         ? { kind: 'prepared', byLevel: singleEntry.prepared }
         : singleEntry?.expanded
@@ -276,8 +274,8 @@ const raceMap = new Map(); // `${name}|${source}` -> id
 
 runSection('races', () => {
   const insertRace = db.prepare(
-    `INSERT INTO races (parent_race_id, name, source, srd, basic_rules, size, speed, ability_bonuses, skill_proficiencies, darkvision, resistances, languages, armor_proficiencies, weapon_proficiencies)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO races (parent_race_id, name, source, srd, basic_rules, size, speed, ability_bonuses, skill_proficiencies, darkvision, resistances, languages, armor_proficiencies, weapon_proficiencies, tool_proficiencies)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   );
   const insertRacialTrait = db.prepare(
     'INSERT INTO racial_traits (race_id, name, entries, sort_order) VALUES (?,?,?,?)'
@@ -303,7 +301,8 @@ runSection('races', () => {
       json(r.resist ?? null),
       json(r.languageProficiencies ?? null),
       json(r.armorProficiencies ?? null),
-      json(r.weaponProficiencies ?? null)
+      json(r.weaponProficiencies ?? null),
+      json(r.toolProficiencies ?? null)
     );
     const id = info.lastInsertRowid;
     // Only base races register themselves for subrace lookup. Subraces used

@@ -96,6 +96,12 @@ CREATE TABLE races (
   -- Dwarf, Drow, High Elf and Wood Elf have this in the PHB. Confirmed live
   -- against 5e-2014-data/races.json's weaponProficiencies field.
   weapon_proficiencies TEXT,
+  -- JSON, same {name: true}/{anyX: count}/{choose: {from, count}} shape as
+  -- backgrounds.tool_proficiencies - only Dwarf ({"choose":{"from":
+  -- ["smith's tools","brewer's supplies","mason's tools"]}}) and Rock Gnome
+  -- (fixed tinker's tools) have this in the PHB. Confirmed live against
+  -- 5e-2014-data/races.json's toolProficiencies field.
+  tool_proficiencies TEXT,
   -- parent_race_id is part of the key: a handful of subrace names (e.g.
   -- dragonmark variants) legitimately repeat across different base races.
   UNIQUE (parent_race_id, name, source)

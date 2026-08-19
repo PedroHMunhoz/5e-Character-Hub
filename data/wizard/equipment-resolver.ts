@@ -26,7 +26,12 @@
 
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { getBaseItemsByEquipmentType, getBaseItemsByNames, getItemsByNames, refName } from '@/data/queries/equipment-lookup';
+import {
+  getBaseItemsByEquipmentType,
+  getBaseItemsByNames,
+  getItemsByNames,
+  refName,
+} from '@/data/queries/equipment-lookup';
 import type { EquipmentLookupItem } from '@/data/queries/equipment-lookup';
 import type { MultiItemPackEntry } from '@/data/queries/base-items';
 import { EQUIPMENT_TYPE_LABELS } from '@/constants/equipment-types';
@@ -82,6 +87,20 @@ export type ResolvedEquipmentEntry =
       // `containsValueCp` on `kind: 'item'` entries (a pouch/purse with
       // money inside).
       valueCp?: number;
+    }
+  | {
+      // A choice among a small, explicitly named set of catalog items -
+      // distinct from `categoryChoice`, which offers every item in a whole
+      // category (e.g. "any artisan's tool", ~17 PHB options). Used by the
+      // Dwarf's "Tool Proficiency" trait (PHB p.20: choose smith's tools,
+      // brewer's supplies, OR mason's tools - 3 of the ~17 artisan's tools,
+      // not "any" of them) - see data/wizard/tool-proficiency-resolver.ts.
+      // Options are already resolved to catalog rows (no further DB lookup
+      // needed to render the picker), unlike categoryChoice.
+      kind: 'namedChoice';
+      label: string;
+      quantity: number;
+      options: { itemId: number; source: 'base_items' | 'items'; name: string }[];
     }
   | { kind: 'unresolved'; raw: unknown };
 
@@ -364,7 +383,9 @@ function substituteSingleItemPack(
 ): { resolved: EquipmentLookupItem; quantityMultiplier: number } {
   const pack = match.singleItemPack;
   const component = pack ? index.get(refName(pack.itemRef).toLowerCase()) : undefined;
-  return component ? { resolved: component, quantityMultiplier: pack!.quantity } : { resolved: match, quantityMultiplier: 1 };
+  return component
+    ? { resolved: component, quantityMultiplier: pack!.quantity }
+    : { resolved: match, quantityMultiplier: 1 };
 }
 
 // A pack-content entry's own ref: either its `itemRef` directly (kind

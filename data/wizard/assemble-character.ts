@@ -1,7 +1,9 @@
-// Builds the final, real CharacterSheet from a completed WizardDraft. Pure
-// assembly step - by the time this runs, every choice in the draft has
-// already been validated by its own step (see app/wizard/*.tsx's
-// `canProceed` gates), so this trusts the draft rather than re-validating.
+// Builds the final, real CharacterSheet from a completed WizardDraft. Every
+// choice below is normally already validated by its own step (see
+// app/wizard/*.tsx's `canProceed` gates) - this only re-checks presence
+// (was *something* picked for each mandatory choice), as a defensive
+// backstop against reaching this screen out of order; see the comment on
+// the `missingChoices` block inside assembleCharacter for why.
 
 import type { SQLiteDatabase } from 'expo-sqlite';
 
@@ -13,12 +15,22 @@ import { getSubraceDisplayName } from '@/constants/subrace-names';
 import { parseClassArmorProficiencies, parseRaceArmorProficiencies } from '@/data/wizard/armor-proficiency-resolver';
 import { getBackgroundById } from '@/data/queries/backgrounds';
 import { getBaseItemCategoriesByIds } from '@/data/queries/base-items';
-import { getClassById, getClassEnglishName, getSubclassById } from '@/data/queries/classes';
+import {
+  classGrantsExpertiseAtLevel1,
+  classGrantsFavoredEnemyAtLevel1,
+  classGrantsFavoredTerrainAtLevel1,
+  classGrantsFightingStyleAtLevel1,
+  classGrantsSubclassAtLevel1,
+  getClassById,
+  getClassEnglishName,
+  getSubclassById,
+} from '@/data/queries/classes';
 import { itemKey } from '@/data/queries/equipment-lookup';
 import { getFeatById } from '@/data/queries/feats';
 import { getAllLanguages } from '@/data/queries/languages';
 import { getOptionalFeatureById } from '@/data/queries/optional-features';
-import { getRaceById } from '@/data/queries/races';
+import { getAllRaces, getRaceById } from '@/data/queries/races';
+import { RACES_THAT_GRANT_A_FEAT } from '@/constants/race-feat-grants';
 import { getFeatAbilityBonuses } from '@/data/wizard/feat-ability-bonus';
 import {
   getClassGrantedLanguageNames,
@@ -26,8 +38,12 @@ import {
 } from '@/data/wizard/language-proficiency-resolver';
 import { combineAbilityBonuses, getResolvedRacialBonus } from '@/data/wizard/race-ability-bonus';
 import { getRaceGrantedSpellIds } from '@/data/wizard/race-granted-spells';
-import { parseBackgroundSkillProficiencies } from '@/data/wizard/skill-proficiency-resolver';
-import { resolveClassWeaponProficiencies, resolveRaceWeaponProficiencies } from '@/data/wizard/weapon-proficiency-resolver';
+import type { ResolvedEquipmentEntry } from '@/data/wizard/equipment-resolver';
+import { parseBackgroundSkillProficiencies, parseClassSkillChoice } from '@/data/wizard/skill-proficiency-resolver';
+import {
+  resolveClassWeaponProficiencies,
+  resolveRaceWeaponProficiencies,
+} from '@/data/wizard/weapon-proficiency-resolver';
 import { feetToMeters } from '@/utils/speed';
 import type { WizardDraft } from '@/context/wizard-context';
 import type {
@@ -127,15 +143,110 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
     throw new Error('assembleCharacter: failed to load race/class/background from the reference database');
   }
 
-  // Ability scores: base (from whichever method the player used) + racial
-  // bonus (fixed grants + whatever the player picked for a `choose` clause)
-  // + feat bonus (if the chosen feat has its own ability-bonus clause, e.g.
-  // Athlete). Variant Human REPLACES the standard Human's own fixed "+1 to
-  // all six" bonus with its own +1/+1 `choose` clause rather than adding to
-  // it - see the identical note in app/wizard/index.tsx and
-  // app/wizard/abilities.tsx.
+  // Variant Human REPLACES the standard Human's own fixed "+1 to all six"
+  // bonus with its own +1/+1 `choose` clause rather than adding to it - see
+  // the identical note in app/wizard/index.tsx and app/wizard/abilities.tsx.
+  // Computed once here (rather than separately for validation below and for
+  // ability-score assembly further down) since both need it.
   const isVariantHuman = subrace?.englishName === 'Variant';
-  const combinedBonuses = combineAbilityBonuses(isVariantHuman ? null : race.abilityBonuses, subrace?.abilityBonuses ?? null);
+  const combinedBonuses = combineAbilityBonuses(
+    isVariantHuman ? null : race.abilityBonuses,
+    subrace?.abilityBonuses ?? null
+  );
+
+  // Defensive re-validation: every choice below is normally already
+  // confirmed by its own step's `canProceed` gate before the player can
+  // reach Detalhes (see the file-level comment) - but expo-router's
+  // `<Stack>` doesn't structurally prevent reaching this screen out of
+  // order (e.g. browser back/forward on a web build), so nothing else
+  // guarantees it. These are presence checks (was *something* picked),
+  // not exact-count re-validation - the per-step gates already own getting
+  // the count right; this only exists to catch a step being skipped
+  // entirely, turning a silently incomplete character into a loud failure.
+  const missingChoices: string[] = [];
+  const raceBonusClause = combinedBonuses.choices[0];
+  if (raceBonusClause && Object.values(draft.abilityBonusChoices).every((v) => !v)) {
+    missingChoices.push('bônus de atributo racial');
+  }
+  const raceSkillClauseCheck =
+    parseClassSkillChoice(race.skillProficiencies) ??
+    (subrace ? parseClassSkillChoice(subrace.skillProficiencies) : null);
+  if (raceSkillClauseCheck && draft.raceSkillChoices.length === 0) missingChoices.push('perícia racial');
+  if (race.englishName === 'Dragonborn' && draft.draconicAncestry === null) missingChoices.push('linhagem dracônica');
+  if (subrace === null) {
+    const allRaces = await getAllRaces(db);
+    if (allRaces.some((r) => r.parentRaceId === race.id)) missingChoices.push('sub-raça');
+  }
+
+  if ((await classGrantsSubclassAtLevel1(db, classDef.id)) && subclass === null) {
+    missingChoices.push(classDef.subclassTitle ?? 'subclasse');
+  }
+  if ((await classGrantsFightingStyleAtLevel1(db, classDef.id)) && fightingStyle === null) {
+    missingChoices.push('estilo de luta');
+  }
+  if (await classGrantsFavoredEnemyAtLevel1(db, classDef.id)) {
+    if (draft.favoredEnemyType === null) {
+      missingChoices.push('inimigo favorito');
+    } else {
+      const humanoidRacesMissing =
+        draft.favoredEnemyType === FAVORED_ENEMY_HUMANOID_KEY &&
+        (draft.favoredEnemyHumanoidRaces[0] === null || draft.favoredEnemyHumanoidRaces[1] === null);
+      if (humanoidRacesMissing) missingChoices.push('raças humanoides do inimigo favorito');
+      const languagesMissing =
+        draft.favoredEnemyType === FAVORED_ENEMY_HUMANOID_KEY
+          ? draft.favoredEnemyLanguageIds[0] === null || draft.favoredEnemyLanguageIds[1] === null
+          : draft.favoredEnemyLanguageIds[0] === null;
+      if (!humanoidRacesMissing && languagesMissing) missingChoices.push('idioma do inimigo favorito');
+    }
+  }
+  if ((await classGrantsFavoredTerrainAtLevel1(db, classDef.id)) && draft.favoredTerrainType === null) {
+    missingChoices.push('terreno favorito');
+  }
+
+  if (draft.abilityMethod === null || ABILITIES.some((a) => draft.baseAbilityScores[a.key] === undefined)) {
+    missingChoices.push('valores de atributo');
+  }
+  if (subrace !== null && RACES_THAT_GRANT_A_FEAT.has(subrace.englishName)) {
+    if (draft.featId === null) {
+      missingChoices.push('talento');
+    } else if (feat && getFeatAbilityBonuses(feat.ability).choice && draft.featAbilityChoice === null) {
+      missingChoices.push('atributo do talento');
+    }
+  }
+
+  const classSkillsField = (classDef.startingProficiencies as { skills?: unknown } | null)?.skills;
+  if (parseClassSkillChoice(classSkillsField) && draft.classSkillChoices.length === 0) {
+    missingChoices.push('perícia de classe');
+  }
+  if ((await classGrantsExpertiseAtLevel1(db, classDef.id)) && draft.expertiseSkillChoices.length === 0) {
+    missingChoices.push('especialização');
+  }
+  const isToolEntryUnresolved = (entry: ResolvedEquipmentEntry) =>
+    entry.kind === 'unresolved' || entry.kind === 'categoryChoice' || entry.kind === 'namedChoice';
+  if (draft.toolProficiencies.some(isToolEntryUnresolved) || draft.raceToolProficiencies.some(isToolEntryUnresolved)) {
+    missingChoices.push('proficiência em ferramentas');
+  }
+
+  if (draft.equipmentMode === null) {
+    missingChoices.push('equipamento');
+  } else if (draft.equipmentMode === 'gold' && draft.goldRolled === null) {
+    missingChoices.push('ouro inicial');
+  }
+  if (draft.chosenEquipment.length === 0) missingChoices.push('equipamento');
+
+  if (classEnglishName && SPELLCASTING_RULES[classEnglishName] && draft.spellIds.length === 0) {
+    missingChoices.push('magias');
+  }
+  if (name.trim().length === 0) missingChoices.push('nome');
+
+  if (missingChoices.length > 0) {
+    throw new Error(`assembleCharacter: escolhas pendentes no wizard: ${[...new Set(missingChoices)].join(', ')}`);
+  }
+
+  // Ability scores: base (from whichever method the player used) + racial
+  // bonus (fixed grants + whatever the player picked for a `choose` clause,
+  // combinedBonuses computed above) + feat bonus (if the chosen feat has its
+  // own ability-bonus clause, e.g. Athlete).
   // Fixed component (e.g. Heavily Armored's flat +1 Strength, Actor's flat
   // +1 Charisma) applies unconditionally; the `choose` component (e.g.
   // Athlete's Strength-or-Dexterity) only applies once the player has
@@ -189,15 +300,19 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
     ])
   ) as CharacterSheet['skills'];
 
-  // Tools: resolved entirely by the background step (fixed grants +
-  // player-picked category choices). 'item' entries map to a concrete tool
-  // id; 'special'/'unresolved' entries have no catalog row to track
-  // proficiency against, so they're persisted as freeform text instead
-  // (CharacterSheet.freeformToolProficiencies) rather than silently
-  // dropped - e.g. Folk Hero/Soldier/Sailor's vehicle proficiency.
+  // Tools: resolved by the background step (class + background, fixed
+  // grants + player-picked category choices) plus race/subrace's own grant
+  // (Dwarf/Rock Gnome - kept as a separate draft field, see the note on
+  // raceToolProficiencies in context/wizard-context.tsx, but merged back
+  // together here since the final character doesn't care which step granted
+  // a proficiency). 'item' entries map to a concrete tool id; 'special'/
+  // 'unresolved' entries have no catalog row to track proficiency against,
+  // so they're persisted as freeform text instead (CharacterSheet.
+  // freeformToolProficiencies) rather than silently dropped - e.g. Folk
+  // Hero/Soldier/Sailor's vehicle proficiency.
   const tools: Record<string, ToolState> = {};
   const freeformToolProficiencies: string[] = [];
-  for (const entry of draft.toolProficiencies) {
+  for (const entry of [...draft.toolProficiencies, ...draft.raceToolProficiencies]) {
     if (entry.kind === 'item') {
       const key = itemKey(entry.source, entry.itemId);
       tools[key] = { proficient: true, expertise: key === draft.expertiseToolChoice };
@@ -386,7 +501,7 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   // run" shape as the Breath Weapon grant above). Skipped if the player
   // already picked the same cantrip through their class, so it isn't
   // double-listed or has its prepared state clobbered.
-  const raceGrantedSpellIds = await getRaceGrantedSpellIds(db, race.englishName);
+  const raceGrantedSpellIds = await getRaceGrantedSpellIds(db, race.englishName, subrace?.englishName ?? null);
   const classSpellEntries = draft.spellIds.map((id) => [String(id), { prepared: startsPrepared }] as const);
   const racialSpellEntries = raceGrantedSpellIds
     .filter((id) => !draft.spellIds.includes(id))
@@ -402,12 +517,20 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   const conTotal = Number(abilities.con.base) + abilities.con.racialBonus + (abilities.con.featBonus ?? 0);
   const conModifier = Math.floor((conTotal - 10) / 2);
   const isDraconicSorcerer = subclass?.shortName === 'Draconic';
+  // Dwarven Toughness (Hill Dwarf, PHB p.20): "+1 hit point, and it
+  // increases by 1 every time you gain a level" - +1 at level 1 here (a
+  // future level-up flow would need to add another +1 per level gained
+  // afterward).
+  const isHillDwarf = subrace?.englishName === 'Hill';
   // Tough (PHB p.171): "+2 hit points per character level" at the level it's
   // taken, i.e. +2 at level 1 here (the wizard only creates level-1
   // characters - a future level-up flow would need to add another +2 per
   // level gained afterward).
   const toughBonus = feat?.englishName === 'Tough' ? 2 : 0;
-  const maxHp = Math.max(1, (classDef.hitDieFaces ?? 8) + conModifier + (isDraconicSorcerer ? 1 : 0) + toughBonus);
+  const maxHp = Math.max(
+    1,
+    (classDef.hitDieFaces ?? 8) + conModifier + (isDraconicSorcerer ? 1 : 0) + (isHillDwarf ? 1 : 0) + toughBonus
+  );
 
   const raceDisplayName = subrace ? getSubraceDisplayName(subrace.englishName, subrace.name) : race.name;
   const classDisplayName = subclass ? `${classDef.name} (${subclass.name})` : classDef.name;
@@ -438,7 +561,13 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
     favoredTerrainType: draft.favoredTerrainType,
     favoredEnemyLanguageIds: draft.favoredEnemyLanguageIds,
     feats: feat
-      ? [{ featId: feat.id, englishName: feat.englishName, abilityChoice: featAbilityChoice } satisfies CharacterFeatState]
+      ? [
+          {
+            featId: feat.id,
+            englishName: feat.englishName,
+            abilityChoice: featAbilityChoice,
+          } satisfies CharacterFeatState,
+        ]
       : [],
     backgroundId: background.id,
     classes: [characterClass],

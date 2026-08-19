@@ -448,8 +448,72 @@ InventoryItemState>` — cada registro é uma unidade física, com
     processos com o arquivo aberto). Envolvido em `BEGIN`/`COMMIT`; roda em
     menos de 1 segundo agora.
 
+- **Cross-check de criação de 1º nível vs. PHB, direto no código (2026-08-19)**
+  — não achado por teste ao vivo no celular, mas lendo os 7 passos do wizard
+  + resolvers inteiros contra as regras do PHB, classe a classe/raça a raça
+  (continuação do cross-check de 2026-08-18 que gerou os cards #42 e #44).
+  Quatro lacunas, nenhuma delas registrada em card antes — **todas
+  resolvidas na mesma sessão**:
+  - `RACE_GRANTED_CANTRIPS` (`constants/spellcasting.ts`) só cobria o
+    Tiefling (Taumaturgia) — faltavam Drow (Luzes Dançantes, "Drow Magic")
+    e Gnomo da Floresta (Ilusão Menor, "Natural Illusionist"), e pior: a
+    função só olhava o nome da raça-base, nunca o da sub-raça, então um
+    grant de sub-raça como esses dois nunca teria funcionado mesmo estando
+    na tabela. `getRaceGrantedSpellIds` (`data/wizard/
+    race-granted-spells.ts`) agora recebe raça e sub-raça e olha as duas.
+  - "Dwarven Toughness" do Anão da Colina (+1 PV no 1º nível) nunca entrava
+    no cálculo de PV máximo (`data/wizard/assemble-character.ts`), apesar
+    dos bônus irmãos (Resiliência Dracônica do Feiticeiro, talento Rústico)
+    estarem bem ao lado no mesmo cálculo.
+  - Profíciência em ferramentas do Anão ("escolha entre ferramentas de
+    ferreiro/apetrechos de cervejeiro/ferramentas de pedreiro") e do Gnomo
+    da Rocha (ferramentas de reparo, fixa) não tinham nem coluna no schema
+    — `races` (`db/schema.sql`) só tinha perícia/armadura/arma/idioma, nunca
+    ferramenta, então essas duas características do PHB não podiam ter sido
+    importadas, muito menos oferecidas no wizard. Adicionada
+    `races.tool_proficiencies` (mesmo formato de `backgrounds.
+    tool_proficiencies`), populada no import
+    (`scripts/import-5e-data.mjs`) e exposta em `data/queries/races.ts`.
+    Como a escolha do Anão é "3 ferramentas nomeadas", não "qualquer
+    ferramenta de artesão" (~17 opções), ganhou um tipo de escolha novo,
+    `ResolvedEquipmentEntry.namedChoice` (`data/wizard/
+    equipment-resolver.ts`), distinto do `categoryChoice` já existente.
+  - `assembleCharacter` só validava `raceId`/`classId`/`backgroundId`
+    não-nulos, confiando que o `canProceed` de cada passo já teria barrado
+    qualquer outra coisa faltando — mas o `<Stack>` do expo-router não
+    impede estruturalmente chegar no passo Detalhes fora de ordem (ex.
+    voltar/avançar pelo navegador numa build web). Ganhou uma checagem de
+    presença (não de contagem exata — isso continua sendo papel do
+    `canProceed` de cada passo) pra cada escolha obrigatória antes de montar
+    a ficha; `app/wizard/details.tsx` agora mostra um alerta em vez de
+    travar em silêncio se isso algum dia disparar.
+
+  Achada e corrigida uma regressão introduzida pela própria correção da
+  ferramenta do Anão, validada ao vivo pelo usuário (Anão da Colina +
+  Artesão da Guilda + Guerreiro): juntar a ferramenta da raça no mesmo pool
+  de ferramentas de classe+antecedente quebrou a reconciliação "mesmo tipo
+  que sua proficiência em ferramentas" do Passo 5 Equipamento
+  (`data/wizard/tool-equipment-overlap.ts`) sempre que a escolha de artesão
+  do Anão caía na mesma categoria ampla de um grant não-relacionado (ex. o
+  próprio "qualquer ferramenta de artesão" do Artesão da Guilda) — a
+  reconciliação só auto-trava quando existe exatamente uma ferramenta
+  daquela categoria já concedida, e duas concessões não-relacionadas da
+  mesma categoria ampla faziam ela desistir, abrindo um segundo combo
+  confuso e não-preenchido em vez de travar automaticamente. Ferramentas de
+  raça/sub-raça agora resolvem pro próprio campo do draft
+  (`raceToolProficiencies`, `context/wizard-context.tsx`), mostradas juntas
+  com as de classe/antecedente numa lista só no Passo 4 pro jogador, mas
+  mantidas separadas pra reconciliação do Passo 5 e só remescladas na hora
+  de montar a ficha final.
+
+  Uma quinta lacuna (truque à escolha do Elfo Alto, "Cantrip" — magia de
+  Mago à escolha, PHB p.24) precisava de UI/estado novos em vez de uma
+  correção pontual, então virou card Trello #45 em vez de ser resolvida
+  nessa sessão.
+
 Pendências restantes (multiclasse, sourcebooks além do PHB, Patrulheiro UA,
 Humano Variante/talentos, magias de subclasse com escolha adicional,
 template de ancestralidade, Ataque Furtivo no dano da arma, encumbrance
-opcional, e as pós-level-up no checklist do card "Implementar o Lvl Up de
-personagem"): ver board Trello "5e Character Hub", lista "A fazer".
+opcional, truque à escolha do Elfo Alto, e as pós-level-up no checklist do
+card "Implementar o Lvl Up de personagem"): ver board Trello "5e Character
+Hub", lista "A fazer".

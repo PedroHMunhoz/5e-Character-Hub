@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
@@ -38,6 +38,16 @@ export default function WizardDetailsStep() {
       const character = await assembleCharacter(referenceDb, { draft, name: name.trim(), appearance });
       await createCharacter(charactersDb, character);
       router.replace({ pathname: '/sheet/[characterId]', params: { characterId: character.id } });
+    } catch (error) {
+      // Normally unreachable - assembleCharacter's own defensive validation
+      // only throws if a mandatory step was skipped (e.g. navigating out of
+      // order), which shouldn't happen through the wizard's own "Próximo"
+      // flow. Surfaced instead of left as a silent hang/crash if it ever is.
+      Alert.alert(
+        'Não foi possível criar o personagem',
+        'Volte pelos passos anteriores do wizard e confira se todas as escolhas foram feitas.' +
+          (error instanceof Error ? `\n\n${error.message}` : '')
+      );
     } finally {
       setCreating(false);
     }
