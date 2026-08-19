@@ -552,3 +552,15 @@ Hub", lista "A fazer".
   índice). Documentação completa (cobertura, estratégia, como estender) em
   `docs/testing.md`. Fase 2 (testes de componente pra bugs de exibição, não
   só de dado) registrada como próximo passo, não implementada.
+- ~~Humano comum (não Variante) travava a criação na tela final~~ —
+  **corrigido, achado pela suíte acima na primeira rodada** (273 de 4111
+  casos falhando, todos "Humano + qualquer classe + qualquer antecedente").
+  `assemble-character.ts` marcava "sub-raça" como pendente sempre que
+  existia qualquer linha com `parentRaceId` igual à raça escolhida -
+  incluindo a linha "Variant", que `app/wizard/index.tsx` já excluía da
+  lista de sub-raças reais (`race.englishName !== 'Variant'`). Resultado: um
+  jogador que escolhia Humano comum completava a wizard inteira sem nunca
+  ver um passo de sub-raça (a UI nunca pedia, porque a lista ficava vazia),
+  mas a montagem final falhava com `"escolhas pendentes: sub-raça"`.
+  Corrigido excluindo `englishName === 'Variant'` da checagem, mesmo padrão
+  já usado na tela de Raça.

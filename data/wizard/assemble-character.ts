@@ -174,8 +174,14 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   if (raceSkillClauseCheck && draft.raceSkillChoices.length === 0) missingChoices.push('perícia racial');
   if (race.englishName === 'Dragonborn' && draft.draconicAncestry === null) missingChoices.push('linhagem dracônica');
   if (subrace === null) {
+    // Variant Human isn't a real "pick a subrace" option (see the identical
+    // exclusion in app/wizard/index.tsx's `subraces` list) - it's surfaced
+    // as its own top-level Raça entry instead, so a plain Human never has a
+    // subrace step to complete and must not be flagged as missing one.
     const allRaces = await getAllRaces(db);
-    if (allRaces.some((r) => r.parentRaceId === race.id)) missingChoices.push('sub-raça');
+    if (allRaces.some((r) => r.parentRaceId === race.id && r.englishName !== 'Variant')) {
+      missingChoices.push('sub-raça');
+    }
   }
 
   if ((await classGrantsSubclassAtLevel1(db, classDef.id)) && subclass === null) {
