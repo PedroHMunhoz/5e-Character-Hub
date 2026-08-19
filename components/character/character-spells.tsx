@@ -69,6 +69,14 @@ export function CharacterSpells() {
   // ENTIRE class list each day, rather than knowing a fixed repertoire -
   // see docs/TODO.md.
   const isFullListCaster = rule?.preparedFromFullList ?? false;
+  // "Known" casters (Bard/Sorcerer/Warlock) learn a fixed repertoire with no
+  // daily preparation ritual - every known spell is always ready to cast,
+  // unlike Cleric/Druid (prepare from the full list each day,
+  // preparedFromFullList) or Wizard (prepares a daily subset of a larger
+  // spellbook, maxPreparedFormula). Mirrors the same detection
+  // data/wizard/assemble-character.ts uses to decide prepared:true at
+  // creation - see docs/TODO.md.
+  const isKnownCasterAlwaysPrepared = rule?.spellsKnownFixed !== undefined && !rule?.maxPreparedFormula;
 
   useEffect(() => {
     let cancelled = false;
@@ -184,10 +192,13 @@ export function CharacterSpells() {
   );
 
   const preparedCount = useMemo(() => {
-    return spells.filter(
-      (spell) => spell.level >= 1 && !domainSpellIds.has(spell.id) && character.spells[String(spell.id)]?.prepared
-    ).length;
-  }, [character.spells, spells, domainSpellIds]);
+    return spells.filter((spell) => {
+      if (spell.level < 1 || domainSpellIds.has(spell.id)) return false;
+      // Known casters always count as prepared, regardless of the stored
+      // toggle value - see isKnownCasterAlwaysPrepared above.
+      return isKnownCasterAlwaysPrepared || character.spells[String(spell.id)]?.prepared;
+    }).length;
+  }, [character.spells, spells, domainSpellIds, isKnownCasterAlwaysPrepared]);
 
   const normalizedSearch = search.trim().toLowerCase();
 
@@ -253,20 +264,25 @@ export function CharacterSpells() {
             <View style={styles.cardList}>
               {items.map((spell) => {
                 const isDomainSpell = domainSpellIds.has(spell.id);
+                // Domain spells (always-prepared bonus, don't count against
+                // the limit) and known-caster spells (always ready, no
+                // daily prep - see isKnownCasterAlwaysPrepared) both lock
+                // the checkbox permanently checked, for different rules
+                // reasons.
+                const isAlwaysPrepared = isDomainSpell || isKnownCasterAlwaysPrepared;
                 // Full-list casters (Cleric/Druid) see their whole class
                 // list, but can't prepare a spell above the highest level
                 // they currently have slots for.
                 const isLevelLocked = isFullListCaster && spell.level > maxCastableLevel;
                 const togglePreparedState = character.spells[String(spell.id)]?.prepared ?? false;
-                const displayPrepared = isDomainSpell || togglePreparedState;
+                const displayPrepared = isAlwaysPrepared || togglePreparedState;
                 // Once a class's known prepared limit is reached, only
                 // unpreparing an already-prepared spell stays allowed. The
                 // checkbox stays tappable either way (so the tap is
                 // intercepted here instead of bubbling into the row's
                 // "open spell detail" press) but warns and does nothing
                 // when blocked, and renders dimmed via CheckboxToggle.
-                // Domain spells are always prepared and can't be toggled at
-                // all - they don't count against the limit either.
+                // Always-prepared spells can't be toggled at all.
                 const atCap = showRealStats && preparedCount >= maxPrepared;
                 const canTogglePrepared = !isLevelLocked && (togglePreparedState || !atCap);
 
@@ -285,10 +301,10 @@ export function CharacterSpells() {
                       school={SPELL_SCHOOL_LABELS[spell.school] ?? spell.school}
                       ritual={spell.ritual}
                       prepared={section.level >= 1 ? displayPrepared : undefined}
-                      preparedDimmed={section.level >= 1 && !isDomainSpell && !canTogglePrepared}
+                      preparedDimmed={section.level >= 1 && !isAlwaysPrepared && !canTogglePrepared}
                       domainSpell={isDomainSpell}
                       onTogglePrepared={
-                        section.level >= 1 && !isDomainSpell
+                        section.level >= 1 && !isAlwaysPrepared
                           ? () => {
                               if (isLevelLocked) {
                                 setBlockedMessage(
