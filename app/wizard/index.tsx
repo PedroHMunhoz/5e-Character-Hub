@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { AbilityBonusChoice } from '@/components/wizard/ability-bonus-choice';
+import { SkillChoiceList } from '@/components/wizard/skill-choice-list';
 import { WizardStepHeader } from '@/components/wizard/wizard-step-header';
 import { SelectField } from '@/components/character/select-field';
 import { ThemedText } from '@/components/themed-text';
@@ -15,16 +16,19 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { useWizardDraft } from '@/context/wizard-context';
 import { getAllRaces } from '@/data/queries/races';
 import { combineAbilityBonuses } from '@/data/wizard/race-ability-bonus';
+import { parseClassSkillChoice } from '@/data/wizard/skill-proficiency-resolver';
 import { sortByLocalizedName } from '@/utils/sort-by-name';
-import type { AbilityKey } from '@/types/character';
+import type { AbilityKey, SkillKey } from '@/types/character';
 import type { Race } from '@/types/reference';
 
 export default function WizardRaceStep() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { draft, setRace, setSubrace, setAbilityBonusChoices, setDraconicAncestry } = useWizardDraft();
+  const { draft, setRace, setSubrace, setAbilityBonusChoices, setDraconicAncestry, setRaceSkillChoices } =
+    useWizardDraft();
   const goldColor = useThemeColor({}, 'gold');
   const [races, setRaces] = useState<Race[] | null>(null);
+  const [raceSkillSelected, setRaceSkillSelected] = useState<SkillKey[]>(draft.raceSkillChoices);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,12 +115,38 @@ export default function WizardRaceStep() {
   // race+subrace pair (only Half-Elf has one at all) - see combineAbilityBonuses.
   const bonusChoiceClause = combinedBonuses.choices[0];
 
+  // Race's own skill-choice clause - Half-Elf's Versatilidade em Perícias
+  // ({"any":2} on the race row) and Variant Human's "one skill proficiency
+  // of your choice" ({"any":1}, stored on the "Variant" subrace row, not the
+  // base Human row - see races.skill_proficiencies in db/schema.sql) are the
+  // only two in the PHB. No race+subrace pair ever has a clause on both at
+  // once, so checking the race first and falling back to the subrace is
+  // enough - no need to combine them. Resolved here, before class/background
+  // exist, so there's nothing to exclude yet - the Antecedente step (Passo
+  // 4) later reads draft.raceSkillChoices back as an already-fixed grant,
+  // the same way it reads Elf/Half-Orc's fixed skill.
+  const raceSkillClause = useMemo(() => {
+    if (!selectedRace) return null;
+    return (
+      parseClassSkillChoice(selectedRace.skillProficiencies) ??
+      (selectedSubrace ? parseClassSkillChoice(selectedSubrace.skillProficiencies) : null)
+    );
+  }, [selectedRace, selectedSubrace]);
+
   const needsSubrace = subraces.length > 0 && draft.subraceId === null;
   const needsBonusChoice = bonusChoiceClause
     ? Object.values(draft.abilityBonusChoices).filter((v) => v && v > 0).length < bonusChoiceClause.count
     : false;
+  const needsSkillChoice = raceSkillClause ? raceSkillSelected.length < raceSkillClause.count : false;
   const needsDraconicAncestry = isDragonborn && draft.draconicAncestry === null;
-  const canProceed = draft.raceId !== null && !needsSubrace && !needsBonusChoice && !needsDraconicAncestry;
+  const canProceed =
+    draft.raceId !== null && !needsSubrace && !needsBonusChoice && !needsSkillChoice && !needsDraconicAncestry;
+
+  function handleNext() {
+    if (!canProceed) return;
+    setRaceSkillChoices(raceSkillSelected);
+    router.push('/wizard/class');
+  }
 
   if (races === null) {
     return (
@@ -140,6 +170,13 @@ export default function WizardRaceStep() {
             if (!option) return;
             setRace(option.raceId);
             if (option.subraceId !== null) setSubrace(option.subraceId);
+            // raceSkillChoices already resets in the draft (SET_RACE/
+            // SET_SUBRACE reducer cases), but this is local component state
+            // (only committed to the draft on "Próximo") and doesn't pick
+            // that up on its own - without this it stays "selected"
+            // internally even once its skills disappear from the
+            // recomputed pool.
+            setRaceSkillSelected([]);
           }}
         />
 
@@ -157,7 +194,10 @@ export default function WizardRaceStep() {
               value: String(race.id),
               label: getSubraceDisplayName(race.englishName, race.name),
             }))}
-            onChange={(value) => setSubrace(Number(value))}
+            onChange={(value) => {
+              setSubrace(Number(value));
+              setRaceSkillSelected([]);
+            }}
           />
         ) : null}
 
@@ -192,6 +232,15 @@ export default function WizardRaceStep() {
           />
         ) : null}
 
+        {raceSkillClause ? (
+          <View style={styles.section}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Perícias raciais (escolha)
+            </ThemedText>
+            <SkillChoiceList clause={raceSkillClause} selected={raceSkillSelected} onChange={setRaceSkillSelected} />
+          </View>
+        ) : null}
+
         {selectedRace ? (
           <ThemedText style={styles.bonusSummary}>{formatBonusSummary(combinedBonuses.fixed)}</ThemedText>
         ) : null}
@@ -200,7 +249,7 @@ export default function WizardRaceStep() {
       <View style={[styles.footer, { borderColor: goldColor }]}>
         <Pressable
           disabled={!canProceed}
-          onPress={() => router.push('/wizard/class')}
+          onPress={handleNext}
           style={[styles.nextButton, { borderColor: goldColor, opacity: canProceed ? 1 : 0.4 }]}
         >
           <ThemedText style={[styles.nextButtonText, { color: goldColor }]}>Próximo</ThemedText>
@@ -234,6 +283,12 @@ const styles = StyleSheet.create({
   bonusSummary: {
     fontSize: 13,
     opacity: 0.7,
+  },
+  section: {
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 16,
   },
   field: {
     borderWidth: 1,

@@ -79,6 +79,73 @@ expertiseToolChoice`, guarda a `itemKey()` da ferramenta escolhida);
   `SkillProficiencyToggle` (mesmo componente 3-estados de perícia) em vez de
   um checkbox simples, e o modal de detalhamento em
   `character-attributes.tsx` dobra o bônus de proficiência quando aplicável.
+- ~~Perícia duplicada entre antecedente, raça e classe (card Trello
+  "Corrigir perícia duplicada...")~~ — **corrigido**: PHB p.127
+  ("Proficiências") diz que, ao colidir, o personagem "pode escolher outra
+  proficiência do mesmo tipo (perícia ou ferramenta)" em vez da repetida -
+  não talento/idioma, como o card sugeria (checado e descartado). Duas
+  lacunas: (1) o pool de escolha da classe (`app/wizard/background.tsx`) não
+  excluía as perícias já escolhidas na "Versatilidade em Perícias" do
+  Meio-Elfo (só excluía antecedente + raça fixa), permitindo duplicata
+  silenciosa que o `Set` de `assemble-character.ts` absorvia sem avisar; (2)
+  quando a filtragem esvaziava a lista restrita da classe abaixo do `count`
+  exigido (ex.: Clérigo, só 5 opções), não havia substituto, travando o
+  wizard. `data/wizard/skill-proficiency-resolver.ts` ganhou
+  `resolveSkillChoicePool(clause, alreadyGranted)`: filtra as já concedidas
+  e, se sobrarem menos opções que `count`, abre todas as perícias ainda não
+  concedidas (não só uma "de preenchimento" escolhida arbitrariamente pela
+  ordem do array). Aproveitando a correção, a escolha racial do Meio-Elfo
+  também migrou do Passo 4 (`background.tsx`) para o Passo 1
+  (`app/wizard/index.tsx`), junto com bônus de atributo/linhagem dracônica -
+  como raça é escolhida antes de classe/antecedente no wizard, isso elimina
+  de vez a colisão em vez de só filtrá-la (nada para excluir ainda nesse
+  passo) e deixa o fluxo mais natural para o jogador. `background.tsx` passou
+  a ler `draft.raceSkillChoices` como grant fixo (igual às perícias fixas de
+  Elfo/Meio-Orc), sem estado/lista de escolha própria. Achado no processo: o
+  Humano Variante ("uma perícia à sua escolha") também tem esse `choose`,
+  gravado em `races.skill_proficiencies` da linha "Variant" (id 186, fonte
+  PHB, `{"any":1}`), não da linha base "Human" - o comentário em
+  `db/schema.sql` dizia que só Elfo/Meio-Elfo/Meio-Orc tinham esse campo, o
+  que estava errado (corrigido). Como o `raceSkillClause` do Passo 1 já lê
+  raça + sub-raça de forma genérica, o Variante ganhou a escolha de perícia
+  de graça, sem código extra.
+- ~~Regressão: perícia racial escolhida no Passo 1 colidindo com o
+  antecedente do Passo 4 (achado ao vivo: Meio-Elfo Clérigo/Acólito,
+  escolheu Religião na raça, Acólito também fixa Religião - a escolha
+  "sumia" ao fechar a ficha)~~ — **corrigido**. Efeito colateral direto da
+  mudança acima: mover a escolha racial pro Passo 1 resolve a colisão
+  contra classe/antecedente-já-escolhido quando a raça é escolhida
+  *depois*, mas não cobre o caso oposto - antecedente é fixo (não é um
+  pool, não tem como "excluir" nada dele), e é escolhido *depois* da raça,
+  então uma perícia já escolhida na raça pode colidir com o antecedente sem
+  nenhum aviso, perdida em silêncio pelo `Set` de `assemble-character.ts`
+  (mesma classe de bug do card original, ângulo diferente).
+  `app/wizard/background.tsx` agora detecta
+  `raceSkillChoiceCollisions` (interseção entre `draft.raceSkillChoices` e
+  as perícias fixas do antecedente) e, quando não-vazia, abre uma seção
+  "Perícias raciais — substituição por colisão" com `resolveSkillChoicePool`
+  oferecendo `count = colisões.length` substitutas (qualquer perícia ainda
+  não concedida); `raceSkills` (usado pra excluir do pool da classe e pra
+  exibição) passou a ser fixo + escolhas-da-raça-não-colididas + essas
+  substitutas, e a lista final é regravada em `draft.raceSkillChoices` (via
+  `setRaceSkillChoices`, reimportado nesta tela) só quando há colisão.
+- ~~Magia de domínio fora da lista da classe não aparecia na ficha (ex.:
+  Identificação do Domínio do Conhecimento)~~ — **corrigido**: achado ao
+  vivo num Clérigo Meio-Elfo com Domínio do Conhecimento, que mostrava
+  Comando como magia de domínio mas não Identificação, a outra magia de
+  1º nível do domínio. `components/character/character-spells.tsx` já
+  resolvia `getSubclassAdditionalSpellsByLevel` em `domainSpellIds` e
+  marcava corretamente como sempre-preparada qualquer magia de domínio já
+  presente na lista normal da classe (Comando é magia de Clérigo) - mas
+  nunca mesclava esse id na lista `spells` de fato buscada quando a magia
+  de domínio não pertence à lista normal (Identificação é magia de Mago,
+  não de Clérigo). O efeito que busca `spells` para "full-list casters"
+  (Clérigo/Druida) só mesclava ids extras vindos de `character.spells`
+  (usado pro caso de magia racial fora da lista, ex. Taumaturgia de
+  Tiefling); passou a mesclar também `domainSpellIds`. Afeta os 7
+  Domínios do Clérigo do PHB core - ver card Trello "Cobrir magias de
+  subclasse com escolha adicional" pro que ainda falta (Círculo da Terra
+  do Druida, patronos do Bruxo).
 - ~~Distinção fina entre "magia conhecida" e "magia preparada hoje"~~ —
   **corrigido**: achado ao vivo num Mago nível 1 com INT +1, que mostrava
   "6/2" preparadas (grimório de 6 marcado todo como preparado, contra um

@@ -85,11 +85,14 @@ export interface WizardDraft {
   backgroundId: number | null;
   classSkillChoices: SkillKey[];
   // Skills chosen for a race's own `choose` clause (only Half-Elf's
-  // Versatilidade em Perícias has one in the PHB) - kept separate from
-  // classSkillChoices since they're resolved from a different pool/section
-  // in app/wizard/background.tsx. Fixed race skills (Elf/Half-Orc) aren't
-  // stored here - they're re-derived from the race's own skillProficiencies
-  // whenever needed, same as fixed ability bonuses.
+  // Versatilidade em Perícias has one in the PHB) - resolved in the Raça
+  // step (app/wizard/index.tsx) alongside the ability-bonus choice, since
+  // it's decided before class/background exist and needs no cross-exclusion
+  // against them. Kept in its own field (not merged into classSkillChoices)
+  // since the Antecedente step (Passo 4) reads it back as an already-fixed
+  // grant, the same way it reads fixed race skills (Elf/Half-Orc). Those
+  // fixed skills aren't stored here - they're re-derived from the race's own
+  // skillProficiencies whenever needed, same as fixed ability bonuses.
   raceSkillChoices: SkillKey[];
   // Language ids (data/queries/languages.ts's Language.id) picked for the
   // race's own anyStandard choice (e.g. Human, Half-Elf, High Elf) and the
@@ -212,6 +215,7 @@ function wizardReducer(state: WizardDraft, action: Action): WizardDraft {
         ...state,
         subraceId: action.subraceId,
         abilityBonusChoices: {},
+        raceSkillChoices: [],
         raceLanguageChoices: [],
         featId: null,
         featAbilityChoice: null,

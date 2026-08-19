@@ -79,7 +79,7 @@ CREATE TABLE races (
   size TEXT NOT NULL, -- JSON array, e.g. ["M"]
   speed INTEGER,
   ability_bonuses TEXT, -- JSON
-  skill_proficiencies TEXT, -- JSON, same {name: true}/{any: count} shape as backgrounds.skill_proficiencies / classes.starting_proficiencies.skills - only Elf ({"perception":true}), Half-Elf ({"any":2}) and Half-Orc ({"intimidation":true}) have this in the PHB
+  skill_proficiencies TEXT, -- JSON, same {name: true}/{any: count} shape as backgrounds.skill_proficiencies / classes.starting_proficiencies.skills - in the PHB: Elf ({"perception":true}), Half-Elf ({"any":2}), Half-Orc ({"intimidation":true}), and the Variant Human subrace row ({"any":1}, parent_race_id = Human's row - see the "Variant" handling in scripts/import-5e-data.mjs)
   darkvision INTEGER,
   resistances TEXT, -- JSON array
   languages TEXT, -- JSON

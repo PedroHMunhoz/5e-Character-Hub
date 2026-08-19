@@ -25,8 +25,10 @@ import { getToolItemByEnglishName, type ToolItem } from '@/data/queries/tools';
 import type { ResolvedEquipmentEntry } from '@/data/wizard/equipment-resolver';
 import { parseFixedLanguageEnglishNames, parseLanguageChoiceCount } from '@/data/wizard/language-proficiency-resolver';
 import {
+  ALL_SKILL_KEYS,
   parseBackgroundSkillProficiencies,
   parseClassSkillChoice,
+  resolveSkillChoicePool,
   type SkillChoiceClause,
 } from '@/data/wizard/skill-proficiency-resolver';
 import { resolveToolProficiencies } from '@/data/wizard/tool-proficiency-resolver';
@@ -94,7 +96,12 @@ export default function WizardBackgroundStep() {
   const [allLanguages, setAllLanguages] = useState<Language[] | null>(null);
 
   const [classSkillSelected, setClassSkillSelected] = useState<SkillKey[]>(draft.classSkillChoices);
-  const [raceSkillSelected, setRaceSkillSelected] = useState<SkillKey[]>(draft.raceSkillChoices);
+  // Replacement pick(s) for a Raça-step skill choice that collides with the
+  // background's fixed grant - see raceSkillChoiceCollisions below. Not
+  // initialized from the draft (unlike the other selections here) since
+  // there's nothing to resume: the collision, if any, is only known once a
+  // background is picked on this same screen.
+  const [raceSkillCollisionReplacement, setRaceSkillCollisionReplacement] = useState<SkillKey[]>([]);
   const [raceLanguageSelected, setRaceLanguageSelected] = useState<number[]>(draft.raceLanguageChoices);
   const [backgroundLanguageSelected, setBackgroundLanguageSelected] = useState<number[]>(
     draft.backgroundLanguageChoices
@@ -183,24 +190,43 @@ export default function WizardBackgroundStep() {
   );
 
   // Fixed (non-`choose`) race-granted skills, e.g. Elf's Percepção or
-  // Half-Orc's Intimidação. No PHB subrace carries its own
-  // skillProficiencies, but both are checked in case that changes with a
-  // future sourcebook.
-  const raceSkills = useMemo(() => {
+  // Half-Orc's Intimidação. No PHB subrace carries its own fixed
+  // skillProficiencies, but it's checked in case that changes with a future
+  // sourcebook.
+  const raceSkillsFixed = useMemo(() => {
     const fromRace = race ? parseBackgroundSkillProficiencies(race.skillProficiencies) : [];
     const fromSubrace = subrace ? parseBackgroundSkillProficiencies(subrace.skillProficiencies) : [];
     return [...new Set([...fromRace, ...fromSubrace])];
   }, [race, subrace]);
 
-  // Race's own `choose` clause, e.g. Half-Elf's Versatilidade em Perícias
-  // ("choose 2 skills of your choice"). Only Half-Elf has one in the PHB.
-  const raceSkillClause: SkillChoiceClause | null = useMemo(() => {
-    if (!race) return null;
-    return (
-      parseClassSkillChoice(race.skillProficiencies) ??
-      (subrace ? parseClassSkillChoice(subrace.skillProficiencies) : null)
+  // A skill the player picked in the Raça step (Half-Elf/Variant Human's
+  // `choose` clause) can turn out to collide with the background's fixed
+  // grant - background is picked afterward, on this screen, so there was no
+  // way to exclude it at pick time. PHB p.127 says the player swaps the
+  // collided pick for a different skill instead of losing it - see the
+  // replacement pool below.
+  const raceSkillChoiceCollisions = useMemo(
+    () => draft.raceSkillChoices.filter((key) => backgroundSkills.includes(key)),
+    [draft.raceSkillChoices, backgroundSkills]
+  );
+
+  const raceSkillCollisionClause: SkillChoiceClause | null = useMemo(() => {
+    if (raceSkillChoiceCollisions.length === 0) return null;
+    return resolveSkillChoicePool(
+      { from: ALL_SKILL_KEYS, count: raceSkillChoiceCollisions.length },
+      [...backgroundSkills, ...raceSkillsFixed, ...draft.raceSkillChoices]
     );
-  }, [race, subrace]);
+  }, [raceSkillChoiceCollisions, backgroundSkills, raceSkillsFixed, draft.raceSkillChoices]);
+
+  // Effective race-granted skills used everywhere else on this screen
+  // (display + excluding from the class's own pool below): fixed grants,
+  // whatever the player picked in the Raça step that DIDN'T collide with
+  // this background, and whatever they picked here as a replacement for
+  // what did.
+  const raceSkills = useMemo(() => {
+    const nonCollidingChoices = draft.raceSkillChoices.filter((key) => !backgroundSkills.includes(key));
+    return [...new Set([...raceSkillsFixed, ...nonCollidingChoices, ...raceSkillCollisionReplacement])];
+  }, [raceSkillsFixed, draft.raceSkillChoices, backgroundSkills, raceSkillCollisionReplacement]);
 
   const classSkillClause: SkillChoiceClause | null = useMemo(() => {
     if (!classDef) return null;
@@ -211,13 +237,13 @@ export default function WizardBackgroundStep() {
     const skillsField = (classDef.startingProficiencies as { skills?: unknown } | null)?.skills;
     const raw = parseClassSkillChoice(skillsField);
     if (!raw) return null;
-    // Don't let the player pick (again) a skill the background/race already
-    // grants for free - the simplification documented in docs/TODO.md
-    // (RAW would let them swap it for a feat/language instead).
-    return {
-      from: raw.from.filter((key) => !backgroundSkills.includes(key) && !raceSkills.includes(key)),
-      count: raw.count,
-    };
+    // Don't let the player pick (again) a skill already granted by
+    // background or race (fixed traits + the race's own skill choice,
+    // already folded into raceSkills above) - PHB p.127 lets them swap a
+    // collided pick for a different skill instead, which
+    // resolveSkillChoicePool also backs into when the class's own list runs
+    // dry from too much overlap (see docs/TODO.md).
+    return resolveSkillChoicePool(raw, [...backgroundSkills, ...raceSkills]);
   }, [classDef, backgroundSkills, raceSkills]);
 
   // Resolve tool proficiencies (class + background combined) once both are
@@ -242,18 +268,9 @@ export default function WizardBackgroundStep() {
     };
   }, [db, classDef, selectedBackground]);
 
-  // Excludes skills already granted/chosen elsewhere so the player doesn't
-  // spend Half-Elf's free choice on a skill they'd already have anyway.
-  const raceSkillChoicePool = useMemo(() => {
-    if (!raceSkillClause) return [];
-    return raceSkillClause.from.filter(
-      (key) => !backgroundSkills.includes(key) && !raceSkills.includes(key) && !classSkillSelected.includes(key)
-    );
-  }, [raceSkillClause, backgroundSkills, raceSkills, classSkillSelected]);
-
   const proficientSkillPool = useMemo(
-    () => [...new Set([...backgroundSkills, ...raceSkills, ...classSkillSelected, ...raceSkillSelected])],
-    [backgroundSkills, raceSkills, classSkillSelected, raceSkillSelected]
+    () => [...new Set([...backgroundSkills, ...raceSkills, ...classSkillSelected])],
+    [backgroundSkills, raceSkills, classSkillSelected]
   );
 
   const languageByEnglishName = useMemo(
@@ -420,7 +437,7 @@ export default function WizardBackgroundStep() {
   const canProceed =
     draft.backgroundId !== null &&
     (classSkillClause === null || classSkillSelected.length === classSkillClause.count) &&
-    (raceSkillClause === null || raceSkillSelected.length === raceSkillClause.count) &&
+    (raceSkillCollisionClause === null || raceSkillCollisionReplacement.length === raceSkillCollisionClause.count) &&
     (raceLanguageClause === null || raceLanguageSelected.length === raceLanguageClause.count) &&
     (backgroundLanguageClause === null || backgroundLanguageSelected.length === backgroundLanguageClause.count) &&
     (!expertiseAllowed || expertiseSelected.length === requiredExpertiseSkillCount) &&
@@ -446,7 +463,12 @@ export default function WizardBackgroundStep() {
     });
 
     setClassSkillChoices(classSkillSelected);
-    setRaceSkillChoices(raceSkillSelected);
+    if (raceSkillChoiceCollisions.length > 0) {
+      setRaceSkillChoices([
+        ...draft.raceSkillChoices.filter((key) => !backgroundSkills.includes(key)),
+        ...raceSkillCollisionReplacement,
+      ]);
+    }
     setRaceLanguageChoices(raceLanguageSelected);
     setBackgroundLanguageChoices(backgroundLanguageSelected);
     setExpertiseSkillChoices(expertiseSelected);
@@ -483,7 +505,7 @@ export default function WizardBackgroundStep() {
             // internally even once their skills disappear from the
             // recomputed pool, silently blocking new picks.
             setClassSkillSelected([]);
-            setRaceSkillSelected([]);
+            setRaceSkillCollisionReplacement([]);
             setRaceLanguageSelected([]);
             setBackgroundLanguageSelected([]);
             setExpertiseSelected([]);
@@ -521,25 +543,30 @@ export default function WizardBackgroundStep() {
           </View>
         ) : null}
 
+        {raceSkillCollisionClause ? (
+          <View style={styles.section}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Perícias raciais — substituição por colisão
+            </ThemedText>
+            <ThemedText style={styles.fixedEntry}>
+              {raceSkillChoiceCollisions.map((key) => LABEL_BY_SKILL_KEY[key]).join(', ')}{' '}
+              {raceSkillChoiceCollisions.length === 1 ? 'já é' : 'já são'} concedida pelo antecedente - escolha
+              {raceSkillChoiceCollisions.length === 1 ? ' outra perícia' : ' outras perícias'} no lugar (PHB p.127).
+            </ThemedText>
+            <SkillChoiceList
+              clause={raceSkillCollisionClause}
+              selected={raceSkillCollisionReplacement}
+              onChange={setRaceSkillCollisionReplacement}
+            />
+          </View>
+        ) : null}
+
         {classSkillClause ? (
           <View style={styles.section}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Perícias de classe
             </ThemedText>
             <SkillChoiceList clause={classSkillClause} selected={classSkillSelected} onChange={setClassSkillSelected} />
-          </View>
-        ) : null}
-
-        {raceSkillClause ? (
-          <View style={styles.section}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
-              Perícias raciais (escolha)
-            </ThemedText>
-            <SkillChoiceList
-              clause={{ from: raceSkillChoicePool, count: raceSkillClause.count }}
-              selected={raceSkillSelected}
-              onChange={setRaceSkillSelected}
-            />
           </View>
         ) : null}
 

@@ -79,16 +79,22 @@ export function CharacterSpells() {
     // rather than character.spells - but a racial/off-list spell recorded in
     // character.spells (e.g. a Tiefling Druid's granted Thaumaturgy, not on
     // Druid's own list) still needs to be merged in, or it'd never render.
+    // Same deal for a domain/circle spell that isn't already on the class's
+    // own list (e.g. Knowledge Domain's Identify, not a Cleric spell) -
+    // getSubclassAdditionalSpellsByLevel resolves it into domainSpellIds and
+    // the render loop is ready to flag it as always-prepared, but it still
+    // has to be merged into `spells` here first or it's never fetched at all.
+    const extraSourceIds = [...new Set([...spellIds, ...domainSpellIds])];
     const spellsPromise =
       isFullListCaster && englishName
         ? getSpellsForClass(db, englishName).then(async (classSpells) => {
             const classSpellIds = new Set(classSpells.map((spell) => spell.id));
-            const extraIds = spellIds.filter((id) => !classSpellIds.has(id));
+            const extraIds = extraSourceIds.filter((id) => !classSpellIds.has(id));
             if (extraIds.length === 0) return classSpells;
             const extraSpells = await getSpellsByIds(db, extraIds);
             return [...classSpells, ...extraSpells];
           })
-        : getSpellsByIds(db, spellIds);
+        : getSpellsByIds(db, extraSourceIds);
 
     spellsPromise.then((data) => {
       if (cancelled) return;
@@ -110,7 +116,7 @@ export function CharacterSpells() {
       cancelled = true;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [db, spellIds, isFullListCaster, englishName]);
+  }, [db, spellIds, isFullListCaster, englishName, domainSpellIds]);
 
   // Always-prepared bonus spells granted by the character's subclass (e.g.
   // Cleric domain spells) - don't count against the prepared limit and
