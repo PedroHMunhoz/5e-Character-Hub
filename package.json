@@ -12,7 +12,9 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -49,7 +51,8 @@
     "eslint-config-expo": "~10.0.0",
     "pdf-parse": "^2.4.5",
     "prettier": "3.9.6",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "vitest": "^4.1.11"
   },
   "private": true
 }

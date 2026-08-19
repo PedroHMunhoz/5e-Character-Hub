@@ -31,6 +31,7 @@ import {
 } from '@/data/queries/classes';
 import { getAllLanguages, type Language } from '@/data/queries/languages';
 import { getFightingStyleOptions } from '@/data/queries/optional-features';
+import { canProceedFromClassStep } from '@/data/wizard/step-validation';
 import { sortByLocalizedName, subclassSortKey } from '@/utils/sort-by-name';
 import type { CharacterClassDefinition, OptionalFeatureDefinition, SubclassDefinition } from '@/types/reference';
 
@@ -269,16 +270,20 @@ export default function WizardClassStep() {
     ? draft.favoredEnemyLanguageIds[0] !== null && draft.favoredEnemyLanguageIds[1] !== null
     : draft.favoredEnemyLanguageIds[0] !== null;
 
-  const canProceed =
-    draft.classId !== null &&
-    (!needsSubclassChoice || draft.subclassId !== null) &&
-    (!needsFightingStyle || draft.fightingStyleId !== null) &&
-    (!needsFavoredEnemy ||
-      (draft.favoredEnemyType !== null &&
-        (!isHumanoidFavoredEnemy ||
-          (draft.favoredEnemyHumanoidRaces[0] !== null && draft.favoredEnemyHumanoidRaces[1] !== null)) &&
-        favoredEnemyLanguagesResolved)) &&
-    (!needsFavoredTerrain || draft.favoredTerrainType !== null);
+  const canProceed = canProceedFromClassStep({
+    classId: draft.classId,
+    needsSubclassChoice,
+    subclassId: draft.subclassId,
+    needsFightingStyle,
+    fightingStyleId: draft.fightingStyleId,
+    needsFavoredEnemy,
+    favoredEnemyType: draft.favoredEnemyType,
+    isHumanoidFavoredEnemy,
+    favoredEnemyHumanoidRaces: draft.favoredEnemyHumanoidRaces,
+    favoredEnemyLanguagesResolved,
+    needsFavoredTerrain,
+    favoredTerrainType: draft.favoredTerrainType,
+  });
 
   if (classes === null) {
     return (

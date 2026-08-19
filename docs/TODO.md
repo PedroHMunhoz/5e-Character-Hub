@@ -517,3 +517,38 @@ template de ancestralidade, Ataque Furtivo no dano da arma, encumbrance
 opcional, truque à escolha do Elfo Alto, e as pós-level-up no checklist do
 card "Implementar o Lvl Up de personagem"): ver board Trello "5e Character
 Hub", lista "A fazer".
+
+## Testes automatizados
+
+- **Análise: consertar o bug de Expo Web (OPFS) vs. implementar testes
+  unitários (2026-08-19)** — testes manuais de regressão (raça × classe ×
+  subclasse × antecedente, um a um no celular) ficaram caros demais depois
+  que um bug de OPFS (`FileSystemSyncAccessHandle` só permite um handle por
+  arquivo, `app/_layout.tsx`) passou a impedir testar pelo Expo Web de forma
+  confiável. Investigação: o motor de regras (`data/wizard/*.ts`,
+  `utils/*.ts`) já é desacoplado de React/React Native, então testes
+  unitários em Node puro saíam mais baratos e davam cobertura combinatória
+  real - resolver o OPFS continuaria dependendo de um humano clicar na
+  wizard, e nunca cobriria "quase 100% das combinações" de forma viável.
+  Testes unitários venceram; OPFS/web ficou de fora desta rodada (card
+  Trello #46 documenta a decisão completa e o que foi implementado).
+- **Suíte de testes de criação de personagem nível 1 (PHB), implementada
+  (2026-08-19)** — Vitest rodando puro em Node (`npm test`, sem
+  emulador/navegador/jest-expo). `tests/support/sqlite-adapter.ts` expõe
+  `assets/data/dnd5e.db` via `node:sqlite` no shape do `SQLiteDatabase` do
+  expo-sqlite, reaproveitando as queries reais do app sem alteração.
+  `tests/support/build-test-draft.ts` monta um `WizardDraft` completo e
+  válido sem interação humana, reaproveitando os resolvers reais da wizard
+  (sempre a primeira opção válida, determinístico).
+  `tests/support/level1-matrix.ts` gera a matriz exaustiva **direto do
+  banco** (não hardcoded) - 15 variantes de raça/sub-raça × 21 de
+  classe/subclasse × 13 antecedentes = 4095 combinações de nível 1 do PHB.
+  `tests/character-creation/level1-phb-matrix.test.ts` chama
+  `assembleCharacter` pra cada combinação e verifica PV/CA/salvaguardas
+  contra a regra do PHB, com comentário citando a página/traço quando é
+  regra específica. `data/wizard/step-validation.ts` extraiu os
+  `canProceed` de Raça/Classe da wizard pra funções puras testáveis
+  (Antecedente/Equipamento ficaram de fora, acoplados a estado local por
+  índice). Documentação completa (cobertura, estratégia, como estender) em
+  `docs/testing.md`. Fase 2 (testes de componente pra bugs de exibição, não
+  só de dado) registrada como próximo passo, não implementada.

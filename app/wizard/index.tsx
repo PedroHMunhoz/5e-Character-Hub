@@ -17,6 +17,7 @@ import { useWizardDraft } from '@/context/wizard-context';
 import { getAllRaces } from '@/data/queries/races';
 import { combineAbilityBonuses } from '@/data/wizard/race-ability-bonus';
 import { parseClassSkillChoice } from '@/data/wizard/skill-proficiency-resolver';
+import { canProceedFromRaceStep } from '@/data/wizard/step-validation';
 import { sortByLocalizedName } from '@/utils/sort-by-name';
 import type { AbilityKey, SkillKey } from '@/types/character';
 import type { Race } from '@/types/reference';
@@ -133,14 +134,17 @@ export default function WizardRaceStep() {
     );
   }, [selectedRace, selectedSubrace]);
 
-  const needsSubrace = subraces.length > 0 && draft.subraceId === null;
-  const needsBonusChoice = bonusChoiceClause
-    ? Object.values(draft.abilityBonusChoices).filter((v) => v && v > 0).length < bonusChoiceClause.count
-    : false;
-  const needsSkillChoice = raceSkillClause ? raceSkillSelected.length < raceSkillClause.count : false;
-  const needsDraconicAncestry = isDragonborn && draft.draconicAncestry === null;
-  const canProceed =
-    draft.raceId !== null && !needsSubrace && !needsBonusChoice && !needsSkillChoice && !needsDraconicAncestry;
+  const canProceed = canProceedFromRaceStep({
+    raceId: draft.raceId,
+    hasSubraceOptions: subraces.length > 0,
+    subraceId: draft.subraceId,
+    bonusChoiceClause,
+    selectedBonusCount: Object.values(draft.abilityBonusChoices).filter((v) => v && v > 0).length,
+    raceSkillClause,
+    selectedRaceSkillCount: raceSkillSelected.length,
+    isDragonborn,
+    draconicAncestry: draft.draconicAncestry,
+  });
 
   function handleNext() {
     if (!canProceed) return;
