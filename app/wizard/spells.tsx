@@ -21,16 +21,19 @@ import type { Spell } from '@/types/reference';
 export default function WizardSpellsStep() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { draft, setSpellIds } = useWizardDraft();
+  const { draft, setSpellIds, setHighElfCantripId } = useWizardDraft();
   const goldColor = useThemeColor({}, 'gold');
 
   const [status, setStatus] = useState<'loading' | 'notApplicable' | 'ready'>('loading');
   const [spells, setSpells] = useState<Spell[]>([]);
   const [preparedCount, setPreparedCount] = useState(1);
   const [ruleKey, setRuleKey] = useState<string | null>(null);
+  const [isHighElf, setIsHighElf] = useState(false);
+  const [highElfCantripPool, setHighElfCantripPool] = useState<Spell[]>([]);
 
   const [selectedCantrips, setSelectedCantrips] = useState<number[]>([]);
   const [selectedLevel1, setSelectedLevel1] = useState<number[]>([]);
+  const [selectedHighElfCantrip, setSelectedHighElfCantrip] = useState<number | null>(null);
 
   useEffect(() => {
     if (draft.classId === null) return;
@@ -39,49 +42,63 @@ export default function WizardSpellsStep() {
     async function load() {
       const classDef = await getClassById(db, draft.classId!);
       const englishName = await getClassEnglishName(db, draft.classId!);
+      const subrace = draft.subraceId !== null ? await getRaceById(db, draft.subraceId) : null;
       if (cancelled || !classDef) return;
+
+      // Elfo Alto ("Cantrip", PHB p.24): concede um truque do Mago à escolha
+      // do jogador independente da classe do personagem - por isso essa
+      // seção precisa renderizar mesmo quando a classe não é conjuradora.
+      const highElf = subrace?.englishName === 'High';
+      setIsHighElf(highElf);
 
       const isLevel1Caster = classDef.casterProgression === 'full' || classDef.casterProgression === 'pact';
       const rule = englishName ? SPELLCASTING_RULES[englishName] : undefined;
-      if (!isLevel1Caster || !rule || !englishName) {
+      if ((!isLevel1Caster || !rule || !englishName) && !highElf) {
         setStatus('notApplicable');
         return;
       }
 
-      setRuleKey(englishName);
+      if (rule && englishName) {
+        setRuleKey(englishName);
 
-      const classSpells = await getSpellsForClass(db, englishName);
-      if (cancelled) return;
-
-      // Warlock patrons (The Archfey, The Fiend, The Great Old One) grant an
-      // "expanded" spell list - spells from OTHER classes' lists the
-      // character can choose to learn as one of their known spells, on top
-      // of Warlock's own list. Only the "s1" (1st-level slot) tier matters
-      // at level-1 creation. See getSubclassExpandedSpellsByLevel.
-      let allSpells = classSpells;
-      if (draft.subclassId !== null) {
-        const expandedByLevel = await getSubclassExpandedSpellsByLevel(db, draft.subclassId);
+        const classSpells = await getSpellsForClass(db, englishName);
         if (cancelled) return;
-        const expandedNames = expandedByLevel?.s1 ?? [];
-        if (expandedNames.length > 0) {
-          const expandedSpells = await getSpellsByNames(db, expandedNames);
+
+        // Warlock patrons (The Archfey, The Fiend, The Great Old One) grant an
+        // "expanded" spell list - spells from OTHER classes' lists the
+        // character can choose to learn as one of their known spells, on top
+        // of Warlock's own list. Only the "s1" (1st-level slot) tier matters
+        // at level-1 creation. See getSubclassExpandedSpellsByLevel.
+        let allSpells = classSpells;
+        if (draft.subclassId !== null) {
+          const expandedByLevel = await getSubclassExpandedSpellsByLevel(db, draft.subclassId);
           if (cancelled) return;
-          const classSpellIds = new Set(classSpells.map((spell) => spell.id));
-          allSpells = [...classSpells, ...expandedSpells.filter((spell) => !classSpellIds.has(spell.id))];
+          const expandedNames = expandedByLevel?.s1 ?? [];
+          if (expandedNames.length > 0) {
+            const expandedSpells = await getSpellsByNames(db, expandedNames);
+            if (cancelled) return;
+            const classSpellIds = new Set(classSpells.map((spell) => spell.id));
+            allSpells = [...classSpells, ...expandedSpells.filter((spell) => !classSpellIds.has(spell.id))];
+          }
+        }
+        setSpells(allSpells);
+
+        if (rule.preparedFromFullList && classDef.spellcastingAbility) {
+          const abilityKey = classDef.spellcastingAbility as AbilityKey;
+          const race = draft.raceId !== null ? await getRaceById(db, draft.raceId) : null;
+          if (cancelled) return;
+          const combined = combineAbilityBonuses(race?.abilityBonuses ?? null, subrace?.abilityBonuses ?? null);
+          const racialBonus = getResolvedRacialBonus(combined, draft.abilityBonusChoices, abilityKey);
+          const base = draft.baseAbilityScores[abilityKey] ?? 10;
+          const modifier = Math.floor((base + racialBonus - 10) / 2);
+          setPreparedCount(getPreparedSpellCount(modifier, 1));
         }
       }
-      setSpells(allSpells);
 
-      if (rule.preparedFromFullList && classDef.spellcastingAbility) {
-        const abilityKey = classDef.spellcastingAbility as AbilityKey;
-        const race = draft.raceId !== null ? await getRaceById(db, draft.raceId) : null;
-        const subrace = draft.subraceId !== null ? await getRaceById(db, draft.subraceId) : null;
+      if (highElf) {
+        const wizardSpells = await getSpellsForClass(db, 'Wizard');
         if (cancelled) return;
-        const combined = combineAbilityBonuses(race?.abilityBonuses ?? null, subrace?.abilityBonuses ?? null);
-        const racialBonus = getResolvedRacialBonus(combined, draft.abilityBonusChoices, abilityKey);
-        const base = draft.baseAbilityScores[abilityKey] ?? 10;
-        const modifier = Math.floor((base + racialBonus - 10) / 2);
-        setPreparedCount(getPreparedSpellCount(modifier, 1));
+        setHighElfCantripPool(wizardSpells.filter((spell) => spell.level === 0));
       }
 
       setStatus('ready');
@@ -95,6 +112,17 @@ export default function WizardSpellsStep() {
   }, [db, draft.classId]);
 
   useEffect(() => {
+    // Guards against the High Elf's bonus cantrip landing on the same spell
+    // the player also picked through their own class (only possible for a
+    // High Elf Wizard, since that's the only class sharing the same cantrip
+    // pool) - the picker below already filters the option out, but the
+    // stale selection needs clearing too.
+    if (selectedHighElfCantrip !== null && selectedCantrips.includes(selectedHighElfCantrip)) {
+      setSelectedHighElfCantrip(null);
+    }
+  }, [selectedCantrips, selectedHighElfCantrip]);
+
+  useEffect(() => {
     if (status === 'notApplicable') {
       router.replace('/wizard/details');
     }
@@ -103,16 +131,18 @@ export default function WizardSpellsStep() {
   const rule = ruleKey ? SPELLCASTING_RULES[ruleKey] : undefined;
   const cantrips = useMemo(() => sortByLocalizedName(spells.filter((spell) => spell.level === 0)), [spells]);
   const level1Spells = useMemo(() => sortByLocalizedName(spells.filter((spell) => spell.level === 1)), [spells]);
+  const sortedHighElfCantripPool = useMemo(() => sortByLocalizedName(highElfCantripPool), [highElfCantripPool]);
   const level1Count = rule?.spellsKnownFixed ?? preparedCount;
 
   const canProceed =
     status === 'ready' &&
-    rule !== undefined &&
-    selectedCantrips.length === rule.cantripsKnown &&
-    selectedLevel1.length === level1Count;
+    (rule === undefined ||
+      (selectedCantrips.length === rule.cantripsKnown && selectedLevel1.length === level1Count)) &&
+    (!isHighElf || selectedHighElfCantrip !== null);
 
   function handleNext() {
     setSpellIds([...selectedCantrips, ...selectedLevel1]);
+    setHighElfCantripId(selectedHighElfCantrip);
     router.push('/wizard/details');
   }
 
@@ -130,26 +160,44 @@ export default function WizardSpellsStep() {
         <WizardStepHeader
           step={6}
           title="Magias"
-          subtitle={rule?.preparedFromFullList ? 'Escolha as magias preparadas para hoje.' : 'Escolha as magias conhecidas.'}
+          subtitle={
+            rule?.preparedFromFullList
+              ? 'Escolha as magias preparadas para hoje.'
+              : rule
+                ? 'Escolha as magias conhecidas.'
+                : 'Escolha seu truque de Alto Elfo.'
+          }
         />
 
         {rule ? (
-          <SpellPicker
-            title="Truques"
-            spells={cantrips}
-            count={rule.cantripsKnown}
-            selected={selectedCantrips}
-            onChange={setSelectedCantrips}
-          />
+          <>
+            <SpellPicker
+              title="Truques"
+              spells={cantrips}
+              count={rule.cantripsKnown}
+              selected={selectedCantrips}
+              onChange={setSelectedCantrips}
+            />
+
+            <SpellPicker
+              title="Magias de 1º nível"
+              spells={level1Spells}
+              count={level1Count}
+              selected={selectedLevel1}
+              onChange={setSelectedLevel1}
+            />
+          </>
         ) : null}
 
-        <SpellPicker
-          title="Magias de 1º nível"
-          spells={level1Spells}
-          count={level1Count}
-          selected={selectedLevel1}
-          onChange={setSelectedLevel1}
-        />
+        {isHighElf ? (
+          <SpellPicker
+            title="Truque de Alto Elfo"
+            spells={sortedHighElfCantripPool.filter((spell) => !selectedCantrips.includes(spell.id))}
+            count={1}
+            selected={selectedHighElfCantrip !== null ? [selectedHighElfCantrip] : []}
+            onChange={(ids) => setSelectedHighElfCantrip(ids[ids.length - 1] ?? null)}
+          />
+        ) : null}
       </ScrollView>
 
       <View style={[styles.footer, { borderColor: goldColor }]}>

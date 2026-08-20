@@ -134,6 +134,13 @@ export interface WizardDraft {
 
   // Passo 6: Magias
   spellIds: number[];
+  // Elfo Alto ("Cantrip", PHB p.24) - um truque à escolha da lista do Mago,
+  // concedido pela sub-raça, não pela classe. Separado de spellIds porque não
+  // conta para o cantripsKnown da classe (ex. os 3 do Mago) e sempre termina
+  // preparado, mesmo padrão dos truques raciais fixos (RACE_GRANTED_CANTRIPS)
+  // em data/wizard/assemble-character.ts - a diferença é que aqui é o
+  // jogador quem escolhe o id, não um nome fixo resolvido pela raça.
+  highElfCantripId: number | null;
 
   // Passo 7: Detalhes
   name: string;
@@ -172,6 +179,7 @@ const initialDraft: WizardDraft = {
   chosenEquipment: [],
   goldRolled: null,
   spellIds: [],
+  highElfCantripId: null,
   name: '',
 };
 
@@ -204,6 +212,7 @@ type Action =
   | { type: 'SET_CHOSEN_EQUIPMENT'; entries: ResolvedEquipmentEntry[] }
   | { type: 'SET_GOLD_ROLLED'; value: number | null }
   | { type: 'SET_SPELL_IDS'; ids: number[] }
+  | { type: 'SET_HIGH_ELF_CANTRIP_ID'; id: number | null }
   | { type: 'SET_NAME'; value: string }
   | { type: 'RESET' };
 
@@ -222,6 +231,7 @@ function wizardReducer(state: WizardDraft, action: Action): WizardDraft {
         raceLanguageChoices: [],
         featId: null,
         featAbilityChoice: null,
+        highElfCantripId: null,
       };
     case 'SET_SUBRACE':
       return {
@@ -232,6 +242,7 @@ function wizardReducer(state: WizardDraft, action: Action): WizardDraft {
         raceLanguageChoices: [],
         featId: null,
         featAbilityChoice: null,
+        highElfCantripId: null,
       };
     case 'SET_ABILITY_BONUS_CHOICES':
       return { ...state, abilityBonusChoices: action.choices };
@@ -319,6 +330,8 @@ function wizardReducer(state: WizardDraft, action: Action): WizardDraft {
       return { ...state, goldRolled: action.value };
     case 'SET_SPELL_IDS':
       return { ...state, spellIds: action.ids };
+    case 'SET_HIGH_ELF_CANTRIP_ID':
+      return { ...state, highElfCantripId: action.id };
     case 'SET_NAME':
       return { ...state, name: action.value };
     case 'RESET':
@@ -358,6 +371,7 @@ export interface WizardContextValue {
   setChosenEquipment: (entries: ResolvedEquipmentEntry[]) => void;
   setGoldRolled: (value: number | null) => void;
   setSpellIds: (ids: number[]) => void;
+  setHighElfCantripId: (id: number | null) => void;
   setDraftName: (value: string) => void;
   reset: () => void;
 }
@@ -398,6 +412,7 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       setChosenEquipment: (entries) => dispatch({ type: 'SET_CHOSEN_EQUIPMENT', entries }),
       setGoldRolled: (value) => dispatch({ type: 'SET_GOLD_ROLLED', value }),
       setSpellIds: (ids) => dispatch({ type: 'SET_SPELL_IDS', ids }),
+      setHighElfCantripId: (id) => dispatch({ type: 'SET_HIGH_ELF_CANTRIP_ID', id }),
       setDraftName: (value) => dispatch({ type: 'SET_NAME', value }),
       reset: () => dispatch({ type: 'RESET' }),
     }),

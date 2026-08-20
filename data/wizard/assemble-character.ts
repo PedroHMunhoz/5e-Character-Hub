@@ -243,6 +243,9 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   if (classEnglishName && SPELLCASTING_RULES[classEnglishName] && draft.spellIds.length === 0) {
     missingChoices.push('magias');
   }
+  if (subrace?.englishName === 'High' && draft.highElfCantripId === null) {
+    missingChoices.push('truque de Alto Elfo');
+  }
   if (name.trim().length === 0) missingChoices.push('nome');
 
   if (missingChoices.length > 0) {
@@ -512,7 +515,17 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   const racialSpellEntries = raceGrantedSpellIds
     .filter((id) => !draft.spellIds.includes(id))
     .map((id) => [String(id), { prepared: true }] as const);
-  const spells = Object.fromEntries([...classSpellEntries, ...racialSpellEntries]);
+  // Elfo Alto's "Cantrip" (PHB p.24): unlike Tiefling/Drow/Forest Gnome above
+  // (a fixed name resolved via RACE_GRANTED_CANTRIPS), this is a Wizard-list
+  // cantrip the player picked in the wizard's Spells step - already an id in
+  // the draft (context/wizard-context.tsx's highElfCantripId), so it just
+  // needs the same dedup guard as racialSpellEntries (a High Elf Wizard who
+  // picks the same cantrip through both the class and the racial choice).
+  const highElfSpellEntries =
+    draft.highElfCantripId !== null && !draft.spellIds.includes(draft.highElfCantripId)
+      ? [[String(draft.highElfCantripId), { prepared: true }] as const]
+      : [];
+  const spells = Object.fromEntries([...classSpellEntries, ...racialSpellEntries, ...highElfSpellEntries]);
 
   // Hit points: level-1 max HP is always the hit die's full face value +
   // CON modifier (PHB p.12), never rolled at level 1. Draconic Bloodline

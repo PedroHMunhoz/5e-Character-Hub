@@ -506,17 +506,38 @@ InventoryItemState>` — cada registro é uma unidade física, com
   mantidas separadas pra reconciliação do Passo 5 e só remescladas na hora
   de montar a ficha final.
 
-  Uma quinta lacuna (truque à escolha do Elfo Alto, "Cantrip" — magia de
+  ~~Uma quinta lacuna (truque à escolha do Elfo Alto, "Cantrip" — magia de
   Mago à escolha, PHB p.24) precisava de UI/estado novos em vez de uma
   correção pontual, então virou card Trello #45 em vez de ser resolvida
-  nessa sessão.
+  nessa sessão.~~ **Implementada** — ver entrada abaixo.
+
+- **Truque à escolha do Elfo Alto, "Cantrip" (PHB p.24) — card Trello #45
+  (2026-08-19)**. Diferente dos truques raciais fixos
+  (`RACE_GRANTED_CANTRIPS`, ver acima), este é escolha do jogador entre os
+  truques do Mago — precisou de campo novo no draft (`highElfCantripId`,
+  `context/wizard-context.tsx`) e de fazer o Passo 6
+  (`app/wizard/spells.tsx`) renderizar mesmo pra classe não-conjuradora
+  (ex. Elfo Alto Guerreiro) quando só essa seção se aplica; antes disso
+  esse personagem não tinha nenhum jeito de escolher o truque, e um Elfo
+  Alto Mago não ganhava o bônus além da contagem normal da classe.
+  `assembleCharacter` (`data/wizard/assemble-character.ts`) mescla o
+  truque escolhido em `spells` como sempre-preparado, com o mesmo guard
+  anti-duplicata dos truques raciais fixos (Mago que escolhe pela classe o
+  mesmo truque do bônus racial). Cobertura de teste:
+  `tests/character-creation/level1-phb-matrix.test.ts` (toda combinação
+  Elfo Alto x classe já presente na matriz) + novo
+  `tests/character-creation/high-elf-cantrip.test.ts` (dedup e validação
+  de escolha ausente, casos que o auto-preenchedor da matriz não
+  exercita). Achado num teste ao vivo do usuário logo em seguida: a lista
+  de truques dessa nova seção não estava em ordem alfabética (as outras
+  duas listas do Passo 6 já passavam por `sortByLocalizedName`, essa não)
+  — corrigido com o mesmo `useMemo`+`sortByLocalizedName` das demais.
 
 Pendências restantes (multiclasse, sourcebooks além do PHB, Patrulheiro UA,
 Humano Variante/talentos, magias de subclasse com escolha adicional,
-template de ancestralidade, Ataque Furtivo no dano da arma, encumbrance
-opcional, truque à escolha do Elfo Alto, e as pós-level-up no checklist do
-card "Implementar o Lvl Up de personagem"): ver board Trello "5e Character
-Hub", lista "A fazer".
+template de ancestralidade, Ataque Furtivo no dano da arma, e encumbrance
+opcional, além das pós-level-up no checklist do card "Implementar o Lvl Up
+de personagem"): ver board Trello "5e Character Hub", lista "A fazer".
 
 ## Testes automatizados
 

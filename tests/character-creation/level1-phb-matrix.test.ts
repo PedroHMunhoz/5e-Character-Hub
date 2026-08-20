@@ -84,6 +84,9 @@ describe('Criação de personagem nível 1 - matriz exaustiva PHB', () => {
     // Robustez do Anão da Colina (PHB p.20): "+1 de PV, aumentando em 1
     // toda vez que ganha um nível" - +1 no nível 1.
     const isHillDwarf = subrace?.englishName === 'Hill';
+    // Elfo Alto ("Cantrip", PHB p.24): truque do Mago à escolha, concedido
+    // pela sub-raça independente da classe do personagem.
+    const isHighElf = subrace?.englishName === 'High';
 
     const subclass = combo.subclassId !== null ? await cachedSubclass(combo.subclassId) : null;
     // Resiliência Dracônica do Feiticeiro Linhagem Dracônica (PHB p.101):
@@ -161,6 +164,20 @@ describe('Criação de personagem nível 1 - matriz exaustiva PHB', () => {
       expect(total).not.toBeNull();
       expect(total as number).toBeGreaterThanOrEqual(3);
       expect(total as number).toBeLessThanOrEqual(20);
+    }
+
+    // Elfo Alto ("Cantrip", PHB p.24): sempre ganha o truque bônus escolhido
+    // no wizard além de tudo que a própria classe concede - cobre tanto o
+    // caso conjurador quanto o não-conjurador (ex. Elfo Alto Guerreiro), já
+    // que a matriz cruza Elfo Alto com toda classe. Comparado contra
+    // draft.highElfCantripId/spellIds (não uma lista de truques do Mago
+    // recalculada) porque vários truques são compartilhados entre listas de
+    // classe (ex. Luz, Mão Mágica) - contar coincidências desse jeito daria
+    // falso positivo pra classes não-Mago que também pegam um desses.
+    if (isHighElf) {
+      expect(draft.highElfCantripId).not.toBeNull();
+      expect(character.spells[String(draft.highElfCantripId)]).toEqual({ prepared: true });
+      expect(Object.keys(character.spells)).toHaveLength(draft.spellIds.length + 1);
     }
   });
 });

@@ -383,6 +383,18 @@ export async function buildTestDraft(db: SQLiteDatabase, input: DraftInput): Pro
     spellIds = [...selectedCantrips.map((s) => s.id), ...selectedLevel1.map((s) => s.id)];
   }
 
+  // Elfo Alto ("Cantrip", PHB p.24, mirrors app/wizard/spells.tsx): um truque
+  // do Mago à escolha, independente da classe do personagem - excluindo os
+  // já escolhidos pela própria classe (só relevante pra um Alto Elfo Mago)
+  // pra sempre produzir uma escolha genuinamente distinta, igual a UI faz.
+  let highElfCantripId: number | null = null;
+  if (subrace?.englishName === 'High') {
+    const wizardCantrips = (await getSpellsForClass(db, 'Wizard')).filter((s) => s.level === 0);
+    const availableWizardCantrips = wizardCantrips.filter((s) => !spellIds.includes(s.id));
+    const [picked] = take(availableWizardCantrips, 1, 'truque de Alto Elfo');
+    highElfCantripId = picked.id;
+  }
+
   // --- Passo 7: Detalhes ---
   const name = 'Personagem de Teste';
 
@@ -415,6 +427,7 @@ export async function buildTestDraft(db: SQLiteDatabase, input: DraftInput): Pro
     chosenEquipment,
     goldRolled: null,
     spellIds,
+    highElfCantripId,
     name,
   };
 }
