@@ -377,7 +377,9 @@ function buildLookupIndex(items: EquipmentLookupItem[]): Map<string, EquipmentLo
 // and each item inside a multi-item pack's contents (resolvePackContentRef)
 // - the Burglar's Pack's "ball bearings (bag of 1,000)" entry is itself a
 // single-item pack, so the same substitution applies one level down.
-function substituteSingleItemPack(
+// Exported for data/queries/shop-catalog.ts - same substitution needed when
+// resolving a purchasable pack row to what it actually grants.
+export function substituteSingleItemPack(
   match: EquipmentLookupItem,
   index: Map<string, EquipmentLookupItem>
 ): { resolved: EquipmentLookupItem; quantityMultiplier: number } {
@@ -394,7 +396,10 @@ function substituteSingleItemPack(
 // top-level `special` grants (see parseRawEntry above), so these resolve
 // through the identical synthetic-catalog-row mechanism instead of being
 // dropped. Undefined when there's no catalog row and no redirect for it.
-function packContentEntryRef(pc: MultiItemPackEntry): string | undefined {
+// Exported for data/queries/shop-catalog.ts, which needs the identical
+// resolution when a multi-item equipment pack (Explorer's Pack, ...) is
+// purchased instead of granted by the wizard's starting-equipment step.
+export function packContentEntryRef(pc: MultiItemPackEntry): string | undefined {
   return pc.kind === 'item' ? pc.itemRef : EQUIPMENT_SPECIAL_ITEM_REFS[pc.text.toLowerCase()];
 }
 

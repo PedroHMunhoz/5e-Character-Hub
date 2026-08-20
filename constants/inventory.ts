@@ -20,3 +20,18 @@ export const INVENTORY_CATEGORY_SECTIONS: { key: string; label: string; category
   { key: 'consumiveis', label: 'Consumíveis', category: 'consumable' },
   { key: 'itensGerais', label: 'Itens em Geral', category: 'general' },
 ];
+
+// Shown (one at random) while components/character/item-shop.tsx loads its
+// catalog - same "one random phrase while it loads" pattern as
+// SPELL_LOADING_MESSAGES in constants/spells.ts.
+export const SHOP_LOADING_MESSAGES: string[] = [
+  'Organizando o estoque...',
+  'Verificando se temos espadas...',
+  'Contando moedas de ouro...',
+  'Espantando as traças das capas...',
+  'Afiando as lâminas para exibição...',
+  'Procurando o Kit do Explorador no depósito...',
+  'Negociando com o fornecedor de flechas...',
+  'Tirando a poeira das armaduras...',
+  'Acordando o mercador...',
+];

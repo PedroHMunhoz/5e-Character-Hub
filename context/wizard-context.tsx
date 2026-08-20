@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, useReducer, type ReactNode } from '
 
 import { FAVORED_ENEMY_HUMANOID_KEY, FAVORED_ENEMY_NO_LANGUAGE } from '@/constants/favored-enemy';
 import type { ResolvedEquipmentEntry } from '@/data/wizard/equipment-resolver';
+import type { ShopCart } from '@/data/wizard/item-purchase';
 import type { AbilityKey, SkillKey } from '@/types/character';
 
 export type AbilityMethod = 'roll' | 'array' | 'pointBuy';
@@ -131,6 +132,24 @@ export interface WizardDraft {
   // the DSL or re-resolve anything.
   chosenEquipment: ResolvedEquipmentEntry[];
   goldRolled: number | null;
+  // Purchases made on the item-shop screen (app/wizard/shop.tsx, reached via
+  // the Equipamento step's 'gold' mode) - kept separate from chosenEquipment
+  // (which only ever holds class/background starting-equipment grants)
+  // since the shop is its own routed screen, not something equipment.tsx
+  // mounts inline; assemble-character.ts grants both lists the same way.
+  // Written live as the player shops (see item-shop.tsx's onCartChange),
+  // same "committed immediately, not deferred to Próximo" pattern as
+  // goldRolled below.
+  purchasedEquipment: ResolvedEquipmentEntry[];
+  // Total spent (in copper pieces) on purchasedEquipment above -
+  // assemble-character.ts subtracts this from goldRolled to get the
+  // character's final starting PO.
+  goldSpentCp: number;
+  // Raw cart (catalog key -> quantity) behind purchasedEquipment/goldSpentCp
+  // - purely so re-opening the shop screen (e.g. via back navigation) can
+  // re-seed components/character/item-shop.tsx with what was already
+  // selected instead of silently starting over.
+  purchaseCart: ShopCart;
 
   // Passo 6: Magias
   spellIds: number[];
@@ -178,6 +197,9 @@ const initialDraft: WizardDraft = {
   equipmentMode: 'starting',
   chosenEquipment: [],
   goldRolled: null,
+  purchasedEquipment: [],
+  goldSpentCp: 0,
+  purchaseCart: {},
   spellIds: [],
   highElfCantripId: null,
   name: '',
@@ -211,6 +233,9 @@ type Action =
   | { type: 'SET_EQUIPMENT_MODE'; mode: EquipmentMode | null }
   | { type: 'SET_CHOSEN_EQUIPMENT'; entries: ResolvedEquipmentEntry[] }
   | { type: 'SET_GOLD_ROLLED'; value: number | null }
+  | { type: 'SET_PURCHASED_EQUIPMENT'; entries: ResolvedEquipmentEntry[] }
+  | { type: 'SET_GOLD_SPENT_CP'; value: number }
+  | { type: 'SET_PURCHASE_CART'; cart: ShopCart }
   | { type: 'SET_SPELL_IDS'; ids: number[] }
   | { type: 'SET_HIGH_ELF_CANTRIP_ID'; id: number | null }
   | { type: 'SET_NAME'; value: string }
@@ -327,7 +352,15 @@ function wizardReducer(state: WizardDraft, action: Action): WizardDraft {
     case 'SET_CHOSEN_EQUIPMENT':
       return { ...state, chosenEquipment: action.entries };
     case 'SET_GOLD_ROLLED':
-      return { ...state, goldRolled: action.value };
+      // A new roll invalidates whatever the player had shopped for against
+      // the previous amount.
+      return { ...state, goldRolled: action.value, purchasedEquipment: [], goldSpentCp: 0, purchaseCart: {} };
+    case 'SET_PURCHASED_EQUIPMENT':
+      return { ...state, purchasedEquipment: action.entries };
+    case 'SET_GOLD_SPENT_CP':
+      return { ...state, goldSpentCp: action.value };
+    case 'SET_PURCHASE_CART':
+      return { ...state, purchaseCart: action.cart };
     case 'SET_SPELL_IDS':
       return { ...state, spellIds: action.ids };
     case 'SET_HIGH_ELF_CANTRIP_ID':
@@ -370,6 +403,9 @@ export interface WizardContextValue {
   setEquipmentMode: (mode: EquipmentMode | null) => void;
   setChosenEquipment: (entries: ResolvedEquipmentEntry[]) => void;
   setGoldRolled: (value: number | null) => void;
+  setPurchasedEquipment: (entries: ResolvedEquipmentEntry[]) => void;
+  setGoldSpentCp: (value: number) => void;
+  setPurchaseCart: (cart: ShopCart) => void;
   setSpellIds: (ids: number[]) => void;
   setHighElfCantripId: (id: number | null) => void;
   setDraftName: (value: string) => void;
@@ -411,6 +447,9 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       setEquipmentMode: (mode) => dispatch({ type: 'SET_EQUIPMENT_MODE', mode }),
       setChosenEquipment: (entries) => dispatch({ type: 'SET_CHOSEN_EQUIPMENT', entries }),
       setGoldRolled: (value) => dispatch({ type: 'SET_GOLD_ROLLED', value }),
+      setPurchasedEquipment: (entries) => dispatch({ type: 'SET_PURCHASED_EQUIPMENT', entries }),
+      setGoldSpentCp: (value) => dispatch({ type: 'SET_GOLD_SPENT_CP', value }),
+      setPurchaseCart: (cart) => dispatch({ type: 'SET_PURCHASE_CART', cart }),
       setSpellIds: (ids) => dispatch({ type: 'SET_SPELL_IDS', ids }),
       setHighElfCantripId: (id) => dispatch({ type: 'SET_HIGH_ELF_CANTRIP_ID', id }),
       setDraftName: (value) => dispatch({ type: 'SET_NAME', value }),

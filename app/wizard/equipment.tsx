@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -10,6 +10,7 @@ import { useWizardDraft, type EquipmentMode } from '@/context/wizard-context';
 import { getBackgroundById } from '@/data/queries/backgrounds';
 import { getClassById } from '@/data/queries/classes';
 import type { EquipmentLookupItem } from '@/data/queries/equipment-lookup';
+import { getShopCatalog, type ShopCatalogItem } from '@/data/queries/shop-catalog';
 import { getAllToolItems } from '@/data/queries/tools';
 import {
   parseBackgroundEquipment,
@@ -18,7 +19,9 @@ import {
   type EquipmentChoiceGroup,
   type ResolvedEquipmentEntry,
 } from '@/data/wizard/equipment-resolver';
+import { buildPurchaseSummaryLines } from '@/data/wizard/item-purchase';
 import { buildToolCategoryIndex, categorizeGrantedTools, reconcileEquipmentGroup } from '@/data/wizard/tool-equipment-overlap';
+import { formatCurrencyBreakdown } from '@/utils/currency';
 import { formatGoldFormula, rollGoldFormula } from '@/utils/dice';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
@@ -84,6 +87,28 @@ export default function WizardEquipmentStep() {
 
   const [selectedOptionKeys, setSelectedOptionKeys] = useState<Record<string, string>>({});
   const [categoryChoices, setCategoryChoices] = useState<Record<string, EquipmentLookupItem>>({});
+
+  // Loaded lazily (only entering 'gold' mode needs it) so "Equipamento
+  // comprado" below can show what's already in draft.purchaseCart without
+  // the player re-opening the shop - see app/wizard/shop.tsx for the screen
+  // that actually writes purchaseCart.
+  const [shopCatalog, setShopCatalog] = useState<ShopCatalogItem[] | null>(null);
+  useEffect(() => {
+    if (draft.equipmentMode !== 'gold' || shopCatalog !== null) return;
+    let cancelled = false;
+    getShopCatalog(db).then((result) => {
+      if (!cancelled) setShopCatalog(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [db, draft.equipmentMode, shopCatalog]);
+
+  const purchaseSummaryLines = useMemo(() => {
+    if (!shopCatalog) return [];
+    const catalogByKey = new Map(shopCatalog.map((item) => [item.key, item]));
+    return buildPurchaseSummaryLines(draft.purchaseCart, catalogByKey);
+  }, [shopCatalog, draft.purchaseCart]);
 
   useEffect(() => {
     if (draft.classId === null || draft.backgroundId === null) return;
@@ -228,12 +253,40 @@ export default function WizardEquipmentStep() {
             <ThemedText style={[styles.goldValue, { color: goldColor }]}>
               {draft.goldRolled !== null ? `${draft.goldRolled} PO` : '—'}
             </ThemedText>
-            <Pressable
-              onPress={() => goldAlternative && setGoldRolled(rollGoldFormula(goldAlternative))}
-              style={[styles.rollButton, { borderColor: goldColor }]}
-            >
-              <ThemedText style={{ color: goldColor }}>Rolar novamente</ThemedText>
-            </Pressable>
+            <View style={styles.goldButtonRow}>
+              <Pressable
+                onPress={() => goldAlternative && setGoldRolled(rollGoldFormula(goldAlternative))}
+                style={[styles.rollButton, { borderColor: goldColor }]}
+              >
+                <ThemedText style={{ color: goldColor }}>Rolar novamente</ThemedText>
+              </Pressable>
+              <Pressable
+                disabled={draft.goldRolled === null}
+                onPress={() => router.push('/wizard/shop')}
+                style={[styles.rollButton, { borderColor: goldColor, opacity: draft.goldRolled === null ? 0.4 : 1 }]}
+              >
+                <ThemedText style={{ color: goldColor }}>Abrir Loja</ThemedText>
+              </Pressable>
+            </View>
+
+            {purchaseSummaryLines.length > 0 ? (
+              <View style={styles.purchasedSection}>
+                <ThemedText type="subtitle" style={styles.sectionTitle}>
+                  Equipamento comprado
+                </ThemedText>
+                {purchaseSummaryLines.map((line) => (
+                  <View key={line.key} style={styles.purchasedLine}>
+                    <ThemedText style={styles.purchasedLineName}>
+                      {line.quantity}x {line.name}
+                    </ThemedText>
+                    <ThemedText style={{ color: goldColor }}>{formatCurrencyBreakdown(line.subtotalCp)}</ThemedText>
+                  </View>
+                ))}
+                <ThemedText style={[styles.purchasedTotal, { color: goldColor }]}>
+                  Total gasto: {formatCurrencyBreakdown(draft.goldSpentCp)}
+                </ThemedText>
+              </View>
+            ) : null}
           </View>
         ) : (
           <View style={styles.section}>
@@ -340,11 +393,32 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
   },
+  goldButtonRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   rollButton: {
     borderWidth: 1,
     borderRadius: 10,
     paddingVertical: 8,
     paddingHorizontal: 14,
+  },
+  purchasedSection: {
+    alignSelf: 'stretch',
+    gap: 6,
+    marginTop: 8,
+  },
+  purchasedLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  purchasedLineName: {
+    flex: 1,
+  },
+  purchasedTotal: {
+    fontWeight: '700',
+    marginTop: 4,
   },
   section: {
     gap: 12,

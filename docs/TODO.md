@@ -510,6 +510,52 @@ InventoryItemState>` — cada registro é uma unidade física, com
   Mago à escolha, PHB p.24) precisava de UI/estado novos em vez de uma
   correção pontual, então virou card Trello #45 em vez de ser resolvida
   nessa sessão.~~ **Implementada** — ver entrada abaixo.
+- ~~O modo "Comprar com PO" do Passo 5 (Equipamento) só rolava o ouro
+  inicial e parava por aí — não existia nenhum fluxo pra gastar esse ouro
+  comprando itens de catálogo (card Trello #29, 2026-08-20).~~
+  **Implementado**: nova tela roteada `app/wizard/shop.tsx` (botão "Abrir
+  Loja" ao lado de "Rolar novamente"), montando o componente reaproveitável
+  `components/character/item-shop.tsx` — busca por nome, 4 seções na mesma
+  ordem/estilo da aba Inventário (`INVENTORY_CATEGORY_SECTIONS`), PO restante
+  ao vivo, e o botão "+" de cada linha trava sozinho ao estourar o orçamento
+  (mesmo padrão de `PointBuyAllocator`). O catálogo (`data/queries/
+  shop-catalog.ts`) une `base_items`+`items` (`source = 'PHB'`, com preço,
+  sem itens mágicos) e reaproveita 100% o mecanismo de pacote já existente
+  pro equipamento inicial (`getSingleItemPackContents`/
+  `getMultiItemPackContents`, `data/wizard/equipment-resolver.ts` — duas
+  funções privadas viraram exportadas pra isso): munição só aparece na loja
+  como pack ("Flechas (20)", nunca a flecha avulsa, excluída dinamicamente
+  por ser referenciada como componente de pack, não por lista hardcoded), e
+  comprar 1 Kit do Explorador explode pros 8 itens reais que ele contém —
+  mesmo tratamento que esse kit já recebe quando vem do equipamento inicial
+  de uma classe/antecedente. `WizardDraft` ganhou `purchasedEquipment`
+  (grants já explodidos, processados por `assemble-character.ts` junto com
+  `chosenEquipment`), `goldSpentCp` e `purchaseCart` (o carrinho bruto,
+  persistido ao vivo — reabrir a loja depois de sair sem confirmar restaura
+  a seleção em vez de zerar). Preço de item pode ter fração de PO (ex.:
+  Tocha = 1 pc) — algo que nenhuma concessão de equipamento inicial da PHB
+  jamais produzia (sempre múltiplo de 100 cp) — então o cálculo de moeda
+  final passou a operar inteiramente em cp e só divide em PO/PC no fim
+  (`Math.floor`/`%`), nunca gerando string decimal em `currency.po` (que
+  quebraria a sanitização "só dígitos" do `CurrencyInput` assim que o
+  jogador tocasse o campo). Ao confirmar a compra ("Comprar"), um modal de
+  resumo (`PurchaseSummaryModal`) mostra cada item×quantidade, subtotal e PO
+  restante — todos formatados por denominação inteira (PO/PP/PC,
+  `utils/currency.ts`), nunca decimal, pro jogador entender de onde vieram
+  eventuais PC no inventário final. O Passo 5 também ganhou uma subseção
+  "Equipamento comprado" (visível assim que algo é comprado) pra reabrir a
+  loja sabendo o que já foi selecionado. PL/PE (platina/eletro) ficaram de
+  fora de propósito — o PHB nunca precifica equipamento nessas duas
+  denominações (só cp/sp/gp, PHB p.143), então nunca sobram no troco de uma
+  compra. Cobertura de teste: `tests/wizard/item-purchase.test.ts` (filtro/
+  soma/explosão de carrinho, lógica pura sem banco),
+  `tests/wizard/shop-catalog.test.ts` (catálogo contra o banco real via
+  `openReferenceDb()`), `tests/wizard/gold-purchase-assembly.test.ts`
+  (ponta a ponta via `assembleCharacter`), `tests/utils/currency.test.ts`
+  (conversão cp→PO/PP/PC). Desenhado pra reaproveito futuro: `ItemShop` só
+  recebe `availableCp`/`initialCart`/`onCartChange`/`onConfirm` via props,
+  sem depender do wizard nem da ficha — uma futura tela "adicionar item ao
+  inventário" na aba Inventário poderia montar o mesmo componente.
 
 - **Truque à escolha do Elfo Alto, "Cantrip" (PHB p.24) — card Trello #45
   (2026-08-19)**. Diferente dos truques raciais fixos

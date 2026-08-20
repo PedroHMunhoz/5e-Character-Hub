@@ -411,8 +411,14 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
   // of collapsing into one row with quantity "2" and a single equip slot.
   // Everything else (consumables, general gear) still sums into one row per
   // catalog item, same as before.
+  // Class/background starting-equipment grants plus whatever was bought on
+  // the item-shop screen (app/wizard/shop.tsx) - both resolve to the same
+  // ResolvedEquipmentEntry shape (see data/wizard/item-purchase.ts's
+  // explodeCartToGrants), so they're granted through this one combined loop.
+  const allEquipmentEntries = [...draft.chosenEquipment, ...draft.purchasedEquipment];
+
   const baseItemIdsToCategorize = new Set<number>();
-  for (const entry of draft.chosenEquipment) {
+  for (const entry of allEquipmentEntries) {
     if (entry.kind !== 'item') continue;
     if (entry.packContents) {
       for (const sub of entry.packContents) {
@@ -454,14 +460,19 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
     }
   }
 
-  let goldFromEquipment = 0;
-  for (const entry of draft.chosenEquipment) {
+  // Accumulated in copper pieces (not divided down to gp here) so the final
+  // currency calc below can net it against goldSpentCp before splitting into
+  // po/pc - dividing per-entry the way this used to would produce a
+  // fractional-gp intermediate that can't be reassembled into whole po/pc
+  // afterward.
+  let goldFromEquipmentCp = 0;
+  for (const entry of allEquipmentEntries) {
     // Bare currency grant with no item at all (e.g. Eremita's "5 gp",
     // {value: 500} in the raw DSL - see equipment-resolver.ts) - same
     // starting-currency pool as containsValueCp below, just no inventory
     // item to attach it to.
     if (entry.kind === 'special') {
-      if (entry.valueCp) goldFromEquipment += entry.valueCp / 100;
+      if (entry.valueCp) goldFromEquipmentCp += entry.valueCp;
       continue;
     }
     if (entry.kind !== 'item') continue;
@@ -474,13 +485,13 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
         if (isNonStackable(sub.source, sub.itemId)) addNonStackable(subKey, sub.quantity);
         else addStackable(subKey, sub.quantity);
       }
-      if (entry.containsValueCp) goldFromEquipment += entry.containsValueCp / 100;
+      if (entry.containsValueCp) goldFromEquipmentCp += entry.containsValueCp;
       continue;
     }
     const key = itemKey(entry.source, entry.itemId);
     if (isNonStackable(entry.source, entry.itemId)) addNonStackable(key, entry.quantity);
     else addStackable(key, entry.quantity);
-    if (entry.containsValueCp) goldFromEquipment += entry.containsValueCp / 100;
+    if (entry.containsValueCp) goldFromEquipmentCp += entry.containsValueCp;
   }
 
   // Dragonborn's Breath Weapon: a natural weapon, not catalog gear - never
@@ -490,9 +501,21 @@ export async function assembleCharacter(db: SQLiteDatabase, input: AssembleChara
     inventoryItems[randomId('item')] = { itemId: BREATH_WEAPON_ITEM_ID, quantity: '1', locked: true };
   }
 
+  // Total wealth in copper pieces (rolled starting gold, minus whatever was
+  // spent on the item-shop screen in the Equipamento step's 'gold' mode,
+  // plus any currency granted alongside chosen equipment - see
+  // goldFromEquipmentCp above), then split into whole po + leftover pc.
+  // Shop prices go down to the copper piece (e.g. Tocha = 1 pc), unlike the
+  // starting-equipment currency grants above (always whole gp in the PHB
+  // DSL), so this is the first place a real copper remainder can occur.
+  const totalCurrencyCp =
+    (draft.equipmentMode === 'gold' ? (draft.goldRolled ?? 0) * 100 : 0) +
+    goldFromEquipmentCp -
+    (draft.equipmentMode === 'gold' ? draft.goldSpentCp : 0);
   const currency: Currency = {
     ...EMPTY_CURRENCY,
-    po: String((draft.equipmentMode === 'gold' ? (draft.goldRolled ?? 0) : 0) + goldFromEquipment),
+    po: String(Math.floor(totalCurrencyCp / 100)),
+    pc: String(totalCurrencyCp % 100),
   };
 
   // Spells: everything the player picked in the (conditional) spells step.

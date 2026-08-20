@@ -25,6 +25,10 @@ export interface CuratedBaseItem {
   category: CuratedItemCategory;
   name: string;
   properties?: string;
+  // Absent for synthetic, non-catalog rows (e.g. Dragonborn's Breath
+  // Weapon in components/character/character-inventory.tsx) - real catalog
+  // rows always carry it (null when the PHB row genuinely has no price).
+  valueCp?: number | null;
   weight: string;
   // Unrounded per-unit weight in kg (same override/×0.5 rule as `weight`,
   // see getWeightKg) - kept alongside the formatted `weight` string so
@@ -45,6 +49,7 @@ interface BaseItemRow {
   id: number;
   name: string;
   type: string | null;
+  value_cp: number | null;
   weight_lb: number | null;
   damage: string | null;
   properties: string | null;
@@ -297,6 +302,7 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict, quantity
       category,
       name,
       properties: buildWeaponProperties(row),
+      valueCp: row.value_cp,
       weight: formatWeightKg(row.name, row.weight_lb),
       weightKg: getWeightKg(row.name, row.weight_lb),
       damageDice: formatDamageDice(row.damage),
@@ -315,6 +321,7 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict, quantity
       category,
       name,
       properties: ARMOR_TYPE_LABELS[row.type ?? ''] ?? row.type ?? undefined,
+      valueCp: row.value_cp,
       weight: formatWeightKg(row.name, row.weight_lb),
       weightKg: getWeightKg(row.name, row.weight_lb),
       armorClassBonus: String(armorClassBonus),
@@ -330,6 +337,7 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict, quantity
       category,
       name,
       properties: GENERAL_ITEM_TYPE_LABELS[row.type ?? ''] ?? row.type ?? undefined,
+      valueCp: row.value_cp,
       weight: formatWeightKg(row.name, row.weight_lb),
       weightKg: getWeightKg(row.name, row.weight_lb),
     };
@@ -340,6 +348,7 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict, quantity
     category,
     name,
     properties: 'Munição',
+    valueCp: row.value_cp,
     // Consumables are the only stackable category with a quantity indicator
     // in the UI today (the StackableItemCard badge) - weight here reflects
     // the full owned stack. Weapon/armor/general above intentionally keep
@@ -367,9 +376,29 @@ export async function getBaseItemsByIds(
   if (ids.length === 0) return [];
   const placeholders = ids.map(() => '?').join(', ');
   const rows = await db.getAllAsync<BaseItemRow>(
-    `SELECT id, name, type, weight_lb, damage, properties, details FROM base_items WHERE id IN (${placeholders})`,
+    `SELECT id, name, type, value_cp, weight_lb, damage, properties, details FROM base_items WHERE id IN (${placeholders})`,
     ...ids
   );
   const translations = await getTranslations(db, 'base_item');
   return rows.map((row) => mapCuratedRow(row, translations, quantityById?.get(row.id) ?? 1));
+}
+
+// Every PHB base_items row with a real price (weapons, armor, ammo, tools,
+// instruments, foci) - the catalog source for data/queries/shop-catalog.ts's
+// purchase screen. `singleItemPackRef` carries the raw (still-unresolved,
+// English) component ref for a pack row (ammo "(20)"/"(50)" bundles) - the
+// caller resolves it to a concrete id, same two-step pattern already used by
+// data/wizard/equipment-resolver.ts (parse now, resolve names to ids in a
+// second batched pass).
+export async function getAllPurchasableBaseItems(
+  db: SQLiteDatabase
+): Promise<(CuratedBaseItem & { singleItemPackRef?: { itemRef: string; quantity: number } })[]> {
+  const rows = await db.getAllAsync<BaseItemRow>(
+    `SELECT id, name, type, value_cp, weight_lb, damage, properties, details FROM base_items WHERE source = 'PHB' AND value_cp IS NOT NULL ORDER BY name`
+  );
+  const translations = await getTranslations(db, 'base_item');
+  return rows.map((row) => ({
+    ...mapCuratedRow(row, translations),
+    singleItemPackRef: getSingleItemPackContents(row.details),
+  }));
 }

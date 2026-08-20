@@ -11,6 +11,7 @@ export default function WizardLayout() {
         <Stack.Screen name="abilities" options={{ title: 'Atributos' }} />
         <Stack.Screen name="background" options={{ title: 'Antecedente' }} />
         <Stack.Screen name="equipment" options={{ title: 'Equipamento' }} />
+        <Stack.Screen name="shop" options={{ title: 'Loja' }} />
         <Stack.Screen name="spells" options={{ title: 'Magias' }} />
         <Stack.Screen name="details" options={{ title: 'Detalhes' }} />
       </Stack>

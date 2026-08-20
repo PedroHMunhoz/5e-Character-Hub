@@ -2,6 +2,14 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { Item } from '@/types/reference';
 import { parseJson, toEntries } from '../rows';
+import {
+  formatWeightKg,
+  getMultiItemPackContents,
+  getSingleItemPackContents,
+  getWeightKg,
+  isMultiItemPack,
+  type MultiItemPackEntry,
+} from './base-items';
 import { getTranslations, localizedName } from './localize';
 
 interface ItemRow {
@@ -93,4 +101,40 @@ export async function getItemsByIds(db: SQLiteDatabase, ids: number[]): Promise<
   const rows = await db.getAllAsync<ItemRow>(`SELECT * FROM items WHERE id IN (${placeholders})`, ...ids);
   const translations = await getTranslations(db, 'item');
   return rows.map((row) => ({ ...mapItemRow(row), name: localizedName(row.id, row.name, translations) }));
+}
+
+export interface PurchasableItem extends Item {
+  // Raw (unlocalized) name - needed to look up ITEM_WEIGHT_KG_OVERRIDES
+  // (keyed by English name, see getWeightKg/formatWeightKg in base-items.ts)
+  // and to match against packContents refs (always English) once `name`
+  // below has been overwritten with the translated display name.
+  englishName: string;
+  weight: string;
+  weightKg: number;
+  // Buying 1 unit grants N of a different catalog item (ammo-style single-
+  // item pack, e.g. a bag of Caltrops) - see getSingleItemPackContents.
+  singleItemPackRef?: { itemRef: string; quantity: number };
+  // Buying 1 unit grants several distinct items (Explorer's Pack, ...) -
+  // see getMultiItemPackContents. Both refs are mutually exclusive, same as
+  // the underlying packContents shapes they come from.
+  multiItemPackRef?: MultiItemPackEntry[];
+}
+
+// Every PHB items-table row with a real price, excluding magic items - the
+// other half of the catalog source for data/queries/shop-catalog.ts's
+// purchase screen (base_items covers weapons/armor/ammo/tools).
+export async function getAllPurchasableItems(db: SQLiteDatabase): Promise<PurchasableItem[]> {
+  const rows = await db.getAllAsync<ItemRow>(
+    `SELECT * FROM items WHERE source = 'PHB' AND value_cp IS NOT NULL AND is_magic = 0 ORDER BY name`
+  );
+  const translations = await getTranslations(db, 'item');
+  return rows.map((row) => ({
+    ...mapItemRow(row),
+    name: localizedName(row.id, row.name, translations),
+    englishName: row.name,
+    weight: formatWeightKg(row.name, row.weight_lb),
+    weightKg: getWeightKg(row.name, row.weight_lb),
+    singleItemPackRef: getSingleItemPackContents(row.details),
+    multiItemPackRef: isMultiItemPack(row.details) ? getMultiItemPackContents(row.details, row.name) : undefined,
+  }));
 }
