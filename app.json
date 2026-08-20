@@ -1,17 +1,19 @@
 {
   "expo": {
-    "name": "DnD5eCharacterSheetApp",
-    "slug": "DnD5eCharacterSheetApp",
+    "name": "5e Character Hub",
+    "slug": "fivee-character-hub",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "dnd5echaractersheetapp",
+    "scheme": "fiveecharacterhub",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pedromunhoz.fiveecharacterhub"
     },
     "android": {
+      "package": "com.pedromunhoz.fiveecharacterhub",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -31,9 +33,9 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
+          "imageWidth": 300,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#000000",
           "dark": {
             "backgroundColor": "#000000"
           }
