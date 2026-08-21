@@ -55,5 +55,7 @@ export function rollGoldFormula(formula: string): number {
 export function formatGoldFormula(formula: string): string {
   const parsed = parseGoldFormula(formula);
   if (!parsed) return formula;
-  return parsed.multiplier > 1 ? `${parsed.count}d${parsed.faces} × ${parsed.multiplier}` : `${parsed.count}d${parsed.faces}`;
+  return parsed.multiplier > 1
+    ? `${parsed.count}d${parsed.faces} × ${parsed.multiplier}`
+    : `${parsed.count}d${parsed.faces}`;
 }

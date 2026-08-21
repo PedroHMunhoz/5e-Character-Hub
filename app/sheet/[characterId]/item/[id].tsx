@@ -25,11 +25,17 @@ import {
 import { useCharacter } from '@/hooks/use-character';
 import { useCharacterClassInfo } from '@/hooks/use-character-class-info';
 import { useEquippedArmor } from '@/hooks/use-equipped-armor';
+import { useEquippedWeapons } from '@/hooks/use-equipped-weapons';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
 import { isMonkWeapon } from '@/utils/monk-weapons';
-import { ARMOR_STRENGTH_SPEED_PENALTY_FEET, feetToMeters, feetToSquares } from '@/utils/speed';
-import { formatSpacedModifier, getWeaponAbilityModifier, type WeaponAttackAbility } from '@/utils/weapon-combat';
+import {
+  ARMOR_STRENGTH_SPEED_PENALTY_FEET,
+  feetToMeters,
+  feetToSquares,
+  isBelowArmorStrengthRequirement,
+} from '@/utils/speed';
+import { formatSpacedModifier, getWeaponAttackAndDamage } from '@/utils/weapon-combat';
 import type { WeaponCategory, WeaponSlot } from '@/types/character';
 
 type WeaponSlotValue = WeaponSlot | 'none';
@@ -108,6 +114,7 @@ export default function ItemDetailScreen() {
   const { character, setItemQuantity, toggleArmorEquipped, setWeaponSlot, hasEquippedShield } = useCharacter();
   const { englishName: classEnglishName } = useCharacterClassInfo();
   const equippedArmor = useEquippedArmor();
+  const equippedWeapons = useEquippedWeapons();
   const goldColor = useThemeColor({}, 'gold');
 
   const [item, setItem] = useState<ItemDetail | null>(null);
@@ -204,11 +211,10 @@ export default function ItemDetailScreen() {
     .map(([, state]) => state.weaponSlot as WeaponSlot);
   const hasAnyOtherWeapon = otherWeaponSlots.length > 0;
   const hasMainHandCompanion = otherWeaponSlots.includes('main');
+  const mainHandWeaponIsLight =
+    equippedWeapons.find((weapon) => weapon.slot === 'main')?.propertyCodes.includes('L') ?? false;
   const useMonkDex =
-    classEnglishName === 'Monk' &&
-    equippedArmor.length === 0 &&
-    item.category === 'weapon' &&
-    isMonkWeapon(item);
+    classEnglishName === 'Monk' && equippedArmor.length === 0 && item.category === 'weapon' && isMonkWeapon(item);
 
   return (
     <>
@@ -241,6 +247,7 @@ export default function ItemDetailScreen() {
             fightingStyle={character.fightingStyle ?? null}
             hasAnyOtherWeapon={hasAnyOtherWeapon}
             hasMainHandCompanion={hasMainHandCompanion}
+            mainHandWeaponIsLight={mainHandWeaponIsLight}
             useMonkDex={useMonkDex}
             onPropertyPress={setSelectedPropertyCode}
             weaponProficiencies={character.weaponProficiencies ?? { categories: [], items: [] }}
@@ -265,8 +272,7 @@ export default function ItemDetailScreen() {
                       }
                       if (
                         !wasEquipped &&
-                        item.strengthRequirement != null &&
-                        (getAbilityTotal(character.abilities.str) ?? 0) < item.strengthRequirement
+                        isBelowArmorStrengthRequirement(getAbilityTotal(character.abilities.str) ?? 0, item)
                       ) {
                         setBlockedMessage(
                           `Você não atende ao requisito de Força mínima desta armadura (${item.strengthRequirement}). Seu deslocamento é reduzido em ${feetToMeters(ARMOR_STRENGTH_SPEED_PENALTY_FEET)}m / ${feetToSquares(ARMOR_STRENGTH_SPEED_PENALTY_FEET)}q.`
@@ -315,7 +321,8 @@ export default function ItemDetailScreen() {
 
         {item.category === 'naturalWeapon' ? <NaturalWeaponSection item={item} /> : null}
 
-        {(item.category === 'consumable' || item.category === 'general' || item.category === 'armor') && item.entries.length > 0 ? (
+        {(item.category === 'consumable' || item.category === 'general' || item.category === 'armor') &&
+        item.entries.length > 0 ? (
           <View style={[styles.field, styles.descriptionField, { borderColor: goldColor }]}>
             <ThemedText style={styles.fieldLabel}>Descrição</ThemedText>
             {item.entries.map((entry, index) => (
@@ -365,6 +372,7 @@ interface WeaponSectionProps {
   fightingStyle: string | null;
   hasAnyOtherWeapon: boolean;
   hasMainHandCompanion: boolean;
+  mainHandWeaponIsLight: boolean;
   useMonkDex: boolean;
   onPropertyPress: (code: string) => void;
   weaponProficiencies: { categories: WeaponCategory[]; items: string[] };
@@ -380,49 +388,43 @@ function WeaponSection({
   fightingStyle,
   hasAnyOtherWeapon,
   hasMainHandCompanion,
+  mainHandWeaponIsLight,
   useMonkDex,
   onPropertyPress,
   weaponProficiencies,
 }: WeaponSectionProps) {
   const goldColor = useThemeColor({}, 'gold');
-  // Martial Arts (Monk) lets DEX stand in for STR on unarmed/monk-weapon
-  // attacks even without the Finesse property - 'finesse' already picks
-  // whichever of STR/DEX is higher, matching the rule's "your choice" text.
-  const attackAbility: WeaponAttackAbility = useMonkDex ? 'finesse' : item.attackAbility;
-  const abilityMod = getWeaponAbilityModifier(attackAbility, strScore, dexScore);
-  const isTwoHanded = slot === 'twoHanded';
 
-  // RAW: no proficiency bonus on an attack with a weapon you're not
-  // proficient with. Monk unarmed/monk-weapon strikes always count as
-  // proficient (useMonkDex already gates on isMonkWeapon), independent of
-  // the weapon's own category/name grant.
-  const isProficient =
-    useMonkDex ||
-    (item.weaponCategory != null && weaponProficiencies.categories.includes(item.weaponCategory)) ||
-    weaponProficiencies.items.includes(itemKey('base_items', item.id));
-
-  // Fighting Style's "Archery": +2 to attack rolls with ranged weapons.
-  const archeryBonus = fightingStyle === 'Archery' && item.isRanged ? 2 : 0;
-  const attackBonus = abilityMod + (isProficient ? proficiencyBonus : 0) + archeryBonus;
-
-  // RAW: the off-hand (bonus action) attack only adds the ability modifier
-  // to damage if it's negative, unless the character has Two-Weapon
-  // Fighting - only relevant when there's actually a companion weapon in
-  // the main hand (otherwise this weapon isn't really "off-hand", it's just
-  // the only one equipped).
-  const isOffHandAttack = slot === 'off' && hasMainHandCompanion;
-  const baseDamageMod = isOffHandAttack
-    ? fightingStyle === 'Two-Weapon Fighting'
-      ? abilityMod
-      : Math.min(abilityMod, 0)
-    : abilityMod;
-  // Fighting Style's "Dueling": +2 damage with a one-handed melee weapon
-  // and no other weapon equipped.
-  const duelingBonus =
-    fightingStyle === 'Dueling' && !item.isRanged && !isTwoHanded && !hasAnyOtherWeapon ? 2 : 0;
-  const damageMod = baseDamageMod + duelingBonus;
-
-  const damageDice = isTwoHanded && item.damageDiceVersatile ? item.damageDiceVersatile : item.damageDice;
+  const isLight = item.propertyCodes.includes('L');
+  const { isProficient, attackBonus, isOffHandAttack, damageModifier, damageDice } = getWeaponAttackAndDamage(
+    {
+      attackAbility: item.attackAbility,
+      isRanged: item.isRanged,
+      weaponCategory: item.weaponCategory,
+      damageDice: item.damageDice,
+      damageDiceVersatile: item.damageDiceVersatile,
+      itemProficiencyKey: itemKey('base_items', item.id),
+      isLight,
+    },
+    {
+      slot,
+      strScore,
+      dexScore,
+      proficiencyBonus,
+      fightingStyle,
+      hasAnyOtherWeapon,
+      hasMainHandCompanion,
+      mainHandWeaponIsLight,
+      useMonkDex,
+      weaponProficiencies,
+    }
+  );
+  // RAW: the off-hand bonus-action attack (basic two-weapon fighting, PHB
+  // p.195) requires both weapons to be Light - when a companion is equipped
+  // in the main hand but that condition isn't met, this isn't really a
+  // valid off-hand attack, so the note below explains why no penalty/bonus
+  // was applied instead of silently showing a full-damage number.
+  const showsNonLightOffHandNote = slot === 'off' && hasMainHandCompanion && !isOffHandAttack;
   const damageTypeLabel = item.damageTypeLabel ?? '—';
 
   return (
@@ -440,7 +442,7 @@ function WeaponSection({
       />
 
       <GridRow
-        left={<Field label="Dano" value={`${damageDice} ${formatSpacedModifier(damageMod)}`} />}
+        left={<Field label="Dano" value={`${damageDice} ${formatSpacedModifier(damageModifier)}`} />}
         right={<Field label="Tipo de Dano" value={damageTypeLabel} />}
       />
 
@@ -452,14 +454,23 @@ function WeaponSection({
         </View>
       ) : null}
 
+      {showsNonLightOffHandNote ? (
+        <View style={[styles.field, styles.observationsField, { borderColor: goldColor }]}>
+          <ThemedText style={styles.bulletItem}>
+            {
+              '•  Sem a propriedade Leve nas duas armas (ou o talento Combatente com Duas Armas, não considerado aqui), este ataque bônus de Combate com Duas Armas não é permitido pelas regras.'
+            }
+          </ThemedText>
+        </View>
+      ) : null}
+
       {item.propertyCodes.length > 0 ? (
         <View style={[styles.field, styles.propertiesField, { borderColor: goldColor }]}>
           <ThemedText style={styles.fieldLabel}>Propriedades</ThemedText>
           <View style={styles.propertiesRow}>
             {item.propertyCodes.map((code) => {
               const baseLabel = WEAPON_PROPERTY_LABELS[code] ?? code;
-              const label =
-                (code === 'A' || code === 'T') && item.range ? `${baseLabel} (${item.range})` : baseLabel;
+              const label = (code === 'A' || code === 'T') && item.range ? `${baseLabel} (${item.range})` : baseLabel;
               return <PropertyPill key={code} label={label} onPress={() => onPropertyPress(code)} />;
             })}
           </View>

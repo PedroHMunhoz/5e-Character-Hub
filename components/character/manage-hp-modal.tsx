@@ -5,6 +5,7 @@ import { MessageModal } from '@/components/character/message-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { resolveHpApply, type HpApplyResult, type HpOutcome } from '@/utils/hit-points';
 
 const MASSIVE_DAMAGE_DISCLAIMER_PT =
   'Dano maciço pode matar instantaneamente. Quando um dano reduz seus pontos de vida a 0 e ainda há dano sobrando, você morre se o restante do dano que sobrou for igual ou maior do que seu máximo de pontos de vida.';
@@ -20,15 +21,7 @@ const HEAL_PRESETS = [1, 5, 10];
 const DAMAGE_COLOR = '#8b1e1e';
 const HEAL_COLOR = '#2e6b34';
 
-export interface HpOutcome {
-  title: string;
-  message: string;
-}
-
-export interface HpApplyResult {
-  current: string;
-  temporary: string;
-}
+export type { HpApplyResult, HpOutcome };
 
 interface ManageHpModalProps {
   visible: boolean;
@@ -72,57 +65,15 @@ export function ManageHpModal({
 
   function handleApply() {
     const rawValue = parseInt(preview, 10) || 0;
+    const resolution = resolveHpApply(variant, rawValue, originalCurrent, originalTemp, maxHp);
 
-    if (variant === 'temp-only') {
-      onApply({ current: String(originalCurrent), temporary: String(rawValue) }, null);
-      return;
-    }
-
-    const ceiling = maxHp + originalTemp;
-    if (maxHp > 0 && rawValue > ceiling) {
+    if (resolution.kind === 'invalid') {
       setPreview(String(startTotal));
-      setInvalidMessage(`Esse valor é inválido pois PV Máximo é ${maxHp}.`);
+      setInvalidMessage(resolution.message);
       return;
     }
 
-    const netDelta = rawValue - startTotal;
-    let outcome: HpOutcome | null = null;
-    let newCurrent = originalCurrent;
-    let newTemp = originalTemp;
-
-    if (netDelta >= 0) {
-      newCurrent = maxHp > 0 ? Math.min(originalCurrent + netDelta, maxHp) : originalCurrent + netDelta;
-      newTemp = originalTemp;
-    } else {
-      const magnitude = -netDelta;
-      newTemp = Math.max(originalTemp - magnitude, 0);
-      const remaining = Math.max(magnitude - originalTemp, 0);
-
-      if (remaining > 0) {
-        const currentAfter = originalCurrent - remaining;
-        if (currentAfter <= 0) {
-          const overflow = -currentAfter;
-          outcome =
-            maxHp > 0 && overflow >= maxHp
-              ? {
-                  title: 'Morte por Dano Maciço',
-                  message:
-                    'O dano restante foi igual ou maior que o máximo de pontos de vida do personagem. Ele morreu instantaneamente.',
-                }
-              : {
-                  title: 'Inconsciente',
-                  message: 'Os pontos de vida chegaram a 0. O personagem está inconsciente.',
-                };
-          newCurrent = 0;
-        } else {
-          newCurrent = currentAfter;
-        }
-      } else {
-        newCurrent = originalCurrent;
-      }
-    }
-
-    onApply({ current: String(newCurrent), temporary: String(newTemp) }, outcome);
+    onApply(resolution.result, resolution.outcome);
   }
 
   const title = variant === 'temp-only' ? 'Adicionar PV Temporário' : 'Aplicar Dano/Cura';

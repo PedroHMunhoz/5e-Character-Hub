@@ -17,6 +17,34 @@ export function feetToSquares(feet: number): number {
 // PHB: wearing armor below its Strength requirement reduces speed by 10 feet.
 export const ARMOR_STRENGTH_SPEED_PENALTY_FEET = 10;
 
+export interface ArmorStrengthRequirement {
+  strengthRequirement?: number;
+}
+
+// Shared by the speed penalty below and the equip-time warnings in
+// character-inventory.tsx/item/[id].tsx (previously duplicated in both).
+export function isBelowArmorStrengthRequirement(
+  strTotal: number,
+  armor: ArmorStrengthRequirement | undefined
+): boolean {
+  return armor?.strengthRequirement != null && strTotal < armor.strengthRequirement;
+}
+
+// Combines the Monk's Unarmored Movement bonus with the armor
+// Strength-requirement speed penalty onto the character's base speed,
+// floored at 0 (can't go negative).
+export function getEffectiveSpeed(
+  baseSpeedMeters: number,
+  bodyArmor: ArmorStrengthRequirement | undefined,
+  strTotal: number,
+  unarmoredMovementBonusMeters: number
+): number {
+  const penalty = isBelowArmorStrengthRequirement(strTotal, bodyArmor)
+    ? feetToMeters(ARMOR_STRENGTH_SPEED_PENALTY_FEET)
+    : 0;
+  return Math.max(0, baseSpeedMeters + unarmoredMovementBonusMeters - penalty);
+}
+
 export function getSpeedInSquares(speed: string): number | null {
   const trimmed = speed.trim();
   if (trimmed === '') {

@@ -3,7 +3,13 @@ import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { useCharacter } from '@/hooks/use-character';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { formatAbilityTotal, formatPassiveScore, getPassiveScore, getProficiencyMultiplier } from '@/utils/ability-modifier';
+import {
+  formatAbilityTotal,
+  formatPassiveScore,
+  getPassiveScore,
+  getProficiencyMultiplier,
+} from '@/utils/ability-modifier';
+import { getObservantPassiveBonus } from '@/utils/feat-bonuses';
 
 interface PassiveScoresProps {
   proficiencyBonus: number | null;
@@ -18,15 +24,13 @@ export function PassiveScores({ proficiencyBonus }: PassiveScoresProps) {
     getProficiencyMultiplier(character.skills.arcanismo.proficient, character.skills.arcanismo.expertise),
     proficiencyBonus
   );
-  // Observant (PHB p.170): "+5 bonus to your passive Wisdom (Perception)
-  // and passive Intelligence (Investigation) scores".
-  const hasObservant = character.feats?.some((f) => f.englishName === 'Observant') ?? false;
+  const observantBonus = getObservantPassiveBonus(character.feats);
   const passivePerception =
     getPassiveScore(
       formatAbilityTotal(character.abilities.wis),
       getProficiencyMultiplier(character.skills.percepcao.proficient, character.skills.percepcao.expertise),
       proficiencyBonus
-    ) + (hasObservant ? 5 : 0);
+    ) + observantBonus;
   const passiveInsight = getPassiveScore(
     formatAbilityTotal(character.abilities.wis),
     getProficiencyMultiplier(character.skills.intuicao.proficient, character.skills.intuicao.expertise),
@@ -37,7 +41,7 @@ export function PassiveScores({ proficiencyBonus }: PassiveScoresProps) {
       formatAbilityTotal(character.abilities.int),
       getProficiencyMultiplier(character.skills.investigacao.proficient, character.skills.investigacao.expertise),
       proficiencyBonus
-    ) + (hasObservant ? 5 : 0);
+    ) + observantBonus;
 
   return (
     <View style={styles.container}>

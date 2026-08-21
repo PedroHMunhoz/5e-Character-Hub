@@ -31,6 +31,39 @@ export interface ArmorClassBreakdown {
 
 const MEDIUM_ARMOR_DEX_CAP = 2;
 
+// Which Unarmored Defense (or equivalent) variant a character has, based on
+// class/subclass - Barbarian (10 + Dex + Con, PHB p.46), Monk (10 + Dex +
+// Wis, requires no shield, PHB p.78), or Draconic Bloodline sorcerers'
+// Draconic Resilience (base AC 13, PHB p.101). Undefined when none apply,
+// in which case getArmorClassBreakdown falls back to the normal 10-base
+// formula.
+export function getUnarmoredDefenseRule(
+  classEnglishName: string | null,
+  subclassShortName: string | null,
+  abilities: { con: string; wis: string }
+): UnarmoredDefenseRule | undefined {
+  if (classEnglishName === 'Barbarian') {
+    return {
+      label: 'Defesa sem Armadura',
+      baseAC: 10,
+      secondaryAbilityScore: abilities.con,
+      requiresNoShield: false,
+    };
+  }
+  if (classEnglishName === 'Monk') {
+    return {
+      label: 'Defesa sem Armadura',
+      baseAC: 10,
+      secondaryAbilityScore: abilities.wis,
+      requiresNoShield: true,
+    };
+  }
+  if (subclassShortName === 'Draconic') {
+    return { label: 'Resiliência Dracônica', baseAC: 13, requiresNoShield: false };
+  }
+  return undefined;
+}
+
 // 5e AC rule: light armor applies the full DEX modifier, medium armor caps
 // it at +2, heavy armor ignores it entirely. Shields (weightClass
 // undefined) never affect the cap, they just add their flat bonus.

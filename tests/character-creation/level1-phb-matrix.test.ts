@@ -17,7 +17,7 @@ import { getClassById, getClassEnglishName, getSubclassById } from '@/data/queri
 import { getRaceById } from '@/data/queries/races';
 import { assembleCharacter } from '@/data/wizard/assemble-character';
 import { getAbilityModifierFromTotal, getAbilityTotal } from '@/utils/ability-modifier';
-import { getArmorClassBreakdown, type UnarmoredDefenseRule } from '@/utils/armor-class';
+import { getArmorClassBreakdown, getUnarmoredDefenseRule } from '@/utils/armor-class';
 import type { CharacterClassDefinition, Race, SubclassDefinition } from '@/types/reference';
 import { buildTestDraft } from '../support/build-test-draft';
 import { buildLevel1Matrix, type Level1Combination } from '../support/level1-matrix';
@@ -101,7 +101,11 @@ describe('Criação de personagem nível 1 - matriz exaustiva PHB', () => {
 
     const expectedMaxHp = Math.max(
       1,
-      (classDef.hitDieFaces ?? 8) + conModifier + (isDraconicSorcerer ? 1 : 0) + (isHillDwarf ? 1 : 0) + (hasToughFeat ? 2 : 0)
+      (classDef.hitDieFaces ?? 8) +
+        conModifier +
+        (isDraconicSorcerer ? 1 : 0) +
+        (isHillDwarf ? 1 : 0) +
+        (hasToughFeat ? 2 : 0)
     );
     expect(Number(character.hitPoints.max)).toBe(expectedMaxHp);
     expect(character.hitPoints.current).toBe(character.hitPoints.max);
@@ -114,30 +118,20 @@ describe('Criação de personagem nível 1 - matriz exaustiva PHB', () => {
     // (Defesa sem Armadura, PHB p.46/78) e Feiticeiro Linhagem Dracônica
     // (Resiliência Dracônica, PHB p.101) substituem essa fórmula.
     const dexModifier = getAbilityModifierFromTotal(character.abilities.dex) ?? 0;
+    const wisModifier = getAbilityModifierFromTotal(character.abilities.wis) ?? 0;
     const classEnglishName = await getClassEnglishNameCached(combo.classId);
-    let expectedBaseAC = 10 + dexModifier;
-    let unarmoredDefenseRule: UnarmoredDefenseRule | undefined;
-    if (classEnglishName === 'Barbarian') {
-      unarmoredDefenseRule = {
-        label: 'Defesa sem Armadura',
-        baseAC: 10,
-        secondaryAbilityScore: String(getAbilityTotal(character.abilities.con)),
-        requiresNoShield: false,
-      };
-      expectedBaseAC = 10 + dexModifier + conModifier;
-    } else if (classEnglishName === 'Monk') {
-      const wisModifier = getAbilityModifierFromTotal(character.abilities.wis) ?? 0;
-      unarmoredDefenseRule = {
-        label: 'Defesa sem Armadura',
-        baseAC: 10,
-        secondaryAbilityScore: String(getAbilityTotal(character.abilities.wis)),
-        requiresNoShield: true,
-      };
-      expectedBaseAC = 10 + dexModifier + wisModifier;
-    } else if (isDraconicSorcerer) {
-      unarmoredDefenseRule = { label: 'Resiliência Dracônica', baseAC: 13, requiresNoShield: false };
-      expectedBaseAC = 13 + dexModifier;
-    }
+    const unarmoredDefenseRule = getUnarmoredDefenseRule(classEnglishName, subclass?.shortName ?? null, {
+      con: String(getAbilityTotal(character.abilities.con)),
+      wis: String(getAbilityTotal(character.abilities.wis)),
+    });
+    const expectedBaseAC =
+      classEnglishName === 'Barbarian'
+        ? 10 + dexModifier + conModifier
+        : classEnglishName === 'Monk'
+          ? 10 + dexModifier + wisModifier
+          : isDraconicSorcerer
+            ? 13 + dexModifier
+            : 10 + dexModifier;
     const breakdown = getArmorClassBreakdown(
       String(getAbilityTotal(character.abilities.dex)),
       [],
@@ -148,8 +142,7 @@ describe('Criação de personagem nível 1 - matriz exaustiva PHB', () => {
 
     // Salvaguardas: exatamente as proficiências fixas da classe, mais
     // Resiliente (PHB p.170) quando esse foi o talento escolhido.
-    const resilientAbility =
-      character.feats?.find((f) => f.englishName === 'Resilient')?.abilityChoice ?? null;
+    const resilientAbility = character.feats?.find((f) => f.englishName === 'Resilient')?.abilityChoice ?? null;
     const expectedSavingThrows = new Set([...(classDef.savingThrowProficiencies ?? [])]);
     if (resilientAbility) expectedSavingThrows.add(resilientAbility);
     for (const key of ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const) {

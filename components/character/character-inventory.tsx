@@ -19,18 +19,15 @@ import { useCharacter } from '@/hooks/use-character';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import type { WeaponSlot } from '@/types/character';
 import { getAbilityModifierFromTotal, getAbilityTotal } from '@/utils/ability-modifier';
+import { getCarryingCapacityKg, getTotalCarriedWeightKg } from '@/utils/carrying-capacity';
 import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
 import { sortByLocalizedName } from '@/utils/sort-by-name';
-import { ARMOR_STRENGTH_SPEED_PENALTY_FEET, feetToMeters, feetToSquares } from '@/utils/speed';
-
-// Same flat "1 kg ~= 2 lb" rule used everywhere else in the app (see
-// getWeightKg/formatWeightKg in data/queries/base-items.ts).
-const KG_PER_LB = 0.5;
-// RAW carrying capacity (PHB): Strength score x 15 lb, no optional
-// encumbrance variant - see docs/TODO.md.
-const CARRY_CAPACITY_KG_PER_STR = 15 * KG_PER_LB;
-// RAW (PHB): every 50 coins, of any denomination, weigh 1 lb.
-const COINS_PER_LB = 50;
+import {
+  ARMOR_STRENGTH_SPEED_PENALTY_FEET,
+  feetToMeters,
+  feetToSquares,
+  isBelowArmorStrengthRequirement,
+} from '@/utils/speed';
 
 function formatKg(value: number): string {
   const rounded = Math.round(value * 10) / 10;
@@ -169,17 +166,16 @@ export function CharacterInventory() {
   );
 
   const totalWeightKg = useMemo(() => {
-    const itemsWeightKg = items.reduce((sum, item) => {
-      const quantity = Number(character.inventoryItems[item.key]?.quantity ?? '1') || 1;
-      return sum + item.weightKg * quantity;
-    }, 0);
+    const weighableItems = items.map((item) => ({
+      weightKg: item.weightKg,
+      quantity: Number(character.inventoryItems[item.key]?.quantity ?? '1') || 1,
+    }));
     const coinCount = CURRENCY_FIELDS.reduce((sum, field) => sum + (Number(character.currency[field.key]) || 0), 0);
-    const coinsWeightKg = (coinCount / COINS_PER_LB) * KG_PER_LB;
-    return itemsWeightKg + coinsWeightKg;
+    return getTotalCarriedWeightKg(weighableItems, coinCount);
   }, [items, character.inventoryItems, character.currency]);
 
   const maxCapacityKg = useMemo(
-    () => (getAbilityTotal(character.abilities.str) ?? 0) * CARRY_CAPACITY_KG_PER_STR,
+    () => getCarryingCapacityKg(getAbilityTotal(character.abilities.str) ?? 0),
     [character.abilities.str]
   );
 
@@ -225,7 +221,10 @@ export function CharacterInventory() {
                     <Pressable
                       key={item.key}
                       onPress={() =>
-                        router.push({ pathname: '/sheet/[characterId]/item/[id]', params: { characterId: character.id, id: item.key } })
+                        router.push({
+                          pathname: '/sheet/[characterId]/item/[id]',
+                          params: { characterId: character.id, id: item.key },
+                        })
                       }
                     >
                       <EquipmentItemCard
@@ -262,8 +261,7 @@ export function CharacterInventory() {
                           }
                           if (
                             !wasEquipped &&
-                            item.strengthRequirement != null &&
-                            (getAbilityTotal(character.abilities.str) ?? 0) < item.strengthRequirement
+                            isBelowArmorStrengthRequirement(getAbilityTotal(character.abilities.str) ?? 0, item)
                           ) {
                             setBlockedMessage(
                               `Você não atende ao requisito de Força mínima desta armadura (${item.strengthRequirement}). Seu deslocamento é reduzido em ${feetToMeters(ARMOR_STRENGTH_SPEED_PENALTY_FEET)}m / ${feetToSquares(ARMOR_STRENGTH_SPEED_PENALTY_FEET)}q.`
@@ -297,7 +295,10 @@ export function CharacterInventory() {
                   <Pressable
                     key={item.key}
                     onPress={() =>
-                      router.push({ pathname: '/sheet/[characterId]/item/[id]', params: { characterId: character.id, id: item.key } })
+                      router.push({
+                        pathname: '/sheet/[characterId]/item/[id]',
+                        params: { characterId: character.id, id: item.key },
+                      })
                     }
                   >
                     {card}

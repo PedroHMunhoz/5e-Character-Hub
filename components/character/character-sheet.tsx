@@ -18,10 +18,16 @@ import { useCharacter } from '@/hooks/use-character';
 import { useCharacterClassInfo } from '@/hooks/use-character-class-info';
 import { useEquippedArmor } from '@/hooks/use-equipped-armor';
 import { VitalBar } from '@/components/character/vital-bar';
-import { formatAbilityTotal, formatSignedModifier, getAbilityModifier, getAbilityTotal } from '@/utils/ability-modifier';
-import { getArmorClassBreakdown, type UnarmoredDefenseRule } from '@/utils/armor-class';
+import {
+  formatAbilityTotal,
+  formatSignedModifier,
+  getAbilityModifier,
+  getAbilityTotal,
+} from '@/utils/ability-modifier';
+import { getArmorClassBreakdown, getUnarmoredDefenseRule } from '@/utils/armor-class';
+import { getAlertInitiativeBonus } from '@/utils/feat-bonuses';
 import { getCharacterLevel, getProficiencyBonus } from '@/utils/proficiency';
-import { ARMOR_STRENGTH_SPEED_PENALTY_FEET, feetToMeters, formatSpeed, getMonkUnarmoredMovementBonusMeters } from '@/utils/speed';
+import { formatSpeed, getEffectiveSpeed, getMonkUnarmoredMovementBonusMeters } from '@/utils/speed';
 
 export function CharacterSheet() {
   const { character, toggleInspiration, setExhaustion, setDeathSaves, setHitPointsField } = useCharacter();
@@ -39,24 +45,10 @@ export function CharacterSheet() {
   const equippedArmor = useEquippedArmor();
   const { englishName: classEnglishName, subclassShortName } = useCharacterClassInfo();
 
-  const unarmoredDefenseRule: UnarmoredDefenseRule | undefined =
-    classEnglishName === 'Barbarian'
-      ? {
-          label: 'Defesa sem Armadura',
-          baseAC: 10,
-          secondaryAbilityScore: formatAbilityTotal(character.abilities.con),
-          requiresNoShield: false,
-        }
-      : classEnglishName === 'Monk'
-        ? {
-            label: 'Defesa sem Armadura',
-            baseAC: 10,
-            secondaryAbilityScore: formatAbilityTotal(character.abilities.wis),
-            requiresNoShield: true,
-          }
-        : subclassShortName === 'Draconic'
-          ? { label: 'Resiliência Dracônica', baseAC: 13, requiresNoShield: false }
-          : undefined;
+  const unarmoredDefenseRule = getUnarmoredDefenseRule(classEnglishName, subclassShortName, {
+    con: formatAbilityTotal(character.abilities.con),
+    wis: formatAbilityTotal(character.abilities.wis),
+  });
 
   const armorClassBreakdown = getArmorClassBreakdown(
     dexTotal,
@@ -66,19 +58,11 @@ export function CharacterSheet() {
   );
 
   const unarmoredMovementBonus =
-    classEnglishName === 'Monk' && equippedArmor.length === 0
-      ? getMonkUnarmoredMovementBonusMeters(characterLevel)
-      : 0;
+    classEnglishName === 'Monk' && equippedArmor.length === 0 ? getMonkUnarmoredMovementBonusMeters(characterLevel) : 0;
 
-  // PHB: wearing armor below its Strength requirement reduces speed by 10ft.
   const strTotal = getAbilityTotal(character.abilities.str) ?? 0;
   const bodyArmor = equippedArmor.find((item) => item.weightClass != null);
-  const strengthPenaltyActive = bodyArmor?.strengthRequirement != null && strTotal < bodyArmor.strengthRequirement;
-  const strengthSpeedPenalty = strengthPenaltyActive ? feetToMeters(ARMOR_STRENGTH_SPEED_PENALTY_FEET) : 0;
-
-  const displaySpeed = String(
-    Math.max(0, Number(character.speed) + unarmoredMovementBonus - strengthSpeedPenalty)
-  );
+  const displaySpeed = String(getEffectiveSpeed(Number(character.speed), bodyArmor, strTotal, unarmoredMovementBonus));
 
   const acRows = [
     { label: 'CA Base', value: String(armorClassBreakdown.base) },
@@ -90,8 +74,7 @@ export function CharacterSheet() {
     ...armorClassBreakdown.items.map((item) => ({ label: item.name, value: formatSignedModifier(item.bonus) })),
   ];
 
-  // Alert (PHB p.165): "+5 bonus to initiative".
-  const alertBonus = character.feats?.some((f) => f.englishName === 'Alert') ? 5 : 0;
+  const alertBonus = getAlertInitiativeBonus(character.feats);
   const initiativeTotal = (dexModifier ?? 0) + alertBonus;
   const initiativeRows = [
     { label: 'Modificador de Destreza', value: formatSignedModifier(dexModifier ?? 0) },

@@ -81,8 +81,7 @@ interface PackDetails {
 }
 
 export type MultiItemPackEntry =
-  | { kind: 'item'; itemRef: string; quantity: number }
-  | { kind: 'special'; text: string; quantity: number };
+  { kind: 'item'; itemRef: string; quantity: number } | { kind: 'special'; text: string; quantity: number };
 
 // `details.packContents` covers two unrelated shapes from the raw 5etools
 // data: a "pack" of N units of one underlying item (ammo like "Crossbow
@@ -93,7 +92,9 @@ export type MultiItemPackEntry =
 // when granted to a character; verified this length===1-with-quantity rule
 // against every packContents entry in the bundled PHB dataset (base_items
 // and items tables).
-export function getSingleItemPackContents(detailsJson: string | null): { itemRef: string; quantity: number } | undefined {
+export function getSingleItemPackContents(
+  detailsJson: string | null
+): { itemRef: string; quantity: number } | undefined {
   const packContents = parseJson<PackDetails>(detailsJson)?.packContents;
   if (!Array.isArray(packContents) || packContents.length !== 1) return undefined;
   const entry = packContents[0];
@@ -135,12 +136,16 @@ const PACK_CONTENT_QUANTITY_OVERRIDES: Record<string, Record<string, number>> = 
 // "alms box") - those become `kind: 'special'` and are never resolvable to an
 // inventory item, same as how a bare `special`-kind DSL grant elsewhere in
 // the wizard has no db row to attach to.
-export function getMultiItemPackContents(detailsJson: string | null, packName?: string): MultiItemPackEntry[] | undefined {
+export function getMultiItemPackContents(
+  detailsJson: string | null,
+  packName?: string
+): MultiItemPackEntry[] | undefined {
   const packContents = parseJson<PackDetails>(detailsJson)?.packContents;
   if (!Array.isArray(packContents) || packContents.length <= 1) return undefined;
   const overrides = packName ? PACK_CONTENT_QUANTITY_OVERRIDES[packName] : undefined;
   return packContents.map((entry): MultiItemPackEntry => {
-    if (typeof entry === 'string') return { kind: 'item', itemRef: entry, quantity: overrides?.[entry.toLowerCase()] ?? 1 };
+    if (typeof entry === 'string')
+      return { kind: 'item', itemRef: entry, quantity: overrides?.[entry.toLowerCase()] ?? 1 };
     if (entry.item) return { kind: 'item', itemRef: entry.item, quantity: entry.quantity ?? 1 };
     return { kind: 'special', text: entry.special ?? '', quantity: entry.quantity ?? 1 };
   });
@@ -181,6 +186,20 @@ export async function getBaseItemCategoriesByIds(
     ...ids
   );
   return new Map(rows.map((row) => [row.id, categorize(row.type)]));
+}
+
+// Lightweight property-code lookup (no translations/damage/etc.) - used by
+// hooks/use-equipped-weapons.ts to check the "Light" property of every
+// currently-equipped weapon, needed for the two-weapon-fighting off-hand
+// rule (PHB p.195: both weapons must be Light).
+export async function getWeaponPropertyCodesByIds(db: SQLiteDatabase, ids: number[]): Promise<Map<number, string[]>> {
+  if (ids.length === 0) return new Map();
+  const placeholders = ids.map(() => '?').join(', ');
+  const rows = await db.getAllAsync<{ id: number; properties: string | null }>(
+    `SELECT id, properties FROM base_items WHERE id IN (${placeholders})`,
+    ...ids
+  );
+  return new Map(rows.map((row) => [row.id, parseJson<string[]>(row.properties) ?? []]));
 }
 
 // Short display label for 'general' items (tools, instruments, spellcasting
@@ -308,7 +327,9 @@ function mapCuratedRow(row: BaseItemRow, translations: TranslationDict, quantity
       damageDice: formatDamageDice(row.damage),
       handedness: getWeaponHandedness(propCodes),
       weaponCategory:
-        details.weaponCategory === 'simple' || details.weaponCategory === 'martial' ? details.weaponCategory : undefined,
+        details.weaponCategory === 'simple' || details.weaponCategory === 'martial'
+          ? details.weaponCategory
+          : undefined,
     };
   }
 
