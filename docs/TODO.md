@@ -631,3 +631,33 @@ de personagem"): ver board Trello "5e Character Hub", lista "A fazer".
   mas a montagem final falhava com `"escolhas pendentes: sub-raça"`.
   Corrigido excluindo `englishName === 'Variant'` da checagem, mesmo padrão
   já usado na tela de Raça.
+- **Cobertura de teste para as automações de equipamento + varredura geral
+  de mecânicas sem teste (2026-08-20/21)** — duas sessões seguidas, a
+  pedido do usuário. Sessão 1: mapeou toda automação de equipamento da
+  ficha (CA ao equipar armadura/escudo, dado de dano de arma versátil
+  mudando com a mão, bloqueio de equipar com as mãos ocupadas, Estilos de
+  Luta) e extraiu o que só existia inline em `.tsx`
+  (`context/character-context.tsx`, `app/sheet/[characterId]/item/[id].tsx`)
+  para `utils/equip-slots.ts` e `utils/weapon-combat.ts`, sem mudar
+  comportamento, para poder testar - `utils/armor-class.ts`/`utils/speed.ts`
+  já eram puras. Sessão 2: varredura do restante do app (2 agentes de
+  exploração) achou mais mecânica sem teste, direto - `utils/
+  ability-modifier.ts`/`proficiency.ts`/`spellcasting.ts`/`dice.ts` - ou
+  inline - `utils/feat-bonuses.ts` (talentos Observador/Alerta),
+  `utils/carrying-capacity.ts`, `utils/hit-points.ts` (aplicar dano/cura),
+  mais os resolvers puros de `data/wizard/` (`race-ability-bonus`,
+  `feat-ability-bonus`, `feat-prerequisites`,
+  `skill-proficiency-resolver`) - extraídas/testadas do mesmo jeito. Ver
+  `docs/testing.md` para o detalhe de qual arquivo de teste cobre o quê.
+  Achados que não viraram teste, e sim ação separada: o Estilo "Combate com
+  Duas Armas" ignorava a propriedade Leve das armas (RAW exige Leve nas
+  duas mãos, PHB p.195) - **corrigido** direto em `utils/weapon-combat.ts`
+  (novo `hooks/use-equipped-weapons.ts` + `getWeaponPropertyCodesByIds` em
+  `data/queries/base-items.ts` pra saber a propriedade da arma da mão
+  principal); rastreio de munição e limite de 3 itens sintonizados não
+  tinham card - viraram os cards Trello #48 e #49; desvantagem de
+  Furtividade por armadura e a penalidade de armadura sem proficiência já
+  tinham card antes (#3 e #39) - só texto informativo hoje, nunca aplicados
+  a uma rolagem de verdade, porque o app não tem nenhum conceito de
+  vantagem/desvantagem ainda (mesma lacuna de infraestrutura do card
+  "Desvantagem de criaturas pequenas com armas pesadas", #38).
