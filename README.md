@@ -102,6 +102,29 @@ Para gerar seu próprio banco local:
 
 Consulte [`docs/data-schema.md`](docs/data-schema.md) para o detalhamento técnico completo do schema e do mecanismo de tradução.
 
+### 📦 Gerando um APK para testes (EAS Build)
+
+O app pode ser compilado na nuvem via [EAS Build](https://docs.expo.dev/build/introduction/) e gerar um APK instalável direto no Android, fora da Play Store — ideal para testar no próprio celular ou distribuir para um grupo fechado de amigos.
+
+**Configuração única** (cada pessoa que for gerar builds precisa rodar, no seu próprio terminal):
+
+```bash
+npx eas login    # login na conta Expo (interativo)
+npx eas init     # vincula o projeto à conta EAS (grava o projectId em app.json)
+```
+
+**Para gerar um novo APK de teste:**
+
+```bash
+npm run build:android:preview
+```
+
+Isso builda na nuvem (perfil `preview`, distribuição interna) e, ao final, mostra um link/QR code para baixar e instalar direto no Android. Esse link também fica disponível depois em [expo.dev](https://expo.dev), na página do projeto, aba de builds.
+
+⚠️ O banco `assets/data/dnd5e.db` precisa existir localmente (via `npm run db:import` + `npm run db:translate`) **antes** de rodar o build, já que é o conteúdo local que é enviado para a nuvem.
+
+A versão do app (`version` em `app.json`, `android.versionCode`) é controlada manualmente — só é incrementada quando o time decide que vale a pena marcar como uma nova versão, não a cada build de teste.
+
 ### Scripts disponíveis
 
 | Script | Descrição |
@@ -115,6 +138,8 @@ Consulte [`docs/data-schema.md`](docs/data-schema.md) para o detalhamento técni
 | `npm run format:check` | Verifica a formatação sem alterar arquivos |
 | `npm run db:import` | Gera o banco de dados de referência a partir de `5e-2014-data/` |
 | `npm run db:translate` | Popula as traduções PT-BR a partir de `translations/pt-BR/` |
+| `npm run build:android:preview` | Gera um APK de teste na nuvem via EAS Build (distribuição interna) |
+| `npm run build:android:production` | Gera um App Bundle (AAB) via EAS Build (perfil de produção) |
 
 ### Status do projeto
 
@@ -224,6 +249,29 @@ To generate your own local database:
 
 See [`docs/data-schema.md`](docs/data-schema.md) for the full technical breakdown of the schema and the translation mechanism.
 
+### 📦 Generating an Android APK for testing (EAS Build)
+
+The app can be built in the cloud via [EAS Build](https://docs.expo.dev/build/introduction/) to produce an installable Android APK outside the Play Store — useful for testing on your own phone or sharing with a closed group of friends.
+
+**One-time setup** (each person generating builds needs to run this in their own terminal):
+
+```bash
+npx eas login    # log in to your Expo account (interactive)
+npx eas init     # links the project to your EAS account (writes projectId into app.json)
+```
+
+**To generate a new test APK:**
+
+```bash
+npm run build:android:preview
+```
+
+This builds in the cloud (`preview` profile, internal distribution) and, once done, prints an install link/QR code you can open on an Android phone to download and install directly. That link is also available afterward at [expo.dev](https://expo.dev), under the project's Builds tab.
+
+⚠️ The `assets/data/dnd5e.db` file must already exist locally (via `npm run db:import` + `npm run db:translate`) **before** running a build, since your local content is what gets uploaded.
+
+The app's version (`version` in `app.json`, `android.versionCode`) is managed manually — it's only bumped when the team decides something is worth marking as a new version, not on every test build.
+
 ### Available Scripts
 
 | Script | Description |
@@ -237,6 +285,8 @@ See [`docs/data-schema.md`](docs/data-schema.md) for the full technical breakdow
 | `npm run format:check` | Checks formatting without modifying files |
 | `npm run db:import` | Builds the reference database from `5e-2014-data/` |
 | `npm run db:translate` | Populates PT-BR translations from `translations/pt-BR/` |
+| `npm run build:android:preview` | Builds a test APK in the cloud via EAS Build (internal distribution) |
+| `npm run build:android:production` | Builds an App Bundle (AAB) via EAS Build (production profile) |
 
 ### Project Status
 

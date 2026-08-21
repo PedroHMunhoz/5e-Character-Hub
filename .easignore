@@ -1,0 +1,56 @@
+# Mirror of .gitignore for EAS Build uploads, EXCEPT the compiled 5e
+# database (assets/data/*.db) is intentionally left out of this file so
+# EAS Build actually bundles it — it's gitignored (regenerated locally via
+# `npm run db:import` + `npm run db:translate`), and .easignore fully
+# replaces .gitignore for EAS's purposes rather than merging with it, so
+# simply omitting that rule here is what makes the upload include it.
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+app-example
+
+# generated native folders
+/ios
+/android
+
+# 5e reference data (raw source — not needed at runtime; only the
+# compiled assets/data/dnd5e.db is, which is NOT ignored here on purpose)
+/5e-2014-data/
+
+# pt-BR localization source (raw source — not needed at runtime)
+/books/
+/translations/

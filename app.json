@@ -14,10 +14,10 @@
     },
     "android": {
       "package": "com.pedromunhoz.fiveecharacterhub",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
+        "foregroundImage": "./assets/images/android-icon-foreground-safe.png",
+        "backgroundColor": "#000000",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
@@ -46,6 +46,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5c97b7c6-c29b-4bb0-964d-2ff417a4e9b0"
+      }
+    },
+    "owner": "pedrohmunhozc"
   }
 }
